@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Generate one Krypton service from pure-service-generator, apply its
+# field-spec (if any), and run its test suite. Run by hand, one service at a
+# time — inspect/test each before generating the next.
+#
+# Usage:
+#   ./generate-service <domain-name> [--field-spec <path>] [--package <package>]
+#
+# Examples:
+#   ./generate-service payment --field-spec ../specs/payment.yaml
+#   ./generate-service notification
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KRYPTON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GENERATOR_DIR="$(cd "$KRYPTON_DIR/../pure-service-generator" && pwd)"
+
+DOMAIN_NAME=""
+FIELD_SPEC=""
+PACKAGE=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --field-spec)
+      FIELD_SPEC="$2"; shift 2 ;;
+    --package)
+      PACKAGE="$2"; shift 2 ;;
+    -h|--help)
+      sed -n '2,12p' "$0"; exit 0 ;;
+    *)
+      if [ -n "$DOMAIN_NAME" ]; then
+        echo "Unexpected argument: $1" >&2; exit 1
+      fi
+      DOMAIN_NAME="$1"; shift ;;
+  esac
+done
+
+if [ -z "$DOMAIN_NAME" ]; then
+  echo "Usage: $0 <domain-name> [--field-spec <path>] [--package <package>]" >&2
+  exit 1
+fi
+
+OUT_NAME="${DOMAIN_NAME}-service"
+OUT_DIR="$KRYPTON_DIR/services/$OUT_NAME"
+
+if [ -e "$OUT_DIR" ]; then
+  echo "FAIL: $OUT_DIR already exists — not overwriting." >&2
+  exit 1
+fi
+
+if [ -n "$FIELD_SPEC" ] && [ ! -f "$FIELD_SPEC" ]; then
+  echo "FAIL: field-spec not found: $FIELD_SPEC" >&2
+  exit 1
+fi
+if [ -n "$FIELD_SPEC" ]; then
+  FIELD_SPEC="$(cd "$(dirname "$FIELD_SPEC")" && pwd)/$(basename "$FIELD_SPEC")"
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "WARN: Docker doesn't look like it's running — the generated service's" >&2
+  echo "      Postgres-backed tests will fail without it." >&2
+fi
+if [ -z "${GITHUB_TOKEN:-}" ] || [ -z "${GITHUB_ACTOR:-}" ]; then
+  echo "WARN: GITHUB_TOKEN / GITHUB_ACTOR not set — resolving purerestlib from" >&2
+  echo "      GitHub Packages will fail without a read:packages token. See" >&2
+  echo "      pure-service-generator/README.md, 'Prerequisites'." >&2
+fi
+
+echo "== Generating $OUT_NAME from $GENERATOR_DIR into $OUT_DIR =="
+LAUNCH_DIR="$(mktemp -d)"
+mkdir -p "$LAUNCH_DIR/project"
+echo 'sbt.version=1.13.0' > "$LAUNCH_DIR/project/build.properties"
+echo 'libraryDependencies += "org.foundweekends.giter8" %% "giter8-launcher" % "0.18.0"' \
+  > "$LAUNCH_DIR/build.sbt"
+
+GITER8_ARGS=(--domain_name="$DOMAIN_NAME")
+if [ -n "$PACKAGE" ]; then
+  GITER8_ARGS+=(--package="$PACKAGE")
+fi
+
+(
+  cd "$LAUNCH_DIR"
+  sbt "runMain giter8.LauncherMain file://$GENERATOR_DIR ${GITER8_ARGS[*]} -o $OUT_DIR"
+)
+rm -rf "$LAUNCH_DIR"
+
+if [ ! -d "$OUT_DIR" ]; then
+  echo "FAIL: generation didn't produce $OUT_DIR" >&2
+  exit 1
+fi
+echo "== Generated $OUT_DIR =="
+
+if [ -n "$FIELD_SPEC" ]; then
+  echo "== Applying field-spec $FIELD_SPEC =="
+  (
+    cd "$GENERATOR_DIR/tools/codegen"
+    sbt "runMain codegen.Main $OUT_DIR $FIELD_SPEC"
+  )
+fi
+
+echo "== sbt scalafmt test in $OUT_DIR =="
+(
+  cd "$OUT_DIR"
+  sbt scalafmt test
+)
+
+cat <<EOF
+
+== Done: $OUT_DIR ==
+
+Next steps (manual, not done by this script):
+  1. cd $OUT_DIR
+  2. In Claude Code: run /conductor:setup
+  3. Paste $KRYPTON_DIR/backlogs/$OUT_NAME.md into the new conductor/tracks.md's Backlog section
+  4. When ready to push:
+     gh repo create beckfordp/$OUT_NAME --public --source=. --remote=origin --push
+     (this initializes its own independent git repo here, under services/ —
+     krypton's own repo has services/ gitignored, so there's no nesting conflict)
+EOF

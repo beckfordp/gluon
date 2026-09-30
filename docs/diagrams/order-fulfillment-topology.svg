@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Order fulfillment runtime topology: order-service and inventory-service reserve stock over a synchronous HTTP call and both read and write their own Postgres store; order-service, inventory-service, payment-service, and notification-service publish and consume events over a Kafka bus guarded by a schema registry; catalog-service and cart-service sit apart, dashed, generated only when their user stories are built.">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap');
+    :root{
+      --bg:#EEF1F6; --surface:#FFFFFF; --ink:#1B2433; --ink-dim:#5C6779;
+      --line:#CBD3E0; --accent-sync:#2B58A6; --accent-async:#9C6318;
+      --accent-future:#8890A0; --store:#1F7A68;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#10151E; --surface:#1A212D; --ink:#E7ECF4; --ink-dim:#93A0B4;
+        --line:#2C3546; --accent-sync:#6B9BF0; --accent-async:#E3A54C;
+        --accent-future:#7A8296; --store:#4FB49E;
+      }
+    }
+    text{ font-family:"IBM Plex Mono","SFMono-Regular",ui-monospace,monospace; }
+  </style>
+  <defs>
+    <marker id="arrSync" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent-sync)"/>
+    </marker>
+    <marker id="arrAsync" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent-async)"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="630" fill="var(--bg)"/>
+  <rect x="0" y="0" width="1200" height="630" fill="var(--surface)"/>
+
+  <!-- future cluster -->
+  <rect x="740" y="20" width="440" height="120" rx="6" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="762" y="38" font-size="10.5" letter-spacing="0.06em" fill="var(--ink-dim)">NOT BUILT — GENERATED ON DEMAND (US-1 / US-2)</text>
+  <rect x="760" y="52" width="180" height="68" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="850" y="80" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">catalog-service</text>
+  <text x="850" y="98" text-anchor="middle" font-size="10" fill="var(--ink-dim)">Postgres + Redis cache</text>
+  <rect x="960" y="52" width="180" height="68" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="1050" y="80" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">cart-service</text>
+  <text x="1050" y="98" text-anchor="middle" font-size="10" fill="var(--ink-dim)">Redis only, primary store</text>
+
+  <!-- client -->
+  <rect x="60" y="30" width="180" height="46" rx="4" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+  <text x="150" y="58" text-anchor="middle" font-size="12" fill="var(--ink)">checkout (client)</text>
+  <line x1="150" y1="76" x2="150" y2="167" stroke="var(--accent-sync)" stroke-width="1.5" marker-end="url(#arrSync)"/>
+
+  <!-- row A: order-service -->
+  <rect x="40" y="170" width="220" height="64" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="150" y="196" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">order-service</text>
+  <text x="150" y="214" text-anchor="middle" font-size="10" fill="var(--ink-dim)">existing · purerest</text>
+
+  <!-- inventory-service -->
+  <rect x="320" y="170" width="220" height="64" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="430" y="196" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">inventory-service</text>
+  <text x="430" y="214" text-anchor="middle" font-size="10" fill="var(--ink-dim)">existing · purerest</text>
+
+  <!-- payment-service -->
+  <rect x="600" y="170" width="220" height="64" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="710" y="196" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">payment-service</text>
+  <text x="710" y="214" text-anchor="middle" font-size="10" fill="var(--ink-dim)">new · generator</text>
+
+  <!-- notification-service -->
+  <rect x="880" y="170" width="220" height="64" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="990" y="196" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">notification-service</text>
+  <text x="990" y="214" text-anchor="middle" font-size="10" fill="var(--ink-dim)">new · generator, no DB</text>
+
+  <!-- sync request/response -->
+  <line x1="260" y1="192" x2="317" y2="192" stroke="var(--accent-sync)" stroke-width="1.5" marker-end="url(#arrSync)"/>
+  <text x="290" y="182" text-anchor="middle" font-size="10" fill="var(--accent-sync)">POST /reserve</text>
+  <line x1="317" y1="214" x2="260" y2="214" stroke="var(--accent-sync)" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrSync)"/>
+  <text x="290" y="228" text-anchor="middle" font-size="10" fill="var(--accent-sync)">reserved / rejected</text>
+
+  <!-- store connectors -->
+  <line x1="150" y1="234" x2="150" y2="270" stroke="var(--line)" stroke-width="1.5"/>
+  <line x1="430" y1="234" x2="430" y2="270" stroke="var(--line)" stroke-width="1.5"/>
+  <line x1="710" y1="234" x2="710" y2="270" stroke="var(--line)" stroke-width="1.5"/>
+
+  <!-- cylinder: orders -->
+  <ellipse cx="150" cy="270" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <rect x="105" y="270" width="90" height="44" fill="var(--surface)" stroke="none"/>
+  <line x1="105" y1="270" x2="105" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <line x1="195" y1="270" x2="195" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <ellipse cx="150" cy="314" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <text x="150" y="297" text-anchor="middle" font-weight="600" font-size="11" fill="var(--ink)">orders</text>
+  <text x="150" y="340" text-anchor="middle" font-size="9.5" letter-spacing="0.04em" fill="var(--ink-dim)">POSTGRES</text>
+
+  <!-- cylinder: stock -->
+  <ellipse cx="430" cy="270" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <line x1="385" y1="270" x2="385" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <line x1="475" y1="270" x2="475" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <ellipse cx="430" cy="314" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <text x="430" y="297" text-anchor="middle" font-weight="600" font-size="11" fill="var(--ink)">stock</text>
+  <text x="430" y="340" text-anchor="middle" font-size="9.5" letter-spacing="0.04em" fill="var(--ink-dim)">POSTGRES</text>
+
+  <!-- cylinder: payments -->
+  <ellipse cx="710" cy="270" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <line x1="665" y1="270" x2="665" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <line x1="755" y1="270" x2="755" y2="314" stroke="var(--store)" stroke-width="1.5"/>
+  <ellipse cx="710" cy="314" rx="45" ry="9" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <text x="710" y="297" text-anchor="middle" font-weight="600" font-size="11" fill="var(--ink)">payments</text>
+  <text x="710" y="340" text-anchor="middle" font-size="9.5" letter-spacing="0.04em" fill="var(--ink-dim)">POSTGRES</text>
+
+  <!-- redis idempotency tag -->
+  <line x1="755" y1="292" x2="800" y2="292" stroke="var(--store)" stroke-width="1.5"/>
+  <rect x="800" y="274" width="168" height="36" rx="4" fill="var(--surface)" stroke="var(--store)" stroke-width="1.5"/>
+  <text x="884" y="297" text-anchor="middle" font-size="10" fill="var(--ink)">Redis — idempotency keys</text>
+
+  <!-- verticals to bus: order-service -->
+  <line x1="134" y1="320" x2="134" y2="557" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
+  <line x1="166" y1="557" x2="166" y2="320" stroke="var(--accent-async)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrAsync)"/>
+  <rect x="95" y="389" width="110" height="17" fill="var(--surface)"/>
+  <text x="150" y="401" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▼ order events</text>
+  <rect x="95" y="469" width="110" height="17" fill="var(--surface)"/>
+  <text x="150" y="481" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▲ stock events</text>
+
+  <!-- verticals to bus: inventory-service -->
+  <line x1="430" y1="320" x2="430" y2="557" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
+  <rect x="375" y="429" width="110" height="17" fill="var(--surface)"/>
+  <text x="430" y="441" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▼ stock events</text>
+
+  <!-- verticals to bus: payment-service -->
+  <line x1="696" y1="557" x2="696" y2="320" stroke="var(--accent-async)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrAsync)"/>
+  <line x1="724" y1="320" x2="724" y2="557" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
+  <rect x="655" y="389" width="110" height="17" fill="var(--surface)"/>
+  <text x="710" y="401" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▲ order.created</text>
+  <rect x="655" y="469" width="110" height="17" fill="var(--surface)"/>
+  <text x="710" y="481" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▼ payment events</text>
+
+  <!-- vertical to bus: notification-service -->
+  <line x1="990" y1="557" x2="990" y2="237" stroke="var(--accent-async)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrAsync)"/>
+  <rect x="935" y="429" width="110" height="17" fill="var(--surface)"/>
+  <text x="990" y="441" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▲ events (tbd)</text>
+
+  <!-- kafka bus -->
+  <rect x="40" y="536" width="230" height="22" rx="11" fill="var(--surface)" stroke="var(--accent-async)" stroke-width="1.5"/>
+  <text x="155" y="551" text-anchor="middle" font-size="10" fill="var(--accent-async)">+ Schema Registry · ADR 0003</text>
+  <rect x="40" y="560" width="1060" height="50" rx="6" fill="none" stroke="var(--accent-async)" stroke-width="2"/>
+  <text x="570" y="591" text-anchor="middle" font-weight="600" font-size="13" fill="var(--accent-async)">Kafka event bus</text>
+</svg>

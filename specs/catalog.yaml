@@ -1,0 +1,14 @@
+fields:
+  - name: name
+    type: String
+    example: "Widget"
+  - name: description
+    type: String
+    example: "A very fine widget"
+  - name: priceCents
+    type: Int
+    example: "1999"
+  - name: sku
+    type: String
+    example: "sku-widget-1"
+    visibility: create-only

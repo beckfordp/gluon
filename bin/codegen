@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Thin wrapper around tools/codegen so callers don't need the sbt incantation.
+# Applies a field-spec to an already-generated service directory.
+#
+# Usage:
+#   ./codegen <service-dir> <field-spec-path>
+#
+# Example:
+#   ./codegen services/payment-service specs/payment.yaml
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KRYPTON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GENERATOR_DIR="$(cd "$KRYPTON_DIR/../pure-service-generator" && pwd)"
+
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <service-dir> <field-spec-path>" >&2
+  exit 1
+fi
+
+SERVICE_DIR="$(cd "$1" && pwd)"
+FIELD_SPEC="$(cd "$(dirname "$2")" && pwd)/$(basename "$2")"
+
+(
+  cd "$GENERATOR_DIR/tools/codegen"
+  sbt "runMain codegen.Main $SERVICE_DIR $FIELD_SPEC"
+)

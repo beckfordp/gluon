@@ -1,0 +1,14 @@
+fields:
+  - name: customerId
+    type: String
+    example: "cust-123"
+    visibility: create-only
+  - name: totalCents
+    type: Int
+    example: "4999"
+    visibility: create-only
+  - name: status
+    type: String
+    example: "pending"
+    visibility: server-defaulted
+    default: "pending"

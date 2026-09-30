@@ -1,0 +1,13 @@
+fields:
+  - name: sku
+    type: String
+    example: "sku-widget-1"
+    visibility: create-only
+  - name: quantityAvailable
+    type: Int
+    example: "100"
+  - name: quantityReserved
+    type: Int
+    example: "0"
+    visibility: server-defaulted
+    default: "0"

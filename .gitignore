@@ -1,0 +1,12 @@
+# Generated services are their own independent git repos — not nested here.
+services/*
+!services/README.md
+
+# macOS
+.DS_Store
+
+# sbt/Scala, in case any tooling ever builds in-place here
+target/
+.bsp/
+.metals/
+.bloop/

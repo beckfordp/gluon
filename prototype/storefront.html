@@ -1,0 +1,656 @@
+<title>Krypton Storefront</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#F3F3F8;
+    --surface:#FFFFFF;
+    --surface-2:#F8F7FC;
+    --ink:#1C1B22;
+    --ink-dim:#66626F;
+    --line:#E1DEE8;
+    --accent:#C7431B;
+    --accent-contrast:#FFFFFF;
+    --accent-soft:#F6E3DA;
+    --status-pending-bg:#EEEDF3; --status-pending-fg:#5B5866;
+    --status-reserved-bg:#E2ECFB; --status-reserved-fg:#2C5FA6;
+    --status-settled-bg:#E1F3E9; --status-settled-fg:#1E7A4C;
+    --danger:#B23A3A;
+    --shadow: 0 1px 2px rgba(28,27,34,0.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#151319;
+      --surface:#1E1B24;
+      --surface-2:#221F2A;
+      --ink:#EFEDF5;
+      --ink-dim:#A39EB0;
+      --line:#332F3D;
+      --accent:#FF7A47;
+      --accent-contrast:#1C1108;
+      --accent-soft:#3A2620;
+      --status-pending-bg:#2A2833; --status-pending-fg:#B8B3C4;
+      --status-reserved-bg:#1D2E45; --status-reserved-fg:#8FB8EC;
+      --status-settled-bg:#183828; --status-settled-fg:#7BD3A3;
+      --danger:#E5827D;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#151319;
+    --surface:#1E1B24;
+    --surface-2:#221F2A;
+    --ink:#EFEDF5;
+    --ink-dim:#A39EB0;
+    --line:#332F3D;
+    --accent:#FF7A47;
+    --accent-contrast:#1C1108;
+    --accent-soft:#3A2620;
+    --status-pending-bg:#2A2833; --status-pending-fg:#B8B3C4;
+    --status-reserved-bg:#1D2E45; --status-reserved-fg:#8FB8EC;
+    --status-settled-bg:#183828; --status-settled-fg:#7BD3A3;
+    --danger:#E5827D;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Manrope", system-ui, sans-serif;
+    padding:0 16px;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+  .mono{font-family:"IBM Plex Mono", ui-monospace, monospace;}
+  .tab{font-variant-numeric:tabular-nums;}
+
+  .shell{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;min-height:100dvh;}
+
+  header.site{
+    position:sticky;top:0;z-index:10;
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding-block:14px;
+  }
+  .header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .wordmark{display:flex;align-items:baseline;gap:8px;text-decoration:none;}
+  .wordmark .name{font-weight:800;font-size:19px;letter-spacing:-0.01em;}
+  .wordmark .tag{font-family:"IBM Plex Mono";font-size:10px;color:var(--ink-dim);letter-spacing:0.06em;text-transform:uppercase;}
+  nav.main{display:flex;align-items:center;gap:4px;}
+  .nav-link{
+    padding:8px 12px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;color:var(--ink-dim);
+    display:flex;align-items:center;gap:6px;
+  }
+  .nav-link:hover{color:var(--ink);background:var(--surface-2);}
+  .nav-link.active{color:var(--ink);background:var(--surface-2);}
+  .cart-count{
+    background:var(--accent);color:var(--accent-contrast);border-radius:999px;font-size:11px;font-weight:700;
+    min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;
+  }
+
+  main{flex:1;padding-block:28px 60px;display:flex;flex-direction:column;gap:24px;}
+
+  h1{font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-0.01em;margin:0;text-wrap:balance;}
+  .eyebrow{
+    font-family:"IBM Plex Mono";font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);
+    margin:0 0 4px;
+  }
+  .page-head{border-bottom:1px solid var(--line);padding-bottom:18px;}
+  .page-sub{color:var(--ink-dim);font-size:14px;margin:6px 0 0;max-width:60ch;line-height:1.55;}
+
+  /* catalog grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;}
+  .product{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;
+    display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow);
+  }
+  .product-name{font-weight:700;font-size:15px;line-height:1.3;}
+  .product-desc{color:var(--ink-dim);font-size:13px;line-height:1.5;flex:1;}
+  .product-sku{font-size:10.5px;color:var(--ink-dim);}
+  .product-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px;}
+  .price{font-weight:700;font-size:16px;}
+  .cache-badge{
+    align-self:flex-start;font-family:"IBM Plex Mono";font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;
+    color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;padding:2px 6px;
+  }
+
+  .btn{
+    border:none;border-radius:8px;padding:9px 14px;font-weight:700;font-size:13.5px;cursor:pointer;
+    background:var(--accent);color:var(--accent-contrast);
+  }
+  .btn:hover{filter:brightness(1.06);}
+  .btn:focus-visible, a:focus-visible, .nav-link:focus-visible, input:focus-visible, .qty-btn:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+  .btn.secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);}
+  .btn.block{width:100%;}
+  .btn:disabled{opacity:0.55;cursor:default;}
+  .btn.small{padding:6px 10px;font-size:12.5px;}
+
+  /* cart */
+  .cart-list{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);}
+  .cart-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);}
+  .cart-row:last-child{border-bottom:none;}
+  .cart-row .info{flex:1;min-width:0;}
+  .cart-row .name{font-weight:700;font-size:14px;}
+  .cart-row .sku{font-size:11px;color:var(--ink-dim);}
+  .qty-group{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:2px;}
+  .qty-btn{
+    width:26px;height:26px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-weight:700;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .qty-btn:hover{background:var(--surface-2);}
+  .qty-val{min-width:20px;text-align:center;font-weight:700;font-size:13px;}
+  .line-total{font-weight:700;font-size:14px;min-width:70px;text-align:right;}
+  .remove-link{background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;padding:4px;}
+
+  .summary{
+    border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--surface);
+    display:flex;flex-direction:column;gap:10px;height:fit-content;
+  }
+  .summary-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-dim);}
+  .summary-row.total{color:var(--ink);font-weight:800;font-size:16px;border-top:1px solid var(--line);padding-top:10px;margin-top:2px;}
+  .empty-state{
+    border:1px dashed var(--line);border-radius:12px;padding:36px 20px;text-align:center;color:var(--ink-dim);font-size:14px;
+  }
+
+  /* checkout */
+  .checkout-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(260px,340px);gap:20px;align-items:start;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .field label{font-size:12.5px;font-weight:700;color:var(--ink-dim);}
+  .field input{
+    border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px;background:var(--surface);color:var(--ink);
+    font-family:inherit;
+  }
+  .reserve-status{
+    display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-dim);padding:10px 0 0;
+  }
+  .spinner{
+    width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);
+    animation:spin 0.7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){ .spinner{animation:none;} }
+
+  /* status pill */
+  .pill{
+    display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:700;
+    text-transform:uppercase;letter-spacing:0.03em;
+  }
+  .pill[data-variant="pending"]{background:var(--status-pending-bg);color:var(--status-pending-fg);}
+  .pill[data-variant="reserved"]{background:var(--status-reserved-bg);color:var(--status-reserved-fg);}
+  .pill[data-variant="settled"], .pill[data-variant="confirmed"]{background:var(--status-settled-bg);color:var(--status-settled-fg);}
+
+  /* order history */
+  .order-card{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--surface);text-decoration:none;color:inherit;
+  }
+  .order-card:hover{border-color:var(--accent);}
+  .order-card .oid{font-family:"IBM Plex Mono";font-size:12.5px;color:var(--ink-dim);}
+  .order-card .ototal{font-weight:800;font-size:15px;}
+
+  /* order detail timeline */
+  .order-summary-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+  .timeline li{position:relative;padding:0 0 26px 30px;}
+  .timeline li:last-child{padding-bottom:0;}
+  .timeline li::before{
+    content:"";position:absolute;left:5px;top:4px;bottom:-2px;width:1.5px;background:var(--line);
+  }
+  .timeline li:last-child::before{display:none;}
+  .timeline .dot{
+    position:absolute;left:0;top:2px;width:11px;height:11px;border-radius:50%;border:2px solid var(--line);background:var(--surface);
+  }
+  .timeline li.done .dot{border-color:var(--accent);background:var(--accent);}
+  .timeline li.pending-step .dot{border-color:var(--line);}
+  .timeline .step-label{font-weight:700;font-size:14px;}
+  .timeline li.pending-step .step-label{color:var(--ink-dim);font-weight:600;}
+  .timeline .step-topic{font-family:"IBM Plex Mono";font-size:11px;color:var(--ink-dim);margin-top:2px;}
+  .timeline .step-time{font-family:"IBM Plex Mono";font-size:11px;color:var(--ink-dim);margin-top:2px;}
+
+  /* toast */
+  .toast{
+    position:fixed;right:16px;bottom:16px;z-index:50;
+    background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 16px;font-size:13.5px;font-weight:600;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    display:flex;align-items:center;gap:8px;
+    animation:toast-in 0.25s ease-out;
+  }
+  @keyframes toast-in{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  @media (prefers-reduced-motion: reduce){ .toast{animation:none;} }
+
+  footer.site{
+    border-top:1px solid var(--line);padding:16px 0 28px;color:var(--ink-dim);font-size:12px;line-height:1.6;
+  }
+
+  @media (max-width:640px){
+    .checkout-grid{grid-template-columns:1fr;}
+    header.site{padding-block:12px;}
+  }
+</style>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo } = React;
+
+/* ---------- mock data ---------- */
+
+const CATALOG = [
+  { sku: "kr-mech-kb-01", name: "Mechanical Keyboard — Low Profile", description: "Hot-swappable switches, USB-C, 75% layout.", priceCents: 8900 },
+  { sku: "kr-mouse-ergo-02", name: "Ergonomic Vertical Mouse", description: "Reduces wrist strain on long sessions.", priceCents: 4500 },
+  { sku: "kr-monitor-27-4k", name: '27" 4K Monitor', description: "IPS panel, 99% sRGB, USB-C 90W passthrough.", priceCents: 32900 },
+  { sku: "kr-headset-anc-03", name: "Noise-Cancelling Headset", description: "30-hour battery, dual-mic boom.", priceCents: 15900 },
+  { sku: "kr-dock-usbc-04", name: "USB-C Dock, 12-in-1", description: "Triple display, 100W passthrough charging.", priceCents: 6900 },
+  { sku: "kr-standdesk-05", name: "Sit-Stand Desk Converter", description: "Gas-spring lift, holds up to two monitors.", priceCents: 11900 },
+];
+
+const catalogService = {
+  list: () => CATALOG,
+  bySku: (sku) => CATALOG.find((p) => p.sku === sku),
+};
+
+/* tiny pub/sub standing in for the Kafka bus — topics match system-design.md */
+function createBus() {
+  const listeners = {};
+  return {
+    on(topic, fn) {
+      (listeners[topic] ||= []).push(fn);
+      return () => { listeners[topic] = listeners[topic].filter((f) => f !== fn); };
+    },
+    emit(topic, payload) {
+      (listeners[topic] || []).forEach((fn) => fn(payload));
+    },
+  };
+}
+const bus = createBus();
+
+const formatCents = (c) => `$${(c / 100).toFixed(2)}`;
+
+let orderSeq = 1;
+const makeOrderId = () => `ord_${String(orderSeq++).padStart(4, "0")}`;
+
+const STEPS = [
+  { key: "pending", label: "Order placed", topic: "order.created" },
+  { key: "reserved", label: "Stock reserved", topic: "inventory.stock-reserved" },
+  { key: "settled", label: "Payment settled", topic: "payment.settled" },
+  { key: "confirmed", label: "Customer notified", topic: "notification.sent" },
+];
+const STEP_INDEX = Object.fromEntries(STEPS.map((s, i) => [s.key, i]));
+
+/* ---------- routing ---------- */
+
+function useHashRoute() {
+  const parse = () => window.location.hash.replace(/^#\/?/, "") || "";
+  const [hash, setHash] = useState(parse);
+  useEffect(() => {
+    const onChange = () => setHash(parse());
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  const parts = hash.split("/").filter(Boolean);
+  if (parts[0] === "orders" && parts[1]) return { name: "orderDetail", id: parts[1] };
+  if (parts[0] === "orders") return { name: "orders" };
+  if (parts[0] === "cart") return { name: "cart" };
+  if (parts[0] === "checkout") return { name: "checkout" };
+  return { name: "catalog" };
+}
+
+/* ---------- small shared bits ---------- */
+
+function Pill({ variant, children }) {
+  return <span className="pill" data-variant={variant}>{children}</span>;
+}
+
+function statusVariant(status) {
+  if (status === "pending") return "pending";
+  if (status === "reserved") return "reserved";
+  return "settled"; // settled + confirmed share the green treatment
+}
+function statusLabel(status) {
+  return { pending: "Pending", reserved: "Reserved", settled: "Payment settled", confirmed: "Confirmed" }[status];
+}
+
+/* ---------- header ---------- */
+
+function Header({ route, cartCount }) {
+  const isActive = (name) => route.name === name;
+  return (
+    <header className="site">
+      <div className="header-row">
+        <a className="wordmark" href="#/">
+          <span className="name">Krypton</span>
+          <span className="tag">Storefront</span>
+        </a>
+        <nav className="main">
+          <a className={"nav-link" + (isActive("catalog") ? " active" : "")} href="#/">Catalog</a>
+          <a className={"nav-link" + (isActive("cart") ? " active" : "")} href="#/cart">
+            Cart {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+          </a>
+          <a className={"nav-link" + (isActive("orders") || isActive("orderDetail") ? " active" : "")} href="#/orders">Orders</a>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- catalog (US-1) ---------- */
+
+function CatalogPage({ onAddToCart }) {
+  return (
+    <React.Fragment>
+      <div className="page-head">
+        <p className="eyebrow">US-1 · Browse catalog</p>
+        <h1>Shop Krypton</h1>
+        <p className="page-sub">Served by catalog-service, read-through cached in Redis — the badge on each card is that cache doing its job.</p>
+      </div>
+      <div className="grid">
+        {CATALOG.map((p) => (
+          <div className="product" key={p.sku}>
+            <span className="cache-badge">Redis cached</span>
+            <div className="product-name">{p.name}</div>
+            <div className="product-desc">{p.description}</div>
+            <div className="product-sku mono">{p.sku}</div>
+            <div className="product-foot">
+              <span className="price tab">{formatCents(p.priceCents)}</span>
+              <button className="btn small" onClick={() => onAddToCart(p.sku)}>Add to cart</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ---------- cart (US-2) ---------- */
+
+function CartPage({ cart, onSetQty, onRemove }) {
+  const lines = cart.map((c) => ({ ...c, product: catalogService.bySku(c.sku) }));
+  const total = lines.reduce((sum, l) => sum + l.product.priceCents * l.qty, 0);
+
+  return (
+    <React.Fragment>
+      <div className="page-head">
+        <p className="eyebrow">US-2 · Add to cart</p>
+        <h1>Your cart</h1>
+        <p className="page-sub">Ephemeral session state — kept in localStorage here, standing in for cart-service's Redis-primary store (no Postgres).</p>
+      </div>
+      {lines.length === 0 ? (
+        <div className="empty-state">Your cart is empty. <a href="#/" style={{ color: "var(--accent)", fontWeight: 700 }}>Browse the catalog</a>.</div>
+      ) : (
+        <React.Fragment>
+          <div className="cart-list">
+            {lines.map((l) => (
+              <div className="cart-row" key={l.sku}>
+                <div className="info">
+                  <div className="name">{l.product.name}</div>
+                  <div className="sku mono">{l.sku}</div>
+                </div>
+                <div className="qty-group">
+                  <button className="qty-btn" onClick={() => onSetQty(l.sku, l.qty - 1)} aria-label={"Decrease quantity of " + l.product.name}>–</button>
+                  <span className="qty-val tab">{l.qty}</span>
+                  <button className="qty-btn" onClick={() => onSetQty(l.sku, l.qty + 1)} aria-label={"Increase quantity of " + l.product.name}>+</button>
+                </div>
+                <div className="line-total tab">{formatCents(l.product.priceCents * l.qty)}</div>
+                <button className="remove-link" onClick={() => onRemove(l.sku)}>Remove</button>
+              </div>
+            ))}
+          </div>
+          <div className="summary" style={{ maxWidth: 340 }}>
+            <div className="summary-row total"><span>Total</span><span className="tab">{formatCents(total)}</span></div>
+            <a className="btn block" href="#/checkout" style={{ textAlign: "center", textDecoration: "none" }}>Checkout</a>
+          </div>
+        </React.Fragment>
+      )}
+    </React.Fragment>
+  );
+}
+
+/* ---------- checkout (US-3, US-4) ---------- */
+
+function CheckoutPage({ cart, onPlaceOrder }) {
+  const [customerId, setCustomerId] = useState("cust-4471");
+  const [reserving, setReserving] = useState(false);
+  const lines = cart.map((c) => ({ ...c, product: catalogService.bySku(c.sku) }));
+  const total = lines.reduce((sum, l) => sum + l.product.priceCents * l.qty, 0);
+
+  const placeOrder = () => {
+    setReserving(true);
+    // simulates order-service's synchronous POST /reserve call to inventory-service
+    setTimeout(() => {
+      setReserving(false);
+      onPlaceOrder(customerId, lines, total);
+    }, 700);
+  };
+
+  if (lines.length === 0) {
+    return <div className="empty-state">Nothing to check out. <a href="#/" style={{ color: "var(--accent)", fontWeight: 700 }}>Browse the catalog</a>.</div>;
+  }
+
+  return (
+    <React.Fragment>
+      <div className="page-head">
+        <p className="eyebrow">US-3 · Checkout · US-4 · Reserve stock</p>
+        <h1>Checkout</h1>
+        <p className="page-sub">Placing the order calls order-service, which synchronously calls inventory-service's reserve endpoint — wrapped in retry + circuit-breaker middleware — before confirming.</p>
+      </div>
+      <div className="checkout-grid">
+        <div>
+          <div className="field">
+            <label htmlFor="customerId">Customer ID</label>
+            <input id="customerId" value={customerId} onChange={(e) => setCustomerId(e.target.value)} />
+          </div>
+          <div className="cart-list">
+            {lines.map((l) => (
+              <div className="cart-row" key={l.sku}>
+                <div className="info">
+                  <div className="name">{l.product.name}</div>
+                  <div className="sku mono">{l.sku} × {l.qty}</div>
+                </div>
+                <div className="line-total tab">{formatCents(l.product.priceCents * l.qty)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="summary">
+          <div className="summary-row"><span>Items</span><span className="tab">{lines.reduce((n, l) => n + l.qty, 0)}</span></div>
+          <div className="summary-row total"><span>Total</span><span className="tab">{formatCents(total)}</span></div>
+          <button className="btn block" onClick={placeOrder} disabled={reserving}>
+            {reserving ? "Reserving stock…" : "Place order"}
+          </button>
+          {reserving && (
+            <div className="reserve-status">
+              <span className="spinner" />
+              <span>POST /reserve → inventory-service (sync)</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ---------- order detail (US-5, US-6, US-7) ---------- */
+
+function OrderDetailPage({ order }) {
+  if (!order) return <div className="empty-state">Order not found.</div>;
+  const currentIndex = STEP_INDEX[order.status];
+
+  return (
+    <React.Fragment>
+      <div className="page-head">
+        <p className="eyebrow">US-5 · Reservation outcome · US-6 · Payment · US-7 · Notification</p>
+        <div className="order-summary-bar">
+          <h1 className="mono" style={{ fontSize: 22 }}>{order.id}</h1>
+          <Pill variant={statusVariant(order.status)}>{statusLabel(order.status)}</Pill>
+        </div>
+        <p className="page-sub">
+          Order creation returns fast — everything below happens off that request, carried by Kafka.
+          Each step is labeled with the real topic it rides on.
+        </p>
+      </div>
+      <div className="summary" style={{ maxWidth: 340 }}>
+        <div className="summary-row"><span>Customer</span><span className="mono">{order.customerId}</span></div>
+        <div className="summary-row total"><span>Total</span><span className="tab">{formatCents(order.totalCents)}</span></div>
+      </div>
+      <ul className="timeline">
+        {STEPS.map((step, i) => {
+          const done = i <= currentIndex;
+          const at = order.timeline[step.key];
+          return (
+            <li key={step.key} className={done ? "done" : "pending-step"}>
+              <span className="dot" />
+              <div className="step-label">{step.label}</div>
+              <div className="step-topic mono">{step.topic}</div>
+              {at && <div className="step-time mono">{at}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </React.Fragment>
+  );
+}
+
+/* ---------- order history (US-8) ---------- */
+
+function OrdersPage({ orders }) {
+  return (
+    <React.Fragment>
+      <div className="page-head">
+        <p className="eyebrow">US-8 · Order history</p>
+        <h1>Your orders</h1>
+        <p className="page-sub">Read side of order-service — a candidate for a Redis cache on hot/recent orders.</p>
+      </div>
+      {orders.length === 0 ? (
+        <div className="empty-state">No orders yet. <a href="#/" style={{ color: "var(--accent)", fontWeight: 700 }}>Browse the catalog</a>.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[...orders].reverse().map((o) => (
+            <a className="order-card" href={"#/orders/" + o.id} key={o.id}>
+              <span className="oid">{o.id} · {o.customerId}</span>
+              <span className="ototal tab">{formatCents(o.totalCents)}</span>
+              <Pill variant={statusVariant(o.status)}>{statusLabel(o.status)}</Pill>
+            </a>
+          ))}
+        </div>
+      )}
+    </React.Fragment>
+  );
+}
+
+/* ---------- toast ---------- */
+
+function Toast({ message }) {
+  if (!message) return null;
+  return <div className="toast" role="status">✓ {message}</div>;
+}
+
+/* ---------- app ---------- */
+
+function App() {
+  const route = useHashRoute();
+  const [cart, setCart] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("krypton-cart") || "[]"); } catch (e) { return []; }
+  });
+  const [orders, setOrders] = useState([]);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    try { localStorage.setItem("krypton-cart", JSON.stringify(cart)); } catch (e) {}
+  }, [cart]);
+
+  const updateOrder = (id, patch) => {
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
+  };
+
+  // simulated downstream services reacting to bus events — registered once
+  useEffect(() => {
+    const stamp = () => new Date().toLocaleTimeString();
+    const offCreated = bus.on("order.created", (order) => {
+      setTimeout(() => {
+        updateOrder(order.id, { status: "reserved" });
+        setOrders((prev) => {
+          const o = prev.find((x) => x.id === order.id);
+          if (o) bus.emit("inventory.stock-reserved", o);
+          return prev;
+        });
+      }, 1100);
+    });
+    const offReserved = bus.on("inventory.stock-reserved", (order) => {
+      updateOrder(order.id, { timeline: { ...order.timeline, reserved: stamp() } });
+      setTimeout(() => {
+        updateOrder(order.id, { status: "settled" });
+        setOrders((prev) => {
+          const o = prev.find((x) => x.id === order.id);
+          if (o) bus.emit("payment.settled", o);
+          return prev;
+        });
+      }, 1100);
+    });
+    const offSettled = bus.on("payment.settled", (order) => {
+      updateOrder(order.id, { timeline: { ...order.timeline, settled: stamp() } });
+      setTimeout(() => {
+        updateOrder(order.id, { status: "confirmed" });
+        setToast("Order " + order.id + " confirmed — notification sent");
+        setTimeout(() => setToast(null), 3200);
+      }, 800);
+    });
+    return () => { offCreated(); offReserved(); offSettled(); };
+  }, []);
+
+  const onAddToCart = (sku) => {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.sku === sku);
+      if (existing) return prev.map((c) => (c.sku === sku ? { ...c, qty: c.qty + 1 } : c));
+      return [...prev, { sku, qty: 1 }];
+    });
+  };
+  const onSetQty = (sku, qty) => {
+    if (qty <= 0) return onRemove(sku);
+    setCart((prev) => prev.map((c) => (c.sku === sku ? { ...c, qty } : c)));
+  };
+  const onRemove = (sku) => setCart((prev) => prev.filter((c) => c.sku !== sku));
+
+  const onPlaceOrder = (customerId, lines, totalCents) => {
+    const id = makeOrderId();
+    const order = {
+      id, customerId, totalCents, status: "pending",
+      timeline: { pending: new Date().toLocaleTimeString() },
+    };
+    setOrders((prev) => [...prev, order]);
+    setCart([]);
+    bus.emit("order.created", order);
+    window.location.hash = "#/orders/" + id;
+  };
+
+  const cartCount = cart.reduce((n, c) => n + c.qty, 0);
+  const currentOrder = route.name === "orderDetail" ? orders.find((o) => o.id === route.id) : null;
+
+  return (
+    <div className="shell">
+      <Header route={route} cartCount={cartCount} />
+      <main>
+        {route.name === "catalog" && <CatalogPage onAddToCart={onAddToCart} />}
+        {route.name === "cart" && <CartPage cart={cart} onSetQty={onSetQty} onRemove={onRemove} />}
+        {route.name === "checkout" && <CheckoutPage cart={cart} onPlaceOrder={onPlaceOrder} />}
+        {route.name === "orderDetail" && <OrderDetailPage order={currentOrder} />}
+        {route.name === "orders" && <OrdersPage orders={orders} />}
+      </main>
+      <footer className="site">
+        Prototype — mock data only, resets on reload except the cart. Service boundaries (catalogService,
+        cartStore, orderService, inventoryService, paymentService, notificationService) and Kafka topic names
+        mirror system-design.md, so wiring this up to the real services later is a per-module swap.
+      </footer>
+      <Toast message={toast} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
