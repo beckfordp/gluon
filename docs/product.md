@@ -35,18 +35,28 @@ message.
   OOPSLA 1997 keynote — same ideas, in his own words, on video.
 
 ## Naming
-Each major version of the platform gets a new name, physics-themed,
-increasing in scale/complexity:
+A gluon is the particle that binds quarks together via the strong force —
+literally "the thing that binds smaller parts into a larger whole." That's
+the platform, read as a metaphor: individually loosely-coupled services,
+bound into one coherent system by the protocols between them.
 
-| Version | Name |
-|---|---|
-| v1 | **Gluon** |
-| v2 | Hadron |
-| v3 | Nucleon |
-| v4 | Nucleus |
-| v5 | Atom |
-| v6 | Molecule |
-| v7 | Plasma |
+The platform itself stays **Gluon** at every version — that name doesn't
+get replaced. Each major version instead gets a codename, short for "Gluon
+<Name>" (v2 is "Gluon Hadron," usually just said as "Hadron"), continuing
+the same theme up in scale through composite structures physics actually
+describes as bound-together wholes — quarks bound into a hadron, hadrons
+into a nucleon/nucleus, electrons and nuclei into an atom, atoms into a
+molecule, and, at the other extreme, matter ionized into a plasma:
+
+| Version | Codename | Full name |
+|---|---|---|
+| v1 | — | **Gluon** |
+| v2 | Hadron | Gluon Hadron |
+| v3 | Nucleon | Gluon Nucleon |
+| v4 | Nucleus | Gluon Nucleus |
+| v5 | Atom | Gluon Atom |
+| v6 | Molecule | Gluon Molecule |
+| v7 | Plasma | Gluon Plasma |
 
 Everything in this doc set is **v1 — Gluon**: the six-service e-commerce
 build (US-1–US-8) described below. What actually triggers a version bump
