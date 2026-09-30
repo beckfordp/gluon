@@ -1,4 +1,4 @@
-<title>Krypton Storefront</title>
+<title>Gluon Storefront</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
   :root{
@@ -325,7 +325,7 @@ function Header({ route, cartCount }) {
     <header className="site">
       <div className="header-row">
         <a className="wordmark" href="#/">
-          <span className="name">Krypton</span>
+          <span className="name">Gluon</span>
           <span className="tag">Storefront</span>
         </a>
         <nav className="main">
@@ -347,7 +347,7 @@ function CatalogPage({ onAddToCart }) {
     <React.Fragment>
       <div className="page-head">
         <p className="eyebrow">US-1 · Browse catalog</p>
-        <h1>Shop Krypton</h1>
+        <h1>Shop Gluon</h1>
         <p className="page-sub">Served by catalog-service, read-through cached in Redis — the badge on each card is that cache doing its job.</p>
       </div>
       <div className="grid">
@@ -556,13 +556,13 @@ function Toast({ message }) {
 function App() {
   const route = useHashRoute();
   const [cart, setCart] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("krypton-cart") || "[]"); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem("gluon-cart") || "[]"); } catch (e) { return []; }
   });
   const [orders, setOrders] = useState([]);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    try { localStorage.setItem("krypton-cart", JSON.stringify(cart)); } catch (e) {}
+    try { localStorage.setItem("gluon-cart", JSON.stringify(cart)); } catch (e) {}
   }, [cart]);
 
   const updateOrder = (id, patch) => {

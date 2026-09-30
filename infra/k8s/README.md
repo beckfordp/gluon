@@ -1,6 +1,6 @@
 # infra/k8s/
 
-Helm chart(s)/manifests for running Krypton's services on Kubernetes,
+Helm chart(s)/manifests for running Gluon's services on Kubernetes,
 parameterized per environment (see `../../environments/`) rather than
 duplicated per environment.
 

@@ -10,8 +10,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KRYPTON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-GENERATOR_DIR="$(cd "$KRYPTON_DIR/../pure-service-generator" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GENERATOR_DIR="$(cd "$GLUON_DIR/../pure-service-generator" && pwd)"
 
 if [ $# -ne 2 ]; then
   echo "Usage: $0 <service-dir> <field-spec-path>" >&2

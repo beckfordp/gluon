@@ -7,7 +7,7 @@ open in a browser or Preview to zoom. Regenerate/update if this doc's shape chan
 materially (they'll drift silently otherwise).
 
 All six services below are generated fresh via `pure-service-generator` into
-[`krypton/`](../README.md) — see [`../PLAN.md`](../PLAN.md) for the phased
+[`gluon/`](../README.md) — see [`../PLAN.md`](../PLAN.md) for the phased
 execution order — `purerest`'s own `order-service`/`inventory-service` are
 library test fixtures only and are not reused.
 
@@ -71,7 +71,7 @@ internally.
 ## UI prototype
 A clickable React prototype (mock data, no backend) walks all eight user
 stories — published as a Claude Artifact ("Order Fulfillment Topology"'s
-sibling piece, "Krypton Storefront"), source kept at
+sibling piece, "Gluon Storefront"), source kept at
 [`prototype/storefront.html`](../prototype/storefront.html). Its mock service layer
 (`catalogService`, `cartStore`, `orderService`-shaped logic, `inventoryService`,
 `paymentService`, `notificationService`, plus a small pub/sub standing in for

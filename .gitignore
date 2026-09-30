@@ -5,6 +5,9 @@ services/*
 # macOS
 .DS_Store
 
+# Editor/vault config (found an Obsidian vault opened on this folder — not mine to delete)
+.obsidian/
+
 # sbt/Scala, in case any tooling ever builds in-place here
 target/
 .bsp/

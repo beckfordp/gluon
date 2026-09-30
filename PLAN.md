@@ -1,4 +1,4 @@
-# Krypton — cross-repo execution plan
+# Gluon — cross-repo execution plan
 
 The walking-skeleton order of work across all six repos, phased for parallel
 work. This sits *above* each repo's own `/conductor` backlog — it's the
@@ -6,7 +6,7 @@ sequencing layer that says which repo to generate and work on when, and what
 to stub in each repo's own tests so it doesn't need the other five running.
 
 Source: [`docs/user-stories.md`](./docs/user-stories.md), sliced per repo in
-`krypton/backlogs/*.md` — each backlog line is numbered `US-N.M` there now,
+`gluon/backlogs/*.md` — each backlog line is numbered `US-N.M` there now,
 matching the phase tasks below.
 
 ## Per-repo setup (do this once, each time you generate a repo)
@@ -15,7 +15,7 @@ matching the phase tasks below.
 2. `cd <domain>-service`, then in Claude Code: `/conductor:setup` — this repo
    now has its own `conductor/product.md` (should reference the cross-repo
    `product.md`) and `conductor/tracks.md`.
-3. Paste `krypton/backlogs/<domain>-service.md` into that repo's
+3. Paste `gluon/backlogs/<domain>-service.md` into that repo's
    `conductor/tracks.md` `## Backlog` section.
 4. Add the phase this repo belongs to (below) as a note in its
    `conductor/product.md`, so `/conductor:newTrack` there has the sequencing
