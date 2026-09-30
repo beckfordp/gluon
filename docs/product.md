@@ -1,5 +1,39 @@
 # Gluon — Product Vision
 
+## Motivation
+This platform's shape comes directly from Alan Kay's original conception of
+object-oriented programming: an object as a loosely-coupled abstraction that
+hides its internals entirely, exposing only a protocol, and communicating
+with other objects purely by sending messages — never by sharing state or
+reaching into another object's internals. Early Smalltalk pushed this all
+the way: objects were envisioned as standalone processes, each receiving
+messages, "like biological cells and/or individual computers on a network"
+(Kay's own phrase — see References).
+
+That maps directly onto microservices. Each service here is a loosely
+coupled process hiding its own domain entity and business logic behind a
+protocol — REST/Kafka messages standing in for Smalltalk message sends. Seen
+this way, a microservices platform is analogous to a programming language
+whose "objects" are whole services, sending each other messages across a
+network instead of a call stack.
+
+`pure-service-generator` exists because of this framing: it abstracts away
+all the plumbing needed to stand up a compliant "object" in this sense —
+Postgres persistence, health checks, observability, CI, Kafka wiring — so
+the programmer's actual work is exactly the part Kay cared about: the
+protocol between services, the state each service encapsulates (its domain
+entity), and the business logic governing how it behaves in response to a
+message.
+
+### References
+- Alan Kay, email to Stefan Ram, 2003 — the primary source for "objects ...
+  only able to communicate with messages": <https://userpage.fu-berlin.de/~ram/pub/pub_jf47ht81Ht/doc_kay_oop_en>
+- Alan Kay, ["The Early History of Smalltalk"](https://worrydream.com/EarlyHistoryOfSmalltalk/),
+  ACM SIGPLAN Notices 28(3), 1993 — the fullest account of early Smalltalk's
+  message-passing/process model.
+- Alan Kay, ["The Computer Revolution Hasn't Happened Yet"](https://www.youtube.com/watch?v=aYT2se94eU0),
+  OOPSLA 1997 keynote — same ideas, in his own words, on video.
+
 ## Naming
 Each major version of the platform gets a new name, physics-themed,
 increasing in scale/complexity:
