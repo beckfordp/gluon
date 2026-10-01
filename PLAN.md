@@ -77,7 +77,7 @@ optional integration check — not required to close this phase.
 **Repos:** `inventory-service` (publish), `order-service` (consume) — can be
 worked in parallel once each repo's own side is independently testable.
 
-- [ ] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
+- [x] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
       `inventory.stock-reservation-failed`
 - [ ] **US-5.2** (order-service) — consume those topics, update order status
 
