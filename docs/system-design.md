@@ -18,7 +18,7 @@ library test fixtures only and are not reused.
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
 | order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; Kafka wiring (US-4.2/US-5.2) not yet started | Postgres | — | publishes `OrderCreated`, `OrderStatusChanged`; consumes `StockReserved`/`StockReservationFailed` |
-| inventory-service | new (generator) | Postgres | — | publishes `StockReserved`/`StockReservationFailed` |
+| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `StockReserved`/`StockReservationFailed` |
 | payment-service | new (generator) | Postgres | idempotency keys | consumes `OrderCreated`; publishes `PaymentSettled`/`PaymentFailed` |
 | notification-service | new (generator, no DB module) | — | — | consumer only |
 
@@ -69,8 +69,8 @@ this section, not each other's source code, to agree on a wire format.
 ### Payload contracts (plain JSON for now — see ADR 0003)
 
 **`inventory.stock-reserved`** / **`inventory.stock-reservation-failed`**
-(same shape for both; producer: inventory-service, US-5.1; consumer:
-order-service, US-5.2, not yet built):
+(same shape for both; producer: inventory-service, US-5.1, **done**;
+consumer: order-service, US-5.2, not yet built):
 ```json
 {
   "sku": "string",
