@@ -52,10 +52,13 @@ exist yet besides this one) — add one here, in this same format, whenever
 a new one is built.
 
 ## Kafka topics (draft)
-- `order.created`
+- `order.created` — ⚠ **no producer defined yet** — see "Open design
+  questions" below before building a consumer or producer against this
+  name; it may be renamed/restructured once that's resolved
 - `order.status-changed`
-- `inventory.stock-reserved`
-- `inventory.stock-reservation-failed`
+- `inventory.stock-reserved` — producer done (inventory-service, US-5.1)
+- `inventory.stock-reservation-failed` — producer done (inventory-service,
+  US-5.1)
 - `payment.settled`
 - `payment.failed`
 
@@ -94,7 +97,9 @@ its HTTP response instead.
 No payload contract yet for `order.created`, `order.status-changed`,
 `payment.settled`, `payment.failed` — add one here, in this same format,
 whenever the producing service's track defines it (don't let it live only
-in that repo's own `spec.md`).
+in that repo's own `spec.md`). `order.created` specifically has an open
+producer/naming gap (see "Open design questions" below) — resolve that
+before writing a contract for it, not after.
 
 ## Environments
 minikube-successor (OrbStack, see [ADR 0002](./adr/0002-local-k8s-orbstack-over-minikube.md))
