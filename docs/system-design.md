@@ -17,7 +17,7 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | new (generator) | Postgres | — | publishes `OrderCreated`, `OrderStatusChanged`; consumes `StockReserved`/`StockReservationFailed` |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; Kafka wiring (US-4.2/US-5.2) not yet started | Postgres | — | publishes `OrderCreated`, `OrderStatusChanged`; consumes `StockReserved`/`StockReservationFailed` |
 | inventory-service | new (generator) | Postgres | — | publishes `StockReserved`/`StockReservationFailed` |
 | payment-service | new (generator) | Postgres | idempotency keys | consumes `OrderCreated`; publishes `PaymentSettled`/`PaymentFailed` |
 | notification-service | new (generator, no DB module) | — | — | consumer only |
@@ -131,6 +131,29 @@ real service — update this note once it is.
 See adr/ for decisions (0001-0005). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
+
+- **`order.created` / "order-confirmed" event gap** (found 2026-10-01, while
+  checking order-service's US-3.1 work against this doc) — the Services
+  table above and payment-service's US-6.1 both assume order-service
+  publishes `order.created`, but no backlog item anywhere (order-service's
+  own, or this doc's Kafka section) actually produces it — neither US-3.1
+  (checkout) nor US-5.2 (consume stock events) publishes anything.
+  Separately, notification-service's US-7.1 says "consume order-confirmed
+  events," but no topic named `order-confirmed`/`order.confirmed` exists
+  among the six draft topics above, and order-service's actual `OrderStatus`
+  enum (`pending`/`reserved`/`reservation_failed`, hardened via a DB `CHECK`
+  constraint) has no status representing a confirmed/paid order — nothing
+  currently models the state US-7 means by "confirmed." Needs resolving
+  before US-5.2, US-6.1, or US-7.1 can be implemented:
+  1. Add an explicit order-service backlog item + payload contract for
+     publishing `order.created` (and decide whether `order.status-changed`
+     is really needed, or whether payment-service/notification-service only
+     need `order.created` plus their own downstream events).
+  2. Decide what makes an order "confirmed" (presumably payment-service's
+     `PaymentSettled`, consumed by order-service to update status?) and
+     whether `OrderStatus` needs a new case for it — if so, that's another
+     order-service migration/track, not a drop-in.
+  3. Fix US-7.1's topic reference once (1)/(2) are settled.
 
 - **`purerestlib` registry migration** (ADR 0005) — local dev currently
   resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
