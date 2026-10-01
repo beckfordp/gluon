@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Generate all six Gluon services in one run, applying each one's
+# field-spec where it has one (via bin/generate-service). Sequential,
+# stops on the first failure — including bin/generate-service's own
+# refusal to overwrite a services/<name>-service dir that already exists.
+#
+# Usage:
+#   ./generate-all-services
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# name:field-spec (field-spec omitted for notification/cart — see README.md
+# "Field specs": notification-service has no DB, cart-service is
+# Redis-primary and doesn't fit the generator's Postgres/flat-field model).
+SERVICES=(
+  "order:specs/order.yaml"
+  "inventory:specs/inventory.yaml"
+  "payment:specs/payment.yaml"
+  "notification"
+  "catalog:specs/catalog.yaml"
+  "cart"
+)
+
+TOTAL=${#SERVICES[@]}
+i=0
+for entry in "${SERVICES[@]}"; do
+  i=$((i + 1))
+  NAME="${entry%%:*}"
+  if [ "$entry" != "$NAME" ]; then
+    SPEC="${entry#*:}"
+  else
+    SPEC=""
+  fi
+
+  echo "== [$i/$TOTAL] Generating ${NAME}-service =="
+  if [ -n "$SPEC" ]; then
+    "$GLUON_DIR/bin/generate-service" "$NAME" --field-spec "$GLUON_DIR/$SPEC"
+  else
+    "$GLUON_DIR/bin/generate-service" "$NAME"
+  fi
+done
+
+cat <<EOF
+
+== All $TOTAL services generated ==
+EOF
+for entry in "${SERVICES[@]}"; do
+  NAME="${entry%%:*}"
+  echo "  $GLUON_DIR/services/${NAME}-service"
+done
