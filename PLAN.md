@@ -37,7 +37,7 @@ work both at once.
 
 - [ ] **US-4.1** (inventory-service) — reserve-stock endpoint (sync, called
       by order-service)
-- [ ] **US-3.1** (order-service) — checkout creates an order
+- [x] **US-3.1** (order-service) — checkout creates an order
 
 **Stub / fan-out for this phase:**
 - `order-service`: none needed yet — US-3.1 has no external calls.

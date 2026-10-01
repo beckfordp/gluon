@@ -27,7 +27,7 @@ As a customer, I can check out my cart, so an order is created.
 - Creates an order via `order-service` (existing).
 
 ### Tasks
-- [ ] US-3.1: checkout creates an order (order-service)
+- [x] US-3.1: checkout creates an order (order-service)
 
 ## US-4 — Reserve stock
 As the system, when an order is created, stock is reserved against
