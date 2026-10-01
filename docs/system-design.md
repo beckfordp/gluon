@@ -29,6 +29,28 @@ library test fixtures only and are not reused.
   outcome, payment, notification. None of these block the customer-facing
   request.
 
+### REST contracts
+Same rule as the Kafka payloads below: no shared schema registry/OpenAPI
+registry across repos yet, so this section — not either service's own
+source code — is what a caller and callee in different repos should agree
+against. Each generated service also serves its own tapir-generated
+Swagger/OpenAPI docs at `/docs`, which is the authoritative *current* shape
+if this section ever drifts — update this section to match rather than
+trusting it blindly.
+
+**`POST /inventorys/reservations`** (caller: order-service, US-4.2, not yet
+wired; callee: inventory-service, US-4.1, done):
+- Request: `{"sku": "string", "quantity": "int (must be > 0)"}`
+- `200`: full inventory record post-reservation —
+  `{"id": "string (UUID)", "sku": "string", "quantityAvailable": "int", "quantityReserved": "int", "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant"}`
+- `404`: `{"error": "Inventory not found"}` — unknown sku
+- `409`: `{"error": "Insufficient stock"}` — not enough `quantityAvailable`
+- `400`: `{"error": "quantity must be positive"}` — non-positive `quantity`
+
+No contract documented yet for any other cross-service REST call (none
+exist yet besides this one) — add one here, in this same format, whenever
+a new one is built.
+
 ## Kafka topics (draft)
 - `order.created`
 - `order.status-changed`
@@ -39,7 +61,33 @@ library test fixtures only and are not reused.
 
 One topic per event type for now; revisit compaction/partitioning key once
 payment-service and notification-service exist. Schema/contract management:
-see [ADR 0003](./adr/0003-kafka-schema-registry.md) (schema registry).
+see [ADR 0003](./adr/0003-kafka-schema-registry.md) (schema registry) — no
+registry is wired up yet, so each payload below is the **only** place its
+shape is pinned; a producer and consumer in different repos must each read
+this section, not each other's source code, to agree on a wire format.
+
+### Payload contracts (plain JSON for now — see ADR 0003)
+
+**`inventory.stock-reserved`** / **`inventory.stock-reservation-failed`**
+(same shape for both; producer: inventory-service, US-5.1; consumer:
+order-service, US-5.2, not yet built):
+```json
+{
+  "inventoryId": "string (UUID)",
+  "sku": "string",
+  "quantity": "int — the amount just reserved (success) or that failed to reserve (failure)",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+`inventory.stock-reservation-failed` is only published for a genuine stock
+outcome (insufficient stock) — not for a caller-input error (unknown sku,
+non-positive quantity), which inventory-service rejects synchronously via
+its HTTP response instead.
+
+No payload contract yet for `order.created`, `order.status-changed`,
+`payment.settled`, `payment.failed` — add one here, in this same format,
+whenever the producing service's track defines it (don't let it live only
+in that repo's own `spec.md`).
 
 ## Environments
 minikube-successor (OrbStack, see [ADR 0002](./adr/0002-local-k8s-orbstack-over-minikube.md))
