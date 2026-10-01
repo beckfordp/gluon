@@ -35,7 +35,7 @@ blocker is phase 2 needing phase 1 done in both its repos first.
 **Repos:** `inventory-service`, `order-service` — no dependency between them,
 work both at once.
 
-- [ ] **US-4.1** (inventory-service) — reserve-stock endpoint (sync, called
+- [x] **US-4.1** (inventory-service) — reserve-stock endpoint (sync, called
       by order-service)
 - [x] **US-3.1** (order-service) — checkout creates an order
 
