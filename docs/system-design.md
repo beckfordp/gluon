@@ -73,12 +73,19 @@ this section, not each other's source code, to agree on a wire format.
 order-service, US-5.2, not yet built):
 ```json
 {
-  "inventoryId": "string (UUID)",
   "sku": "string",
   "quantity": "int — the amount just reserved (success) or that failed to reserve (failure)",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
+Correlation is by `sku` — not an inventory-record id — since order-service
+(the consumer) never has inventory-service's internal id to correlate
+against in the first place; it only ever knows the sku it asked to
+reserve. (An earlier draft of this contract included an `inventoryId`
+field; dropped once this was noticed, since the failure path also has no
+`Inventory` record to pull an id from — `store.reserve`'s `InsufficientStock`
+result carries no entity.)
+
 `inventory.stock-reservation-failed` is only published for a genuine stock
 outcome (insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
