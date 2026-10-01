@@ -80,6 +80,19 @@ real APIs later is a per-module swap, not a rewrite. Not yet connected to any
 real service — update this note once it is.
 
 ## Open design questions
-None currently — see adr/ for decisions (0001-0004). Revisit this section as
-new questions come up (e.g. serialization format/registry impl for ADR 0003,
-MSK/ElastiCache/RDS confirmation ADR).
+See adr/ for decisions (0001-0005). Revisit this section as new questions
+come up (e.g. serialization format/registry impl for ADR 0003, MSK/
+ElastiCache/RDS confirmation ADR).
+
+- **`purerestlib` registry migration** (ADR 0005) — local dev currently
+  resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
+  only as the CI/fresh-machine fallback (still token-gated, since GitHub
+  Packages requires auth even for public repos). Two migration paths were
+  considered and deferred: **JitPack** (near-zero setup — resolves straight
+  from GitHub tags, no auth, `purerest` already has the `sbt-dynver`
+  versioning it needs) or **Maven Central** (real zero-auth-forever
+  publishing via `io.github.beckfordp`, needs GPG signing + `sbt-ci-release`
+  setup). Revisit if the GitHub Packages fallback becomes a real problem
+  (e.g. for CI, or for anyone else consuming `purerest`) — would touch
+  `pure-service-generator`'s `build.sbt` template and all six generated
+  services' `build.sbt` files. Supersede ADR 0005 with a new ADR if adopted.
