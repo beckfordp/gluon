@@ -17,8 +17,8 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; Kafka wiring (US-4.2/US-5.2) not yet started | Postgres | — | publishes `OrderCreated`, `OrderStatusChanged`; consumes `StockReserved`/`StockReservationFailed` |
-| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `StockReserved`/`StockReservationFailed` |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); does not yet publish anything (see "Open design questions" — `order.created` gap) |
+| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (consumed by order-service, US-5.2) |
 | payment-service | new (generator) | Postgres | idempotency keys | consumes `OrderCreated`; publishes `PaymentSettled`/`PaymentFailed` |
 | notification-service | new (generator, no DB module) | — | — | consumer only |
 
@@ -60,9 +60,10 @@ a new one is built.
   questions" below before building a consumer or producer against this
   name; it may be renamed/restructured once that's resolved
 - `order.status-changed`
-- `inventory.stock-reserved` — producer done (inventory-service, US-5.1)
+- `inventory.stock-reserved` — producer done (inventory-service, US-5.1);
+  consumer done (order-service, US-5.2)
 - `inventory.stock-reservation-failed` — producer done (inventory-service,
-  US-5.1)
+  US-5.1); consumer done (order-service, US-5.2)
 - `payment.settled`
 - `payment.failed`
 
@@ -77,7 +78,7 @@ this section, not each other's source code, to agree on a wire format.
 
 **`inventory.stock-reserved`** / **`inventory.stock-reservation-failed`**
 (same shape for both; producer: inventory-service, US-5.1 + correlation-id
-follow-up, **done**; consumer: order-service, US-5.2, not yet built):
+follow-up, **done**; consumer: order-service, US-5.2, **done**):
 ```json
 {
   "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the POST /inventorys/reservations request above; opaque to inventory-service",
@@ -201,3 +202,8 @@ ElastiCache/RDS confirmation ADR).
   (e.g. for CI, or for anyone else consuming `purerest`) — would touch
   `pure-service-generator`'s `build.sbt` template and all six generated
   services' `build.sbt` files. Supersede ADR 0005 with a new ADR if adopted.
+
+
+Design proposal to fill gaps
+ - oder service will issue order created event when all items associated with the order are reserved
+ - 
