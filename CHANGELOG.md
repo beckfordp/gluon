@@ -123,6 +123,11 @@ repo's own `git log` for that level of detail.
   (interactive lifecycle diagram) and "Checkout Waiting Room" (the four
   checkout screens against their backing `OrderStatus`).
 - `CHANGELOG.md` (this file).
+- **`US-5.4` — publish `order.status-changed` (`reservation_failed`)** added
+  to `docs/user-stories.md`, `PLAN.md`, and `order-service`'s backlog —
+  closes a gap found while scoping the next order-service track: the design
+  doc had decided order-service publishes this, but no task ever assigned
+  the work, so a failed reservation could never reach notification-service.
 
 ### Changed
 - `docs/system-design.md`, `docs/user-stories.md`, `PLAN.md` synced
@@ -150,3 +155,11 @@ repo's own `git log` for that level of detail.
   created order row vanishes between creation and the reservation-failure
   update, the response falls back to a stale `pending` status instead of
   `reservation_failed`.
+- `gluon/backlogs/notification-service.md`: fixed a stale reference to a
+  nonexistent `order-confirmed` topic — its real US-7.1 (`docs/user-stories.md`)
+  already consumes `order.status-changed`; only this one-time seed file had
+  never been updated.
+- `docs/system-design.md`'s "Design proposal to fill gaps": reworded the
+  `reservation_failed` bullet to name `order.status-changed` publishing as
+  its own task (US-5.4) instead of implying only notification-service's
+  consumer was new.
