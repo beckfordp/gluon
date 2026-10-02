@@ -80,7 +80,7 @@ worked in parallel once each repo's own side is independently testable.
 - [x] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
       `inventory.stock-reservation-failed`
 - [x] **US-5.2** (order-service) — consume those topics, update order status
-- [ ] **US-5.3** (order-service) — publish `order.reserved` once an order's
+- [x] **US-5.3** (order-service) — publish `order.reserved` once an order's
       stock is fully reserved (payload/trigger decided 2026-10-02, see
       `gluon/docs/system-design.md`'s "Payload contracts")
 - [ ] **US-5.4** (order-service) — publish `order.status-changed`
@@ -115,7 +115,7 @@ failure; schema registry contract respected (ADR 0003) on both sides.
 (consume the settlement outcome) — can be worked in parallel once each
 repo's own side is independently testable, same split as Phase 3.
 
-- [ ] **US-6.1** (payment-service) — consume `order.reserved`, charge,
+- [x] **US-6.1** (payment-service) — consume `order.reserved`, charge,
       publish `payment.settled` / `payment.failed`
 - [ ] **US-6.2** (payment-service) — Redis idempotency keys, avoid
       double-charging on retry/redelivery

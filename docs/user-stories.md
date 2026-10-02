@@ -54,7 +54,7 @@ downstream failures without order-service blocking on it.
 ### Tasks
 - [x] US-5.1: publish inventory.stock-reserved / inventory.stock-reservation-failed (inventory-service)
 - [x] US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (order-service)
-- [ ] US-5.3: publish order.reserved once an order's stock is fully reserved (order-service)
+- [x] US-5.3: publish order.reserved once an order's stock is fully reserved (order-service)
 - [ ] US-5.4: publish order.status-changed (reservation_failed) when a reservation fails, from either the synchronous checkout-failure path or the async consumer path (order-service)
 
 ## US-6 — Payment
@@ -67,7 +67,7 @@ fulfilled.
   `payment_failed` and publishing `order.status-changed` for US-7 to pick up.
 
 ### Tasks
-- [ ] US-6.1: consume order.reserved, charge, publish payment.settled / payment.failed (payment-service)
+- [x] US-6.1: consume order.reserved, charge, publish payment.settled / payment.failed (payment-service)
 - [ ] US-6.2: Redis idempotency keys to avoid double-charging on retry/redelivery (payment-service)
 - [ ] US-6.3: consume payment.settled / payment.failed, update order status to confirmed / payment_failed, publish order.status-changed (order-service)
 
