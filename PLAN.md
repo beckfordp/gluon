@@ -83,6 +83,12 @@ worked in parallel once each repo's own side is independently testable.
 - [ ] **US-5.3** (order-service) — publish `order.reserved` once an order's
       stock is fully reserved (payload/trigger decided 2026-10-02, see
       `gluon/docs/system-design.md`'s "Payload contracts")
+- [ ] **US-5.4** (order-service) — publish `order.status-changed`
+      (`reservation_failed`) when a reservation fails, from either the
+      synchronous checkout-failure path or the async consumer path — closes
+      a gap found 2026-10-02: the design doc decided order-service publishes
+      this, but no task ever assigned the work (see "Open design questions"
+      in `gluon/docs/system-design.md`)
 
 **Stub / fan-out for this phase:**
 - `inventory-service`: test the publish side against an embedded/test Kafka
@@ -93,11 +99,13 @@ worked in parallel once each repo's own side is independently testable.
   this repo's tests never need inventory-service running. US-5.3's publish
   side: assert the right `order.reserved` event is produced, same as
   inventory-service's own publisher tests — no live payment-service needed.
+  US-5.4's publish side: same pattern, asserting `order.status-changed`
+  carries `status: "reservation_failed"`.
 
 **Exit criteria:** order status updates purely from consumed events, proven
 per-repo against synthetic messages; `order.reserved` actually published once
-stock is reserved; schema registry contract respected (ADR 0003) on both
-sides.
+stock is reserved; `order.status-changed` actually published on reservation
+failure; schema registry contract respected (ADR 0003) on both sides.
 
 ---
 

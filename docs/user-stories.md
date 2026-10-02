@@ -46,12 +46,16 @@ asynchronously, so the sync call path stays thin and inventory can react to
 downstream failures without order-service blocking on it.
 - `inventory.stock-reserved` / `inventory.stock-reservation-failed` events
   over Kafka, consumed by order-service. Once an order's stock is fully
-  reserved, order-service also publishes `order.reserved` — see US-6.
+  reserved, order-service also publishes `order.reserved` — see US-6. If
+  reservation fails instead (sync or async), order-service publishes
+  `order.status-changed` so notification-service can tell the customer —
+  see US-7.
 
 ### Tasks
 - [x] US-5.1: publish inventory.stock-reserved / inventory.stock-reservation-failed (inventory-service)
 - [x] US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (order-service)
 - [ ] US-5.3: publish order.reserved once an order's stock is fully reserved (order-service)
+- [ ] US-5.4: publish order.status-changed (reservation_failed) when a reservation fails, from either the synchronous checkout-failure path or the async consumer path (order-service)
 
 ## US-6 — Payment
 As a customer, once my order is confirmed, I'm charged, so the order can be

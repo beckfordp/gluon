@@ -159,10 +159,25 @@ told, same as the existing inventory-service risk. Accepted for the walking
 skeleton to keep scope down (no new outbox table, no poller); revisit if
 this ever needs to survive a mid-retry crash reliably.
 
-**`payment.settled`** / **`payment.failed`** — no payload contract yet;
-payment-service hasn't started US-6.1 (now unblocked, see above). Add one
-here, in this same format, once that track defines it — don't let it live
-only in that repo's own `spec.md`.
+**`payment.settled`** / **`payment.failed`** (same shape for both; producer:
+payment-service, US-6.1, in progress; consumer: order-service, new
+`order.status-changed`-publishing task under US-6, not yet built):
+```json
+{
+  "orderId": "string (UUID) — order-service's own order id; what its order.status-changed publish needs to correlate back to",
+  "paymentId": "string (UUID) — payment-service's own Payment.id, included for cross-service log/trace correlation only",
+  "amountCents": "int — the amount charged (settled) or that failed to charge",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+Published once per consumed `order.reserved` event: `payment.settled` once
+the (currently simulated — no real provider decided yet, see the ADR
+backlog item) charge succeeds, `payment.failed` otherwise. Keyed by
+`orderId`, mirroring `order.reserved`'s own keying. Same reliability stance
+as `order.reserved`/`order.status-changed` above: no transactional outbox,
+bounded retry (hand-rolled via cats-retry directly — `purerest.resilience`
+is `Client[F]`-only, doesn't apply to a Kafka producer call), log loudly and
+drop on exhaustion.
 
 ## Environments
 minikube-successor (OrbStack, see [ADR 0002](./adr/0002-local-k8s-orbstack-over-minikube.md))
@@ -256,10 +271,11 @@ lightly formatted:
 
 - order-service publishes `order.reserved` once all items on the order are
   reserved. New task under US-5, order-service.
-- When order-service reaches `reservation_failed`, notification-service
-  consumes and emails the customer that their order has failed, showing the
-  order id — the order moving to `reservation_failed` itself is already
-  built (US-4.2/US-5.2); only the notification trigger is new.
+- When order-service reaches `reservation_failed`, it publishes
+  `order.status-changed` (**US-5.4**) so notification-service can consume it
+  (US-7.1) and email the customer that their order has failed, showing the
+  order id. The order moving to `reservation_failed` itself is already built
+  (US-4.2/US-5.2) — only the publish and the notification consumer are new.
 - When payment settles, order-service consumes and moves the order to
   `confirmed`; that in turn triggers a "your order is confirmed (paid for)"
   email via notification-service. On payment failure, the order moves to
