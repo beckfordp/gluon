@@ -102,6 +102,24 @@ inventory-service (no release endpoint exists there either), whether
 cancellation is allowed once payment has settled, and whether it's a new
 `OrderStatus` case or reuses an existing terminal one.
 
+## US-10 — Recover from a stale pending order *(epic, placeholder only)*
+As a customer, if my order never reaches `Reserved` within a reasonable time,
+I'm told something went wrong instead of being left waiting indefinitely, so
+I'm not stuck on a checkout flow that will never resolve.
+
+Surfaced 2026-10-02 while specifying the checkout UI's waiting screen:
+`POST /orders` returns synchronously once each item passes inventory's
+*synchronous* check, but the order stays `pending` until the *asynchronous*
+`inventory.stock-reserved` event is consumed (US-5.2) — there's no bound on
+how long that takes, and no path at all for the case where it never arrives
+(inventory-service down, event lost, consumer stalled). Deliberately out of
+scope for the walking skeleton — placeholder only, needs real refinement
+before it's buildable — at minimum: what counts as "too long," who/what
+detects it (a background sweep over stale `pending` orders is the leading
+idea, not decided), whether it auto-cancels the order or just notifies the
+customer, and how that interacts with US-9 if the reservation actually does
+complete right after the customer gives up.
+
 ## Open questions
 - Auth/identity — no user-service yet; assumed out of scope until these stories
   need real customer accounts rather than a bare customer id.
