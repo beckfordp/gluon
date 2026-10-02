@@ -94,6 +94,17 @@ outcome (insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
 
+**Known limitation (accepted risk, found 2026-10-02 while designing US-5.2):**
+with no order/item id in the payload, order-service's consumer can only
+match an event to the oldest still-`pending` order containing that sku
+(whole-order FIFO match — see US-5.2's spec). Under concurrent orders that
+share a sku, an event produced by one order's reservation can be
+misattributed to a *different*, unrelated order still `pending` on the same
+sku — not just mishandling one order's own partial items, but potentially
+flipping an unrelated order's status based on someone else's event. Accepted
+for the walking skeleton rather than fixed now. See "Open design questions"
+below for the real fix (a correlation id in the event payload).
+
 No payload contract yet for `order.created`, `order.status-changed`,
 `payment.settled`, `payment.failed` — add one here, in this same format,
 whenever the producing service's track defines it (don't let it live only
@@ -155,17 +166,33 @@ ElastiCache/RDS confirmation ADR).
   among the six draft topics above, and order-service's actual `OrderStatus`
   enum (`pending`/`reserved`/`reservation_failed`, hardened via a DB `CHECK`
   constraint) has no status representing a confirmed/paid order — nothing
-  currently models the state US-7 means by "confirmed." Needs resolving
-  before US-5.2, US-6.1, or US-7.1 can be implemented:
-  1. Add an explicit order-service backlog item + payload contract for
-     publishing `order.created` (and decide whether `order.status-changed`
-     is really needed, or whether payment-service/notification-service only
-     need `order.created` plus their own downstream events).
-  2. Decide what makes an order "confirmed" (presumably payment-service's
-     `PaymentSettled`, consumed by order-service to update status?) and
-     whether `OrderStatus` needs a new case for it — if so, that's another
-     order-service migration/track, not a drop-in.
-  3. Fix US-7.1's topic reference once (1)/(2) are settled.
+  currently models the state US-7 means by "confirmed." Blocks US-6.1 and
+  US-7.1. **Does not block US-5.2** (consume `inventory.stock-reserved` /
+  `inventory.stock-reservation-failed`, update order status between
+  `pending`/`reserved`/`reservation_failed`) — all three of those statuses
+  already exist independently of this gap, so US-5.2 can proceed now.
+  Partially resolved 2026-10-02:
+  1. **Still open** — whether order-service publishes `order.created`
+     and/or `order.status-changed` at all is deliberately deferred, not yet
+     decided either way. Revisit when payment-service's US-6.1 (consumer
+     side) is actually started, since that's the first real consumer.
+  2. **Decided** — "confirmed" = payment-service's `PaymentSettled`
+     consumed by order-service. `OrderStatus` will need a new `Confirmed`
+     case (another order-service migration/track) once that consumer is
+     built — not part of US-5.2, and not yet scheduled.
+  3. **Still open** — fix US-7.1's topic reference once (1) is settled.
+
+- **No correlation id in stock-reservation events → cross-order
+  misattribution risk** (found 2026-10-02, while designing order-service's
+  US-5.2 consumer) — `inventory.stock-reserved`/`-failed` carry only
+  `sku`/`quantity`/`timestamp` (see "Payload contracts" above), so a
+  consumer matching purely on sku can't tell apart two different orders
+  concurrently reserving the same sku. US-5.2 accepts this as a walking-
+  skeleton risk (whole-order FIFO match: oldest still-`pending` order with
+  that sku) rather than fixing it now. Real fix, not yet scheduled: add an
+  order/item correlation id to the event payload — a producer-side change
+  in inventory-service (US-5.1's publisher) as well as a consumer-side
+  change in order-service (US-5.2), so don't start it from one repo alone.
 
 - **`purerestlib` registry migration** (ADR 0005) — local dev currently
   resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
