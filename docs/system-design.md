@@ -21,9 +21,9 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); will publish `order.created`/`order.status-changed` (design decided 2026-10-02, see "Design proposal to fill gaps" — not yet built) |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); will publish `order.reserved`/`order.status-changed` (design decided 2026-10-02, see "Design proposal to fill gaps" — not yet built) |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (consumed by order-service, US-5.2) |
-| payment-service | new (generator); US-6.1 unblocked 2026-10-02 (`order.created` contract now pinned), not started | Postgres | idempotency keys (US-6.2) | will consume `order.created`; will publish `payment.settled`/`payment.failed` (US-6.1, not yet built) |
+| payment-service | new (generator); US-6.1 unblocked 2026-10-02 (`order.reserved` contract now pinned), not started | Postgres | idempotency keys (US-6.2) | will consume `order.reserved`; will publish `payment.settled`/`payment.failed` (US-6.1, not yet built) |
 | notification-service | new (generator, no DB module); US-7.x not started | — | — | will consume `order.status-changed` (US-7.x, not yet built) |
 
 ## Sync vs. async boundaries
@@ -60,14 +60,14 @@ exist yet besides this one) — add one here, in this same format, whenever
 a new one is built.
 
 ## Kafka topics (draft)
-- `order.created` — producer: order-service (new task under US-5, not yet
+- `order.reserved` — producer: order-service (new task under US-5, not yet
   built); consumer: payment-service (US-6.1, not yet built). Published once
   an order's stock is fully `Reserved` — not at raw checkout — so
   payment-service never charges before stock is confirmed
 - `order.status-changed` — producer: order-service (new tasks under US-6/US-7,
   not yet built); consumer: notification-service (US-7.x, not yet built).
   Carries `reservation_failed`/`confirmed`/`payment_failed` only — the
-  `Pending`→`Reserved` transition is `order.created`'s job, not this topic's
+  `Pending`→`Reserved` transition is `order.reserved`'s job, not this topic's
 - `inventory.stock-reserved` — producer done (inventory-service, US-5.1);
   consumer done (order-service, US-5.2)
 - `inventory.stock-reservation-failed` — producer done (inventory-service,
@@ -110,7 +110,7 @@ outcome (insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
 
-**`order.created`** (producer: order-service, new task under US-5, not yet
+**`order.reserved`** (producer: order-service, new task under US-5, not yet
 built; consumer: payment-service, US-6.1, not yet built):
 ```json
 {
@@ -144,7 +144,7 @@ Published whenever an order lands in one of these three statuses —
 async `inventory.stock-reservation-failed` consumer, US-4.2/US-5.2, both
 already built — only the publish side is new), `confirmed` (new: consuming
 `payment.settled`), or `payment_failed` (new: consuming `payment.failed`).
-Not published for `pending` or `reserved` — `order.created` already covers
+Not published for `pending` or `reserved` — `order.reserved` already covers
 the one transition payment-service needs, and nothing currently needs
 telling about `pending` itself.
 
@@ -207,13 +207,13 @@ See adr/ for decisions (0001-0005). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
-- ~~**`order.created` / "order-confirmed" event gap**~~ — **Resolved
+- ~~**`order.reserved` / "order-confirmed" event gap**~~ — **Resolved
   2026-10-02** via the "Design proposal to fill gaps" below. (Found
   2026-10-01, while checking order-service's US-3.1 work against this doc —
   the Services table and payment-service's US-6.1 both assumed order-service
-  publishes `order.created`, but nothing produced it, and notification-service's
+  publishes `order.reserved`, but nothing produced it, and notification-service's
   US-7.1 referenced a nonexistent `order-confirmed` topic.) Resolution:
-  1. **Decided** — order-service publishes both `order.created` (once
+  1. **Decided** — order-service publishes both `order.reserved` (once
      `Reserved`) and `order.status-changed` (on `reservation_failed`/
      `confirmed`/`payment_failed`). See "Payload contracts" above for the
      pinned shapes.
@@ -254,7 +254,7 @@ Proposed 2026-10-02, decided the same day (see "Payload contracts" and
 "Open design questions" above for the pinned shapes). Original proposal,
 lightly formatted:
 
-- order-service publishes `order.created` once all items on the order are
+- order-service publishes `order.reserved` once all items on the order are
   reserved. New task under US-5, order-service.
 - When order-service reaches `reservation_failed`, notification-service
   consumes and emails the customer that their order has failed, showing the

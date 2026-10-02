@@ -95,7 +95,7 @@
 
   <!-- edges: future -->
   <line x1="620" y1="68" x2="697" y2="68" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
-  <text x="628" y="58" font-size="10" fill="var(--ink-dim)">order.created (US-5.3)</text>
+  <text x="628" y="58" font-size="10" fill="var(--ink-dim)">order.reserved (US-5.3)</text>
 
   <path d="M890,52 C 925,40 945,34 967,32" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
   <text x="900" y="24" font-size="10" fill="var(--ink-dim)">payment.settled</text>

@@ -80,7 +80,7 @@ worked in parallel once each repo's own side is independently testable.
 - [x] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
       `inventory.stock-reservation-failed`
 - [x] **US-5.2** (order-service) — consume those topics, update order status
-- [ ] **US-5.3** (order-service) — publish `order.created` once an order's
+- [ ] **US-5.3** (order-service) — publish `order.reserved` once an order's
       stock is fully reserved (payload/trigger decided 2026-10-02, see
       `gluon/docs/system-design.md`'s "Payload contracts")
 
@@ -91,11 +91,11 @@ worked in parallel once each repo's own side is independently testable.
 - `order-service`: test the consume side by publishing *synthetic*
   `inventory.stock-reserved` / `-failed` events directly to a test Kafka —
   this repo's tests never need inventory-service running. US-5.3's publish
-  side: assert the right `order.created` event is produced, same as
+  side: assert the right `order.reserved` event is produced, same as
   inventory-service's own publisher tests — no live payment-service needed.
 
 **Exit criteria:** order status updates purely from consumed events, proven
-per-repo against synthetic messages; `order.created` actually published once
+per-repo against synthetic messages; `order.reserved` actually published once
 stock is reserved; schema registry contract respected (ADR 0003) on both
 sides.
 
@@ -107,7 +107,7 @@ sides.
 (consume the settlement outcome) — can be worked in parallel once each
 repo's own side is independently testable, same split as Phase 3.
 
-- [ ] **US-6.1** (payment-service) — consume `order.created`, charge,
+- [ ] **US-6.1** (payment-service) — consume `order.reserved`, charge,
       publish `payment.settled` / `payment.failed`
 - [ ] **US-6.2** (payment-service) — Redis idempotency keys, avoid
       double-charging on retry/redelivery
@@ -116,7 +116,7 @@ repo's own side is independently testable, same split as Phase 3.
       publish `order.status-changed`
 
 **Stub / fan-out for this phase:**
-- `payment-service`: publish synthetic `order.created` events to a test
+- `payment-service`: publish synthetic `order.reserved` events to a test
   Kafka to drive the consumer — no live order-service needed. The "charge"
   step itself: stub/simulate it (no real payment provider decided yet — see
   the open ADR in this repo's backlog). Idempotency logic gets tested by

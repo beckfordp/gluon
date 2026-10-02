@@ -277,7 +277,7 @@ let orderSeq = 1;
 const makeOrderId = () => `ord_${String(orderSeq++).padStart(4, "0")}`;
 
 const STEPS = [
-  { key: "pending", label: "Order placed", topic: "order.created" },
+  { key: "pending", label: "Order placed", topic: null }, // synchronous checkout — no event, see system-design.md
   { key: "reserved", label: "Stock reserved", topic: "inventory.stock-reserved" },
   { key: "settled", label: "Payment settled", topic: "payment.settled" },
   { key: "confirmed", label: "Customer notified", topic: "notification.sent" },
@@ -507,7 +507,7 @@ function OrderDetailPage({ order }) {
             <li key={step.key} className={done ? "done" : "pending-step"}>
               <span className="dot" />
               <div className="step-label">{step.label}</div>
-              <div className="step-topic mono">{step.topic}</div>
+              <div className="step-topic mono">{step.topic || "(synchronous — no event)"}</div>
               {at && <div className="step-time mono">{at}</div>}
             </li>
           );
@@ -569,10 +569,12 @@ function App() {
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
   };
 
-  // simulated downstream services reacting to bus events — registered once
+  // simulated downstream services reacting to bus events — registered once.
+  // "internal.order-placed" is a UI-only trigger, not a real topic — checkout
+  // is synchronous and order-service publishes nothing at this step.
   useEffect(() => {
     const stamp = () => new Date().toLocaleTimeString();
-    const offCreated = bus.on("order.created", (order) => {
+    const offPlaced = bus.on("internal.order-placed", (order) => {
       setTimeout(() => {
         updateOrder(order.id, { status: "reserved" });
         setOrders((prev) => {
@@ -582,8 +584,17 @@ function App() {
         });
       }, 1100);
     });
+    // order-service consumes inventory.stock-reserved, then publishes
+    // order.reserved for payment-service — same moment, two hops.
     const offReserved = bus.on("inventory.stock-reserved", (order) => {
       updateOrder(order.id, { timeline: { ...order.timeline, reserved: stamp() } });
+      setOrders((prev) => {
+        const o = prev.find((x) => x.id === order.id);
+        if (o) bus.emit("order.reserved", o);
+        return prev;
+      });
+    });
+    const offOrderReserved = bus.on("order.reserved", (order) => {
       setTimeout(() => {
         updateOrder(order.id, { status: "settled" });
         setOrders((prev) => {
@@ -601,7 +612,7 @@ function App() {
         setTimeout(() => setToast(null), 3200);
       }, 800);
     });
-    return () => { offCreated(); offReserved(); offSettled(); };
+    return () => { offPlaced(); offReserved(); offOrderReserved(); offSettled(); };
   }, []);
 
   const onAddToCart = (sku) => {
@@ -625,7 +636,7 @@ function App() {
     };
     setOrders((prev) => [...prev, order]);
     setCart([]);
-    bus.emit("order.created", order);
+    bus.emit("internal.order-placed", order);
     window.location.hash = "#/orders/" + id;
   };
 

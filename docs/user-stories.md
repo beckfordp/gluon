@@ -46,24 +46,24 @@ asynchronously, so the sync call path stays thin and inventory can react to
 downstream failures without order-service blocking on it.
 - `inventory.stock-reserved` / `inventory.stock-reservation-failed` events
   over Kafka, consumed by order-service. Once an order's stock is fully
-  reserved, order-service also publishes `order.created` — see US-6.
+  reserved, order-service also publishes `order.reserved` — see US-6.
 
 ### Tasks
 - [x] US-5.1: publish inventory.stock-reserved / inventory.stock-reservation-failed (inventory-service)
 - [x] US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (order-service)
-- [ ] US-5.3: publish order.created once an order's stock is fully reserved (order-service)
+- [ ] US-5.3: publish order.reserved once an order's stock is fully reserved (order-service)
 
 ## US-6 — Payment
 As a customer, once my order is confirmed, I'm charged, so the order can be
 fulfilled.
-- New `payment-service`, consumes `order.created` from Kafka, publishes
+- New `payment-service`, consumes `order.reserved` from Kafka, publishes
   `payment.settled`/`payment.failed`. Redis for idempotency keys (avoid
   double-charging on retry/redelivery). order-service consumes the
   settlement outcome in turn, moving the order to `confirmed` or
   `payment_failed` and publishing `order.status-changed` for US-7 to pick up.
 
 ### Tasks
-- [ ] US-6.1: consume order.created, charge, publish payment.settled / payment.failed (payment-service)
+- [ ] US-6.1: consume order.reserved, charge, publish payment.settled / payment.failed (payment-service)
 - [ ] US-6.2: Redis idempotency keys to avoid double-charging on retry/redelivery (payment-service)
 - [ ] US-6.3: consume payment.settled / payment.failed, update order status to confirmed / payment_failed, publish order.status-changed (order-service)
 

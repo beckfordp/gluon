@@ -121,7 +121,7 @@
   <line x1="696" y1="557" x2="696" y2="320" stroke="var(--accent-async)" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrAsync)"/>
   <line x1="724" y1="320" x2="724" y2="557" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
   <rect x="655" y="389" width="110" height="17" fill="var(--surface)"/>
-  <text x="710" y="401" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▲ order.created</text>
+  <text x="710" y="401" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▲ order.reserved</text>
   <rect x="655" y="469" width="110" height="17" fill="var(--surface)"/>
   <text x="710" y="481" text-anchor="middle" font-size="10.5" fill="var(--accent-async)">▼ payment events</text>
 

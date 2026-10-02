@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Kafka topics (`order.created`, `payment.settled`, etc.) carry event payloads
+Kafka topics (`order.reserved`, `payment.settled`, etc.) carry event payloads
 consumed across service boundaries (order-service, inventory-service,
 payment-service, notification-service). Need a way to manage producer/consumer
 contract evolution before payment-service ships. Options considered: schema
