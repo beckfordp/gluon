@@ -7,4 +7,4 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
 - US-3.1: checkout creates an order (done)
 - US-4.2: wire resilience middleware for the reserve call to inventory-service (done)
 - US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (done)
-- US-8.1: order history read endpoint + Redis cache
+- US-8.1: order history read endpoint + Redis cache (done)
