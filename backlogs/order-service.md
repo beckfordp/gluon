@@ -6,5 +6,5 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
 - Add the FK constraint on `order_items.order_id` → `"order"(id)`, `ON DELETE CASCADE` — same database as `order_items`, so this is a real, enforced Postgres constraint, not just an application-level reference (infra)
 - US-3.1: checkout creates an order (done)
 - US-4.2: wire resilience middleware for the reserve call to inventory-service (done)
-- US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status
+- US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (done)
 - US-8.1: order history read endpoint + Redis cache
