@@ -88,15 +88,14 @@ own line. See each repo's own `git log` for full detail either way.
   added once a gap in the design work above was found: the decision said
   order-service publishes it, but no task ever assigned the work.
 - `CHANGELOG.md` (this file).
-- `payment-service`: **US-6.1** mostly landed — Kafka infra added
-  (fs2-kafka, `docker-compose`, config, mirroring inventory-service's
-  shape); `PaymentEventPublisher` built (`payment.settled`/`payment.failed`,
+- `payment-service`: **US-6.1** landed — Kafka infra added (fs2-kafka,
+  `docker-compose`, config, mirroring inventory-service's shape);
+  `PaymentEventPublisher` built (`payment.settled`/`payment.failed`,
   hand-rolled cats-retry bounded retry since `purerest.resilience` is
   `Client[F]`-only and doesn't cover a Kafka producer); and
   `OrderReservedConsumer` implemented — consumes `order.reserved`, creates
   and settles a `Payment` (charge still simulated), publishes the outcome.
-  68 tests passing, 88% coverage; still `[~]` in progress pending final
-  manual verification.
+  69 tests passing, 88% coverage.
 
 ### Changed
 - Kafka topic **`order.created` renamed to `order.reserved`**, platform-wide
@@ -116,3 +115,11 @@ own line. See each repo's own `git log` for full detail either way.
   just-created order row vanishes between creation and the
   reservation-failure update, the response falls back to a stale `pending`
   status instead of `reservation_failed`.
+- `payment-service`: a null Kafka message key (e.g. a bare
+  `kafka-console-producer.sh` call with no key set) crashed
+  `OrderReservedConsumer`'s entire background stream silently — the HTTP API
+  stayed healthy while Kafka consumption was actually dead. Found during
+  manual verification, confirmed live against a real broker, fixed via
+  fs2-kafka's null-safe `Deserializer.option` for both key and value. The
+  same latent issue likely exists in `order-service`'s `StockEventConsumer`
+  — flagged in `system-design.md`, not yet fixed there.
