@@ -83,7 +83,7 @@ worked in parallel once each repo's own side is independently testable.
 - [x] **US-5.3** (order-service) — publish `order.reserved` once an order's
       stock is fully reserved (payload/trigger decided 2026-10-02, see
       `gluon/docs/system-design.md`'s "Payload contracts")
-- [ ] **US-5.4** (order-service) — publish `order.status-changed`
+- [x] **US-5.4** (order-service) — publish `order.status-changed`
       (`reservation_failed`) when a reservation fails, from either the
       synchronous checkout-failure path or the async consumer path — closes
       a gap found 2026-10-02: the design doc decided order-service publishes
