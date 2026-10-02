@@ -23,7 +23,7 @@ library test fixtures only and are not reused.
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
 | order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); will publish `order.reserved`/`order.status-changed` (design decided 2026-10-02, see "Design proposal to fill gaps" — not yet built) |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (consumed by order-service, US-5.2) |
-| payment-service | new (generator); US-6.1 unblocked 2026-10-02 (`order.reserved` contract now pinned), not started | Postgres | idempotency keys (US-6.2) | will consume `order.reserved`; will publish `payment.settled`/`payment.failed` (US-6.1, not yet built) |
+| payment-service | US-6.1 done 2026-10-02 (consumes `order.reserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `payment.settled`; charge simulated — no real provider decided yet) | Postgres | idempotency keys (US-6.2, not yet built) | consumes `order.reserved` (US-6.1); publishes `payment.settled`/`payment.failed` (US-6.1) |
 | notification-service | new (generator, no DB module); US-7.x not started | — | — | will consume `order.status-changed` (US-7.x, not yet built) |
 
 ## Sync vs. async boundaries
@@ -256,6 +256,22 @@ ElastiCache/RDS confirmation ADR).
   gains the field; checkout must persist the order *before* calling reserve,
   so real `order_items.id`s exist to send — previously reserved first, then
   persisted).
+
+- **Null Kafka message key/value crashes a consumer stream silently** (found
+  2026-10-02, while manually verifying payment-service's US-6.1) —
+  `ConsumerSettings[F, String, String]`'s plain `String` deserializer throws
+  on a null key or value (e.g. a producer that never sets a key, confirmed
+  live with a bare `kafka-console-producer.sh` call against a real broker),
+  and since each service's consumer runs as a backgrounded fiber
+  (`.compile.drain.background.use`), a failed fiber is never observed or
+  logged — the HTTP API stays healthy while Kafka consumption silently dies.
+  **Fixed in payment-service's `OrderReservedConsumer`** via fs2-kafka's
+  null-safe `Deserializer.option` for both key and value (`Option[String]`
+  instead of `String`). **Not yet fixed** in inventory-service's
+  `StockEventPublisher` (producer side — n/a) or order-service's
+  `StockEventConsumer`, which uses the same
+  `ConsumerSettings[F, String, String]` pattern and likely carries the same
+  risk — worth a follow-up track there.
 
 - **`purerestlib` registry migration** (ADR 0005) — local dev currently
   resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
