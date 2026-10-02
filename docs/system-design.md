@@ -38,14 +38,18 @@ Swagger/OpenAPI docs at `/docs`, which is the authoritative *current* shape
 if this section ever drifts — update this section to match rather than
 trusting it blindly.
 
-**`POST /inventorys/reservations`** (caller: order-service, US-4.2, not yet
-wired; callee: inventory-service, US-4.1, done):
-- Request: `{"sku": "string", "quantity": "int (must be > 0)"}`
+**`POST /inventorys/reservations`** (caller: order-service, US-4.2, done;
+callee: inventory-service, US-4.1, done):
+- Request: `{"sku": "string", "quantity": "int (must be > 0)", "orderItemId": "string (UUID) - order-service's order_items.id for this reservation, echoed verbatim on the async stock-reservation event below so the consumer can correlate without guessing"}`
 - `200`: full inventory record post-reservation —
   `{"id": "string (UUID)", "sku": "string", "quantityAvailable": "int", "quantityReserved": "int", "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant"}`
 - `404`: `{"error": "Inventory not found"}` — unknown sku
 - `409`: `{"error": "Insufficient stock"}` — not enough `quantityAvailable`
 - `400`: `{"error": "quantity must be positive"}` — non-positive `quantity`
+
+Added `orderItemId` 2026-10-02 (was absent in the original US-4.1/US-4.2
+contract) to fix the correlation gap below — inventory-service treats it as
+an opaque string, no order-domain coupling implied, purely store-and-echo.
 
 No contract documented yet for any other cross-service REST call (none
 exist yet besides this one) — add one here, in this same format, whenever
@@ -72,38 +76,30 @@ this section, not each other's source code, to agree on a wire format.
 ### Payload contracts (plain JSON for now — see ADR 0003)
 
 **`inventory.stock-reserved`** / **`inventory.stock-reservation-failed`**
-(same shape for both; producer: inventory-service, US-5.1, **done**;
-consumer: order-service, US-5.2, not yet built):
+(same shape for both; producer: inventory-service, US-5.1 + correlation-id
+follow-up, **done**; consumer: order-service, US-5.2, not yet built):
 ```json
 {
+  "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the POST /inventorys/reservations request above; opaque to inventory-service",
   "sku": "string",
   "quantity": "int — the amount just reserved (success) or that failed to reserve (failure)",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Correlation is by `sku` — not an inventory-record id — since order-service
-(the consumer) never has inventory-service's internal id to correlate
-against in the first place; it only ever knows the sku it asked to
-reserve. (An earlier draft of this contract included an `inventoryId`
-field; dropped once this was noticed, since the failure path also has no
-`Inventory` record to pull an id from — `store.reserve`'s `InsufficientStock`
-result carries no entity.)
+Correlation is by `orderItemId`, not `sku` — added 2026-10-02 once it became
+clear sku-only correlation couldn't tell apart two different orders (or two
+line items in the same order) reserving the same sku concurrently; see the
+superseded note in "Open design questions" below for the original gap. (An
+even earlier draft used inventory-service's own internal id; dropped since
+the failure path has no `Inventory` record to pull one from —
+`store.reserve`'s `InsufficientStock` result carries no entity. `orderItemId`
+avoids that problem since order-service mints it before the reserve call,
+not inventory-service.)
 
 `inventory.stock-reservation-failed` is only published for a genuine stock
 outcome (insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
-
-**Known limitation (accepted risk, found 2026-10-02 while designing US-5.2):**
-with no order/item id in the payload, order-service's consumer can only
-match an event to the oldest still-`pending` order containing that sku
-(whole-order FIFO match — see US-5.2's spec). Under concurrent orders that
-share a sku, an event produced by one order's reservation can be
-misattributed to a *different*, unrelated order still `pending` on the same
-sku — not just mishandling one order's own partial items, but potentially
-flipping an unrelated order's status based on someone else's event. Accepted
-for the walking skeleton rather than fixed now. See "Open design questions"
-below for the real fix (a correlation id in the event payload).
 
 No payload contract yet for `order.created`, `order.status-changed`,
 `payment.settled`, `payment.failed` — add one here, in this same format,
@@ -182,17 +178,16 @@ ElastiCache/RDS confirmation ADR).
      built — not part of US-5.2, and not yet scheduled.
   3. **Still open** — fix US-7.1's topic reference once (1) is settled.
 
-- **No correlation id in stock-reservation events → cross-order
-  misattribution risk** (found 2026-10-02, while designing order-service's
-  US-5.2 consumer) — `inventory.stock-reserved`/`-failed` carry only
-  `sku`/`quantity`/`timestamp` (see "Payload contracts" above), so a
-  consumer matching purely on sku can't tell apart two different orders
-  concurrently reserving the same sku. US-5.2 accepts this as a walking-
-  skeleton risk (whole-order FIFO match: oldest still-`pending` order with
-  that sku) rather than fixing it now. Real fix, not yet scheduled: add an
-  order/item correlation id to the event payload — a producer-side change
-  in inventory-service (US-5.1's publisher) as well as a consumer-side
-  change in order-service (US-5.2), so don't start it from one repo alone.
+- ~~**No correlation id in stock-reservation events → cross-order
+  misattribution risk**~~ — **Resolved 2026-10-02**, same day it was found:
+  rather than accept the risk, added `orderItemId` to both the
+  `POST /inventorys/reservations` request and the `stock-reserved`/`-failed`
+  event payload (see "REST contracts" and "Payload contracts" above).
+  Requires rework in both repos: inventory-service (reopens archived US-5.1's
+  contract, additive field only) and order-service (US-4.2's `InventoryClient`
+  gains the field; checkout must persist the order *before* calling reserve,
+  so real `order_items.id`s exist to send — previously reserved first, then
+  persisted).
 
 - **`purerestlib` registry migration** (ADR 0005) — local dev currently
   resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
