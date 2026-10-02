@@ -80,6 +80,9 @@ worked in parallel once each repo's own side is independently testable.
 - [x] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
       `inventory.stock-reservation-failed`
 - [x] **US-5.2** (order-service) — consume those topics, update order status
+- [ ] **US-5.3** (order-service) — publish `order.created` once an order's
+      stock is fully reserved (payload/trigger decided 2026-10-02, see
+      `gluon/docs/system-design.md`'s "Payload contracts")
 
 **Stub / fan-out for this phase:**
 - `inventory-service`: test the publish side against an embedded/test Kafka
@@ -87,33 +90,45 @@ worked in parallel once each repo's own side is independently testable.
   not that anything downstream reacts to it.
 - `order-service`: test the consume side by publishing *synthetic*
   `inventory.stock-reserved` / `-failed` events directly to a test Kafka —
-  this repo's tests never need inventory-service running.
+  this repo's tests never need inventory-service running. US-5.3's publish
+  side: assert the right `order.created` event is produced, same as
+  inventory-service's own publisher tests — no live payment-service needed.
 
 **Exit criteria:** order status updates purely from consumed events, proven
-per-repo against synthetic messages; schema registry contract respected
-(ADR 0003) on both sides.
+per-repo against synthetic messages; `order.created` actually published once
+stock is reserved; schema registry contract respected (ADR 0003) on both
+sides.
 
 ---
 
 ## Phase 4 — Payment
 
-**Repo:** `payment-service` (new — generate it now if not already).
+**Repos:** `payment-service` (charge + publish settlement), `order-service`
+(consume the settlement outcome) — can be worked in parallel once each
+repo's own side is independently testable, same split as Phase 3.
 
-- [ ] **US-6.1** — consume `order.created`, charge, publish
-      `payment.settled` / `payment.failed`
-- [ ] **US-6.2** — Redis idempotency keys, avoid double-charging on
-      retry/redelivery
+- [ ] **US-6.1** (payment-service) — consume `order.created`, charge,
+      publish `payment.settled` / `payment.failed`
+- [ ] **US-6.2** (payment-service) — Redis idempotency keys, avoid
+      double-charging on retry/redelivery
+- [ ] **US-6.3** (order-service) — consume `payment.settled` /
+      `payment.failed`, update order status to `confirmed` / `payment_failed`,
+      publish `order.status-changed`
 
 **Stub / fan-out for this phase:**
-- Publish synthetic `order.created` events to a test Kafka to drive the
-  consumer — no live order-service needed.
-- The "charge" step itself: stub/simulate it (no real payment provider
-  decided yet — see the open ADR in this repo's backlog). Idempotency logic
-  gets tested by replaying the *same* synthetic event twice.
+- `payment-service`: publish synthetic `order.created` events to a test
+  Kafka to drive the consumer — no live order-service needed. The "charge"
+  step itself: stub/simulate it (no real payment provider decided yet — see
+  the open ADR in this repo's backlog). Idempotency logic gets tested by
+  replaying the *same* synthetic event twice.
+- `order-service`: test US-6.3 by publishing synthetic `payment.settled` /
+  `payment.failed` events directly to a test Kafka — no live payment-service
+  needed, same pattern as US-5.2.
 
-**Exit criteria:** consume/publish proven against synthetic events; a
-duplicate-delivery test proves the idempotency key actually prevents a
-double charge.
+**Exit criteria:** consume/publish proven against synthetic events on both
+sides; a duplicate-delivery test proves the idempotency key actually
+prevents a double charge; order status correctly reaches `confirmed` /
+`payment_failed` from synthetic settlement events.
 
 ---
 
@@ -121,11 +136,12 @@ double charge.
 
 **Repo:** `notification-service` (new).
 
-- [ ] **US-7.1** — consume order-confirmed events, send email/notification
+- [ ] **US-7.1** — consume `order.status-changed` (`reservation_failed` /
+      `confirmed` / `payment_failed`), send the matching email per status
 
 **Stub / fan-out for this phase:**
-- Publish synthetic events (whichever topic this ends up subscribing to —
-  still open, see its backlog) to a test Kafka.
+- Publish synthetic `order.status-changed` events (one per status) to a test
+  Kafka.
 - Stub the actual send (log line or fake client) — no real email/notification
   provider decided yet.
 

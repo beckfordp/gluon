@@ -17,10 +17,10 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); does not yet publish anything (see "Open design questions" — `order.created` gap) |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); will publish `order.created`/`order.status-changed` (design decided 2026-10-02, see "Design proposal to fill gaps" — not yet built) |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (consumed by order-service, US-5.2) |
-| payment-service | new (generator) | Postgres | idempotency keys | consumes `OrderCreated`; publishes `PaymentSettled`/`PaymentFailed` |
-| notification-service | new (generator, no DB module) | — | — | consumer only |
+| payment-service | new (generator); US-6.1 unblocked 2026-10-02 (`order.created` contract now pinned), not started | Postgres | idempotency keys (US-6.2) | will consume `order.created`; will publish `payment.settled`/`payment.failed` (US-6.1, not yet built) |
+| notification-service | new (generator, no DB module); US-7.x not started | — | — | will consume `order.status-changed` (US-7.x, not yet built) |
 
 ## Sync vs. async boundaries
 - **Sync (HTTP, resilience middleware):** checkout → order-service → reserve
@@ -56,10 +56,14 @@ exist yet besides this one) — add one here, in this same format, whenever
 a new one is built.
 
 ## Kafka topics (draft)
-- `order.created` — ⚠ **no producer defined yet** — see "Open design
-  questions" below before building a consumer or producer against this
-  name; it may be renamed/restructured once that's resolved
-- `order.status-changed`
+- `order.created` — producer: order-service (new task under US-5, not yet
+  built); consumer: payment-service (US-6.1, not yet built). Published once
+  an order's stock is fully `Reserved` — not at raw checkout — so
+  payment-service never charges before stock is confirmed
+- `order.status-changed` — producer: order-service (new tasks under US-6/US-7,
+  not yet built); consumer: notification-service (US-7.x, not yet built).
+  Carries `reservation_failed`/`confirmed`/`payment_failed` only — the
+  `Pending`→`Reserved` transition is `order.created`'s job, not this topic's
 - `inventory.stock-reserved` — producer done (inventory-service, US-5.1);
   consumer done (order-service, US-5.2)
 - `inventory.stock-reservation-failed` — producer done (inventory-service,
@@ -102,12 +106,59 @@ outcome (insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
 
-No payload contract yet for `order.created`, `order.status-changed`,
-`payment.settled`, `payment.failed` — add one here, in this same format,
-whenever the producing service's track defines it (don't let it live only
-in that repo's own `spec.md`). `order.created` specifically has an open
-producer/naming gap (see "Open design questions" below) — resolve that
-before writing a contract for it, not after.
+**`order.created`** (producer: order-service, new task under US-5, not yet
+built; consumer: payment-service, US-6.1, not yet built):
+```json
+{
+  "orderId": "string (UUID)",
+  "customerId": "string",
+  "totalCents": "int",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+Published exactly once per order, at the moment `StockEventConsumer`
+successfully transitions that order from `pending` to `reserved` — the same
+transition that's already built (US-5.2), just with this publish added
+alongside it. Not published for `reservation_failed` (see
+`order.status-changed` below instead), and not published at raw checkout
+time — payment-service should never see an order it might still need to
+reject for lack of stock.
+
+**`order.status-changed`** (producer: order-service, new tasks under
+US-6/US-7, not yet built; consumer: notification-service, US-7.x, not yet
+built):
+```json
+{
+  "orderId": "string (UUID)",
+  "customerId": "string",
+  "status": "string — one of: reservation_failed | confirmed | payment_failed",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+Published whenever an order lands in one of these three statuses —
+`reservation_failed` (from either the synchronous checkout failure or the
+async `inventory.stock-reservation-failed` consumer, US-4.2/US-5.2, both
+already built — only the publish side is new), `confirmed` (new: consuming
+`payment.settled`), or `payment_failed` (new: consuming `payment.failed`).
+Not published for `pending` or `reserved` — `order.created` already covers
+the one transition payment-service needs, and nothing currently needs
+telling about `pending` itself.
+
+**Reliability (decided 2026-10-02):** no transactional outbox. Both
+publishes above are wrapped in `purerest.resilience`'s bounded retry (same
+middleware already used for the synchronous reserve call), and on final
+failure, logged loudly and dropped — the same risk level inventory-service's
+own publisher already accepts for `inventory.stock-reserved`/`-failed`.
+Explicitly *not* crash-safe: if the process dies between the DB commit and
+the retries being exhausted, the event is lost and nothing downstream is
+told, same as the existing inventory-service risk. Accepted for the walking
+skeleton to keep scope down (no new outbox table, no poller); revisit if
+this ever needs to survive a mid-retry crash reliably.
+
+**`payment.settled`** / **`payment.failed`** — no payload contract yet;
+payment-service hasn't started US-6.1 (now unblocked, see above). Add one
+here, in this same format, once that track defines it — don't let it live
+only in that repo's own `spec.md`.
 
 ## Environments
 minikube-successor (OrbStack, see [ADR 0002](./adr/0002-local-k8s-orbstack-over-minikube.md))
@@ -152,32 +203,22 @@ See adr/ for decisions (0001-0005). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
-- **`order.created` / "order-confirmed" event gap** (found 2026-10-01, while
-  checking order-service's US-3.1 work against this doc) — the Services
-  table above and payment-service's US-6.1 both assume order-service
-  publishes `order.created`, but no backlog item anywhere (order-service's
-  own, or this doc's Kafka section) actually produces it — neither US-3.1
-  (checkout) nor US-5.2 (consume stock events) publishes anything.
-  Separately, notification-service's US-7.1 says "consume order-confirmed
-  events," but no topic named `order-confirmed`/`order.confirmed` exists
-  among the six draft topics above, and order-service's actual `OrderStatus`
-  enum (`pending`/`reserved`/`reservation_failed`, hardened via a DB `CHECK`
-  constraint) has no status representing a confirmed/paid order — nothing
-  currently models the state US-7 means by "confirmed." Blocks US-6.1 and
-  US-7.1. **Does not block US-5.2** (consume `inventory.stock-reserved` /
-  `inventory.stock-reservation-failed`, update order status between
-  `pending`/`reserved`/`reservation_failed`) — all three of those statuses
-  already exist independently of this gap, so US-5.2 can proceed now.
-  Partially resolved 2026-10-02:
-  1. **Still open** — whether order-service publishes `order.created`
-     and/or `order.status-changed` at all is deliberately deferred, not yet
-     decided either way. Revisit when payment-service's US-6.1 (consumer
-     side) is actually started, since that's the first real consumer.
-  2. **Decided** — "confirmed" = payment-service's `PaymentSettled`
-     consumed by order-service. `OrderStatus` will need a new `Confirmed`
-     case (another order-service migration/track) once that consumer is
-     built — not part of US-5.2, and not yet scheduled.
-  3. **Still open** — fix US-7.1's topic reference once (1) is settled.
+- ~~**`order.created` / "order-confirmed" event gap**~~ — **Resolved
+  2026-10-02** via the "Design proposal to fill gaps" below. (Found
+  2026-10-01, while checking order-service's US-3.1 work against this doc —
+  the Services table and payment-service's US-6.1 both assumed order-service
+  publishes `order.created`, but nothing produced it, and notification-service's
+  US-7.1 referenced a nonexistent `order-confirmed` topic.) Resolution:
+  1. **Decided** — order-service publishes both `order.created` (once
+     `Reserved`) and `order.status-changed` (on `reservation_failed`/
+     `confirmed`/`payment_failed`). See "Payload contracts" above for the
+     pinned shapes.
+  2. **Decided** — "confirmed" = payment-service's `payment.settled`
+     consumed by order-service. `OrderStatus` gains `Confirmed` and
+     `PaymentFailed` cases (new order-service track, not yet built).
+  3. **Decided** — US-7.1 now consumes `order.status-changed`, filtered to
+     the three statuses above, not a nonexistent `order-confirmed` topic.
+     `user-stories.md` updated accordingly.
 
 - ~~**No correlation id in stock-reservation events → cross-order
   misattribution risk**~~ — **Resolved 2026-10-02**, same day it was found:
@@ -204,6 +245,41 @@ ElastiCache/RDS confirmation ADR).
   services' `build.sbt` files. Supersede ADR 0005 with a new ADR if adopted.
 
 
-Design proposal to fill gaps
- - oder service will issue order created event when all items associated with the order are reserved
- - 
+## Design proposal to fill gaps
+Proposed 2026-10-02, decided the same day (see "Payload contracts" and
+"Open design questions" above for the pinned shapes). Original proposal,
+lightly formatted:
+
+- order-service publishes `order.created` once all items on the order are
+  reserved. New task under US-5, order-service.
+- When order-service reaches `reservation_failed`, notification-service
+  consumes and emails the customer that their order has failed, showing the
+  order id — the order moving to `reservation_failed` itself is already
+  built (US-4.2/US-5.2); only the notification trigger is new.
+- When payment settles, order-service consumes and moves the order to
+  `confirmed`; that in turn triggers a "your order is confirmed (paid for)"
+  email via notification-service. On payment failure, the order moves to
+  `payment_failed`, and notification-service sends an appropriate email for
+  that too. This unblocks US-6.1 and creates new tasks for US-7.
+
+**Decisions made while working through this proposal:**
+- **Topic shape:** one `order.status-changed` topic carrying
+  `reservation_failed`/`confirmed`/`payment_failed`, not three separate
+  topics — simpler, and notification-service just filters on `status`.
+- **Stock release on failure (gap 07) — out of scope for the walking
+  skeleton.** No automatic compensation. The customer-notification email is
+  the mechanism: reviewing their order and cancelling it is assumed to be a
+  manual step the customer can take. The cancel-order flow itself is
+  deliberately **not** built now — tracked as a future epic in
+  `user-stories.md`, to be refined later (what "cancel" does to already-
+  reserved stock, whether it's allowed post-payment, etc. are all open).
+- **Publish reliability: no outbox, bounded retry instead.** Evaluated
+  against both `gvolpe/pfps-shopping-cart` (no event bus at all — checkout,
+  payment and order creation are in-process calls in one monolith, so the
+  dual-write problem this proposal raises doesn't exist there) and the
+  transactional outbox pattern (fully crash-safe, but a new table + poller
+  in order-service's own database). Chose the simpler of the two real
+  options: wrap each publish in `purerest.resilience`'s existing bounded
+  retry, log loudly on exhaustion, accept the same not-crash-safe risk
+  inventory-service's own publisher already carries. See "Payload contracts"
+  above.
