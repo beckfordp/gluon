@@ -170,7 +170,7 @@ Redis instance.
 
 **Repo:** `order-service`.
 
-- [ ] **US-8.1** — order history read endpoint + Redis cache
+- [x] **US-8.1** — order history read endpoint + Redis cache
 
 **Stub / fan-out:** none — reads this repo's own store.
 

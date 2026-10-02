@@ -75,7 +75,7 @@ track them.
 - Read side of `order-service`. Candidate for Redis cache on hot/recent orders.
 
 ### Tasks
-- [ ] US-8.1: order history read endpoint + Redis cache (order-service)
+- [x] US-8.1: order history read endpoint + Redis cache (order-service)
 
 ## Open questions
 - Auth/identity — no user-service yet; assumed out of scope until these stories
