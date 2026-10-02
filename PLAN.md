@@ -79,7 +79,7 @@ worked in parallel once each repo's own side is independently testable.
 
 - [x] **US-5.1** (inventory-service) — publish `inventory.stock-reserved` /
       `inventory.stock-reservation-failed`
-- [ ] **US-5.2** (order-service) — consume those topics, update order status
+- [x] **US-5.2** (order-service) — consume those topics, update order status
 
 **Stub / fan-out for this phase:**
 - `inventory-service`: test the publish side against an embedded/test Kafka

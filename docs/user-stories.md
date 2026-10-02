@@ -48,7 +48,7 @@ downstream failures without order-service blocking on it.
 
 ### Tasks
 - [x] US-5.1: publish inventory.stock-reserved / inventory.stock-reservation-failed (inventory-service)
-- [ ] US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (order-service)
+- [x] US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (order-service)
 
 ## US-6 — Payment
 As a customer, once my order is confirmed, I'm charged, so the order can be
