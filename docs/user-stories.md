@@ -38,7 +38,7 @@ As the system, when an order is created, stock is reserved against
 
 ### Tasks
 - [x] US-4.1: reserve-stock endpoint (sync, called by order-service) (inventory-service)
-- [ ] US-4.2: wire resilience middleware for the reserve call to inventory-service (order-service)
+- [x] US-4.2: wire resilience middleware for the reserve call to inventory-service (order-service)
 
 ## US-5 — Async reservation outcome
 As the system, when reservation succeeds or fails, the order's status updates

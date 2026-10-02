@@ -55,7 +55,7 @@ calls yet).
 (or at minimum, inventory-service's `/reserve` request/response contract
 agreed, even if not yet live).
 
-- [ ] **US-4.2** — wire resilience middleware (`Resilience.middleware`) for
+- [x] **US-4.2** — wire resilience middleware (`Resilience.middleware`) for
       the reserve call to inventory-service
 
 **Stub / fan-out for this phase:**
