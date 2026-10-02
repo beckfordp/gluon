@@ -148,16 +148,23 @@ Not published for `pending` or `reserved` — `order.reserved` already covers
 the one transition payment-service needs, and nothing currently needs
 telling about `pending` itself.
 
-**Reliability (decided 2026-10-02):** no transactional outbox. Both
-publishes above are wrapped in `purerest.resilience`'s bounded retry (same
-middleware already used for the synchronous reserve call), and on final
-failure, logged loudly and dropped — the same risk level inventory-service's
-own publisher already accepts for `inventory.stock-reserved`/`-failed`.
-Explicitly *not* crash-safe: if the process dies between the DB commit and
-the retries being exhausted, the event is lost and nothing downstream is
-told, same as the existing inventory-service risk. Accepted for the walking
-skeleton to keep scope down (no new outbox table, no poller); revisit if
-this ever needs to survive a mid-retry crash reliably.
+**Reliability (decided 2026-10-02, mechanism corrected 2026-10-02):** no
+transactional outbox. Both publishes above use a bounded retry, then log
+loudly and drop on exhaustion — originally written as "wrapped in
+`purerest.resilience`'s bounded retry," which turned out not to be possible:
+`purerest.resilience` only wraps an http4s `Client[F]` call, not an arbitrary
+Kafka producer send. Implemented instead as a hand-rolled bounded retry via
+`cats-retry` directly (available transitively through `purerestlib`, which
+uses it internally for its own `Client[F]` middleware) — the pattern
+payment-service's `PaymentEventPublisher` established first, mirrored by
+order-service's `OrderEventPublisher`. Inventory-service's own
+`StockEventPublisher` predates this decision and still has no retry at all
+(single attempt + timeout, log-on-failure) — lower-bar than what's described
+here, not yet revisited. Explicitly *not* crash-safe: if the process dies
+between the DB commit and the retries being exhausted, the event is lost and
+nothing downstream is told. Accepted for the walking skeleton to keep scope
+down (no new outbox table, no poller); revisit if this ever needs to survive
+a mid-retry crash reliably.
 
 **`payment.settled`** / **`payment.failed`** (same shape for both; producer:
 payment-service, US-6.1, in progress; consumer: order-service, new
@@ -299,7 +306,8 @@ lightly formatted:
   dual-write problem this proposal raises doesn't exist there) and the
   transactional outbox pattern (fully crash-safe, but a new table + poller
   in order-service's own database). Chose the simpler of the two real
-  options: wrap each publish in `purerest.resilience`'s existing bounded
-  retry, log loudly on exhaustion, accept the same not-crash-safe risk
-  inventory-service's own publisher already carries. See "Payload contracts"
-  above.
+  options: wrap each publish in a bounded retry, log loudly on exhaustion,
+  accept the same not-crash-safe risk. (Originally planned as reusing
+  `purerest.resilience`'s existing bounded retry; corrected once that turned
+  out to be `Client[F]`-only — see "Payload contracts" above for the actual
+  mechanism.)
