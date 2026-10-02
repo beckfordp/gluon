@@ -2,9 +2,13 @@
 
 Derived from [`user-stories.md`](./user-stories.md). Revise as it firms up.
 Diagrams: [`diagrams/order-fulfillment-topology.svg`](./diagrams/order-fulfillment-topology.svg),
-[`diagrams/environment-pipeline.svg`](./diagrams/environment-pipeline.svg) — vector,
+[`diagrams/environment-pipeline.svg`](./diagrams/environment-pipeline.svg),
+[`diagrams/order-lifecycle.svg`](./diagrams/order-lifecycle.svg) — vector,
 open in a browser or Preview to zoom. Regenerate/update if this doc's shape changes
-materially (they'll drift silently otherwise).
+materially (they'll drift silently otherwise). The lifecycle diagram tracks the order
+status state machine and the "Design proposal to fill gaps" decisions below — solid
+is built, dashed grey is decided and scheduled (US-5.3/US-6.1/US-6.3/US-7.1), dotted
+dim is the waived stock-release gap deferred to the future US-9 epic.
 
 All six services below are generated fresh via `pure-service-generator` into
 [`gluon/`](../README.md) — see [`../PLAN.md`](../PLAN.md) for the phased

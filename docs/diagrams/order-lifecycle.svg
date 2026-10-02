@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 560" role="img" aria-label="Order lifecycle diagram: Pending, Reserved, and Reservation Failed are built and live in order-service; payment-service, Confirmed, Payment Failed, and notification-service are decided and scheduled (US-5.3, US-6.1, US-6.3, US-7.1) but not yet built; stock release on a failed order is waived, deferred to the future US-9 cancel-order epic.">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap');
+    :root{
+      --bg:#EEF1F6; --surface:#FFFFFF; --ink:#1B2433; --ink-dim:#5C6779;
+      --line:#CBD3E0; --accent-sync:#2B58A6; --accent-async:#9C6318;
+      --accent-future:#8890A0;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#10151E; --surface:#1A212D; --ink:#E7ECF4; --ink-dim:#93A0B4;
+        --line:#2C3546; --accent-sync:#6B9BF0; --accent-async:#E3A54C;
+        --accent-future:#7A8296;
+      }
+    }
+    text{ font-family:"IBM Plex Mono","SFMono-Regular",ui-monospace,monospace; }
+  </style>
+  <defs>
+    <marker id="arrSync" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent-sync)"/>
+    </marker>
+    <marker id="arrAsync" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent-async)"/>
+    </marker>
+    <marker id="arrFuture" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent-future)"/>
+    </marker>
+    <marker id="arrDim" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="var(--ink-dim)"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="560" fill="var(--bg)"/>
+  <rect x="0" y="0" width="1400" height="560" fill="var(--surface)"/>
+
+  <!-- legend -->
+  <text x="20" y="24" font-size="10.5" letter-spacing="0.06em" fill="var(--ink-dim)">SOLID = BUILT &amp; LIVE   ·   DASHED GREY = DECIDED, SCHEDULED, NOT BUILT   ·   DOTTED DIM = WAIVED, DEFERRED TO US-9</text>
+
+  <!-- trigger -->
+  <rect x="20" y="180" width="160" height="56" rx="4" fill="var(--ink)" stroke="none"/>
+  <text x="100" y="204" text-anchor="middle" font-weight="600" font-size="12" fill="var(--bg)">POST /orders</text>
+  <text x="100" y="220" text-anchor="middle" font-size="9.5" fill="var(--bg)" opacity="0.75">checkout</text>
+
+  <!-- Pending (built) -->
+  <rect x="220" y="170" width="160" height="76" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="300" y="200" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">Pending</text>
+  <text x="300" y="217" text-anchor="middle" font-size="10" fill="var(--ink-dim)">OrderStore.create</text>
+  <text x="300" y="232" text-anchor="middle" font-size="10" fill="var(--ink-dim)">unconditional default</text>
+
+  <!-- Reserved (built) -->
+  <rect x="460" y="30" width="160" height="76" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="540" y="60" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">Reserved</text>
+  <text x="540" y="77" text-anchor="middle" font-size="10" fill="var(--ink-dim)">all items confirmed</text>
+  <text x="540" y="92" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-5.2 · live</text>
+
+  <!-- Reservation Failed (built) -->
+  <rect x="440" y="320" width="200" height="76" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>
+  <text x="540" y="350" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">Reservation Failed</text>
+  <text x="540" y="367" text-anchor="middle" font-size="10" fill="var(--ink-dim)">sync or async failure</text>
+  <text x="540" y="382" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-5.2 · live, terminal</text>
+
+  <!-- payment-service (future) -->
+  <rect x="700" y="30" width="190" height="76" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="795" y="58" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">payment-service</text>
+  <text x="795" y="75" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-6.1 · charges, then</text>
+  <text x="795" y="90" text-anchor="middle" font-size="10" fill="var(--ink-dim)">publishes settlement</text>
+
+  <!-- Confirmed (future) -->
+  <rect x="970" y="4" width="160" height="76" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1050" y="32" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">Confirmed</text>
+  <text x="1050" y="49" text-anchor="middle" font-size="10" fill="var(--ink-dim)">status decided</text>
+  <text x="1050" y="64" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-6.3 · not built</text>
+
+  <!-- Payment Failed (future) -->
+  <rect x="970" y="150" width="160" height="76" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1050" y="178" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">Payment Failed</text>
+  <text x="1050" y="195" text-anchor="middle" font-size="10" fill="var(--ink-dim)">status decided</text>
+  <text x="1050" y="210" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-6.3 · not built</text>
+
+  <!-- notification-service (future) -->
+  <rect x="1200" y="10" width="180" height="76" rx="4" fill="var(--surface)" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1290" y="38" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">notification-</text>
+  <text x="1290" y="53" text-anchor="middle" font-weight="600" font-size="13" fill="var(--ink)">service</text>
+  <text x="1290" y="70" text-anchor="middle" font-size="10" fill="var(--ink-dim)">US-7.1 · no conductor/ yet</text>
+
+  <!-- edges: built -->
+  <line x1="180" y1="208" x2="217" y2="208" stroke="var(--accent-sync)" stroke-width="1.5" marker-end="url(#arrSync)"/>
+
+  <path d="M380,192 C 410,150 430,100 457,74" fill="none" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
+  <text x="392" y="140" font-size="10" fill="var(--accent-async)">inventory.stock-reserved</text>
+
+  <path d="M380,232 C 400,270 415,300 437,338" fill="none" stroke="var(--accent-async)" stroke-width="1.5" marker-end="url(#arrAsync)"/>
+  <text x="392" y="280" font-size="10" fill="var(--accent-async)">stock-reservation-failed</text>
+
+  <!-- edges: future -->
+  <line x1="620" y1="68" x2="697" y2="68" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="628" y="58" font-size="10" fill="var(--ink-dim)">order.created (US-5.3)</text>
+
+  <path d="M890,52 C 925,40 945,34 967,32" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="900" y="24" font-size="10" fill="var(--ink-dim)">payment.settled</text>
+
+  <path d="M890,92 C 925,120 945,150 967,172" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="900" y="134" font-size="10" fill="var(--ink-dim)">payment.failed</text>
+
+  <line x1="1130" y1="38" x2="1197" y2="38" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="1138" y="28" font-size="9.5" fill="var(--ink-dim)">order.status-changed (confirmed)</text>
+
+  <path d="M640,358 C 820,330 1020,300 1180,96" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="760" y="296" font-size="9.5" fill="var(--ink-dim)">order.status-changed (reservation_failed)</text>
+
+  <path d="M1130,188 C 1160,160 1175,130 1195,86" fill="none" stroke="var(--accent-future)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrFuture)"/>
+  <text x="1135" y="150" font-size="9.5" fill="var(--ink-dim)">order.status-changed (payment_failed)</text>
+
+  <!-- waived: stock release -->
+  <rect x="420" y="450" width="400" height="56" rx="4" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="2 4"/>
+  <text x="434" y="470" font-weight="600" font-size="10.5" fill="var(--ink-dim)">Waived — stock not released (yet)</text>
+  <text x="434" y="486" font-size="10" fill="var(--ink-dim)">from ReservationFailed or Payment Failed</text>
+  <text x="434" y="500" font-size="10" fill="var(--ink-dim)">deferred to US-9, the cancel-order epic</text>
+  <path d="M540,396 L540,450" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="2 4" marker-end="url(#arrDim)"/>
+  <path d="M1000,226 C 920,320 820,400 760,450" fill="none" stroke="var(--ink-dim)" stroke-width="1.5" stroke-dasharray="2 4" marker-end="url(#arrDim)"/>
+</svg>
