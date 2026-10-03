@@ -12,7 +12,7 @@ As a customer, I can browse a product catalog, so I can find items to buy.
 
 ### Tasks
 - [x] US-1.1: browse/list catalog endpoints (catalog-service)
-- [ ] US-1.2: Redis read-through cache (catalog-service)
+- [x] US-1.2: Redis read-through cache (catalog-service)
 
 ## US-2 — Add to cart
 As a customer, I can add/remove items in a cart, so I can build an order before

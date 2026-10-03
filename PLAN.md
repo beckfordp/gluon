@@ -165,7 +165,7 @@ independently.
 **Repo:** `catalog-service` (new).
 
 - [x] **US-1.1** — browse/list catalog endpoints
-- [ ] **US-1.2** — Redis read-through cache
+- [x] **US-1.2** — Redis read-through cache
 
 **Stub / fan-out:** none — no external service dependencies, only this
 repo's own Postgres/Redis (generator's existing test setup covers it).
