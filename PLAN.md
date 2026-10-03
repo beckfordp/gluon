@@ -164,7 +164,7 @@ independently.
 
 **Repo:** `catalog-service` (new).
 
-- [ ] **US-1.1** — browse/list catalog endpoints
+- [x] **US-1.1** — browse/list catalog endpoints
 - [ ] **US-1.2** — Redis read-through cache
 
 **Stub / fan-out:** none — no external service dependencies, only this
