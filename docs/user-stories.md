@@ -69,7 +69,7 @@ fulfilled.
 ### Tasks
 - [x] US-6.1: consume order.reserved, charge, publish payment.settled / payment.failed (payment-service)
 - [ ] US-6.2: Redis idempotency keys to avoid double-charging on retry/redelivery (payment-service)
-- [ ] US-6.3: consume payment.settled / payment.failed, update order status to confirmed / payment_failed, publish order.status-changed (order-service)
+- [x] US-6.3: consume payment.settled / payment.failed, update order status to confirmed / payment_failed, publish order.status-changed (order-service)
 
 ## US-7 — Order status notifications
 As a customer, I receive an email when my order's status changes — confirmed,

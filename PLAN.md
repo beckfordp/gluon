@@ -119,7 +119,7 @@ repo's own side is independently testable, same split as Phase 3.
       publish `payment.settled` / `payment.failed`
 - [ ] **US-6.2** (payment-service) — Redis idempotency keys, avoid
       double-charging on retry/redelivery
-- [ ] **US-6.3** (order-service) — consume `payment.settled` /
+- [x] **US-6.3** (order-service) — consume `payment.settled` /
       `payment.failed`, update order status to `confirmed` / `payment_failed`,
       publish `order.status-changed`
 
