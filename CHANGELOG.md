@@ -96,6 +96,13 @@ own line. See each repo's own `git log` for full detail either way.
   `OrderReservedConsumer` implemented — consumes `order.reserved`, creates
   and settles a `Payment` (charge still simulated), publishes the outcome.
   69 tests passing, 88% coverage.
+- `notification-service`: new repo generated and onboarded to Conductor
+  (`gluon:add`); first track — **strip Postgres/CRUD scaffold down to a
+  bare Kafka-consumer shell** — implemented same day:
+  `NotificationStore`/`NotificationRoutes`/`Migrations`/`NotificationError`
+  and the Postgres/skunk/Flyway deps removed, leaving just
+  `/health`+`/health/ready` for US-7.1 to build the real
+  `order.status-changed` consumer on top of.
 
 ### Changed
 - Kafka topic **`order.created` renamed to `order.reserved`**, platform-wide
@@ -123,3 +130,14 @@ own line. See each repo's own `git log` for full detail either way.
   fs2-kafka's null-safe `Deserializer.option` for both key and value. The
   same latent issue likely exists in `order-service`'s `StockEventConsumer`
   — flagged in `system-design.md`, not yet fixed there.
+
+## 2026-10-03
+
+### Fixed
+- `notification-service`: review of the strip-CRUD track found two loose
+  ends — a Phase 1 verification script left broken by Phase 2's own
+  `docker-compose.yml` change, and `development-guidelines.md` still citing
+  the just-deleted `NotificationError`/`NotificationRoutes`/
+  `NotificationStore` as its worked examples. Broken script deleted
+  (superseded by the Phase 2 script); doc flagged inline as pre-strip,
+  pending a refresh once US-7.1 lands.
