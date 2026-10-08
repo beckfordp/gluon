@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-`shopping` is the first real frontend app on the Gluon platform — a client
+`gshop` is the first real frontend app on the Gluon platform — a client
 that calls the existing backend services (catalog, cart, order, inventory,
 payment) to walk a user through browse → cart → checkout → order status
 (US-1 through US-8 in `user-stories.md`). It's intended to be one of
@@ -32,6 +32,6 @@ backends, and it continues the direction already set by the prototype.
 - If a future frontend app genuinely needs SSR/SEO (a public storefront,
   say, vs. an internal admin tool), that's a new ADR superseding this one
   for that app — not assumed to apply platform-wide now.
-- `prototype/storefront.html` stays a design reference only; `shopping`
+- `prototype/storefront.html` stays a design reference only; `gshop`
   does not import or build on its code (CDN-loaded React, mock data, no
   module structure to reuse).

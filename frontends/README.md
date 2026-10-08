@@ -1,7 +1,7 @@
 # frontends/
 
 Each Gluon frontend app lives here as its own **independent git
-repository** — `frontends/shopping/`, etc. — pushed to its own GitHub
+repository** — `frontends/gshop/`, etc. — pushed to its own GitHub
 remote (`beckfordp/<name>`), with its own `/conductor` backlog, its own
 CI, same pattern as `../services/`.
 
@@ -22,7 +22,7 @@ react-ts` inside this directory, then `git init` — see `../README.md`'s
 
 ## Apps
 
-- `shopping` — the first frontend app: walks the shopping workflow
+- `gshop` — the first frontend app: walks the shopping workflow
   (browse catalog → cart → checkout → order status) by calling
   catalog/cart/order/inventory/payment-service. One of potentially many
   apps the platform will host simultaneously.

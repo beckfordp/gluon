@@ -227,12 +227,12 @@ real service — update this note once it is.
 ## Frontend applications
 Gluon hosts multiple frontend apps, each its own repo under `frontends/`
 (see `../README.md`, [ADR 0007](./adr/0007-platform-repo-vs-hosted-workloads.md)).
-`shopping` (React/TypeScript/Vite, [ADR 0006](./adr/0006-react-frontend-framework.md))
+`gshop` (React/TypeScript/Vite, [ADR 0006](./adr/0006-react-frontend-framework.md))
 is the first — it calls the six services above directly over the REST
 contracts documented in this file, no new contracts needed. It supersedes
 the prototype above as the real client once it actually calls something —
 not yet true (scaffold only so far); update the prototype note above once
-it is. Source: [`frontends/shopping`](../frontends/shopping) (gitignored
+it is. Source: [`frontends/gshop`](../frontends/gshop) (gitignored
 here, like `services/*` — see `../README.md`'s "Layout").
 
 ## Open design questions

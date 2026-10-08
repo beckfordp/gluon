@@ -204,8 +204,8 @@ Redis instance.
 
 ## Phase 9 — Shopping frontend *(independent of the spine — can run anytime once its dependencies below are done)*
 
-**Repo:** `frontends/shopping` (new, scaffolded — see
-`frontends/shopping/README.md`).
+**Repo:** `frontends/gshop` (new, scaffolded — see
+`frontends/gshop/README.md`).
 
 - [x] *(infra)* scaffold the repo (Vite + React + TypeScript, ADR 0006);
       thin per-service client modules with base URL + health check only,
@@ -230,7 +230,7 @@ services; a full click-through of US-1 → US-8 against real data, no mocks.
 ## After all phases: cross-repo integration
 
 Once each repo is proven against its own stubs, the next milestone is a real
-end-to-end run — all six services + Kafka + Postgres + Redis + `shopping`
+end-to-end run — all six services + Kafka + Postgres + Redis + `gshop`
 together (docker-compose or OrbStack), no stubs. The k8s manifests
 (generic chart in `infra/k8s/`, values in `environments/local/` — see
 [ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md)) are the

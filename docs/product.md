@@ -113,7 +113,7 @@ Kafka topic/event design — not copied wholesale.
 One repo per service (generator default), all six generated fresh into
 [`gluon/`](../README.md) (order, inventory, payment, notification,
 catalog, cart), plus one repo per frontend app under `frontends/`
-(`shopping` is the first — React/TypeScript/Vite per
+(`gshop` is the first — React/TypeScript/Vite per
 [ADR 0006](./adr/0006-react-frontend-framework.md)), plus:
 - `purerest` — shared library (test-fixture services only, not part of
   Gluon's own service set).

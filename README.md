@@ -41,7 +41,7 @@ catalog-service · cart-service
 
 ## Frontend applications
 
-`shopping` — the first frontend app, walking the shopping workflow (browse
+`gshop` — the first frontend app, walking the shopping workflow (browse
 catalog → cart → checkout → order status) against the services above. One
 of potentially many frontend apps the platform will host simultaneously —
 see [`frontends/README.md`](./frontends/README.md) and
