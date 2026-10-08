@@ -2,6 +2,10 @@
 services/*
 !services/README.md
 
+# Frontend apps are their own independent git repos — not nested here.
+frontends/*
+!frontends/README.md
+
 # macOS
 .DS_Store
 

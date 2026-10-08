@@ -202,10 +202,38 @@ Redis instance.
 
 ---
 
+## Phase 9 — Shopping frontend *(independent of the spine — can run anytime once its dependencies below are done)*
+
+**Repo:** `frontends/shopping` (new, scaffolded — see
+`frontends/shopping/README.md`).
+
+- [x] *(infra)* scaffold the repo (Vite + React + TypeScript, ADR 0006);
+      thin per-service client modules with base URL + health check only,
+      no real endpoints wired yet
+- [ ] US-1 UI — browse catalog screen, calling catalog-service
+- [ ] US-2 UI — cart screen, calling cart-service
+- [ ] US-3 UI — checkout screen, calling order-service
+- [ ] US-8 UI — order status/history screen, calling order-service
+
+Depends on: catalog-service (Phase 6, done), cart-service (Phase 7),
+order-service checkout + history (Phases 2/8, done). US-7 (notification)
+has no UI surface — email only, nothing for this app to call.
+
+**Stub / fan-out:** none — calls real running services directly, no
+synthetic events (this is the UI layer, not another async consumer).
+
+**Exit criteria:** all four screens wired to real (locally running)
+services; a full click-through of US-1 → US-8 against real data, no mocks.
+
+---
+
 ## After all phases: cross-repo integration
 
 Once each repo is proven against its own stubs, the next milestone is a real
-end-to-end run — all six services + Kafka + Postgres + Redis together
-(docker-compose or OrbStack), no stubs. That's a separate exercise, not a
-gate on any phase above, so per-repo work above is never blocked waiting for
-it.
+end-to-end run — all six services + Kafka + Postgres + Redis + `shopping`
+together (docker-compose or OrbStack), no stubs. The k8s manifests
+(generic chart in `infra/k8s/`, values in `environments/local/` — see
+[ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md)) are the
+actual vehicle for this once they exist; until then, docker-compose across
+repos is the fallback. That's a separate exercise, not a gate on any phase
+above, so per-repo work above is never blocked waiting for it.

@@ -23,6 +23,7 @@ gluon/
 ├── docs/            cross-repo vision, user stories, system design, ADRs
 ├── bin/             platform tooling entry points (generate-service, codegen)
 ├── services/        each generated service — its own git repo, gitignored here
+├── frontends/       each frontend app — its own git repo, gitignored here
 ├── infra/
 │   ├── docker/        shared local runtime infra (Kafka, schema registry — not per-service Postgres)
 │   ├── k8s/            Helm chart(s), parameterized per environment
@@ -37,6 +38,15 @@ gluon/
 
 order-service · inventory-service · payment-service · notification-service ·
 catalog-service · cart-service
+
+## Frontend applications
+
+`shopping` — the first frontend app, walking the shopping workflow (browse
+catalog → cart → checkout → order status) against the services above. One
+of potentially many frontend apps the platform will host simultaneously —
+see [`frontends/README.md`](./frontends/README.md) and
+[ADR 0006](./docs/adr/0006-react-frontend-framework.md) (React/TypeScript/
+Vite, the standard toolchain for every one of them).
 
 ## Per-service run order
 
@@ -99,6 +109,20 @@ generated tests/docs representative of the real shape. This is different
 from a hand-written child table's own FK column (like `order_items.order_id`
 above), which sits outside codegen entirely and should stay a real `UUID`
 with a real constraint when it references a row in the *same* database.
+
+## Per-frontend run order
+
+1. `npm create vite@latest <name> -- --template react-ts` inside
+   `frontends/` — generates `frontends/<name>/`.
+2. `git init` inside the new directory (each frontend app is its own
+   independent repo, same as a service — `frontends/*` is gitignored here
+   for the same reason).
+3. When ready to push: `gh repo create beckfordp/<name> --public
+   --source=. --remote=origin --push`.
+4. Inside the new directory, in Claude Code: run `/conductor:setup` and
+   paste `backlogs/<name>.md`'s items into `conductor/tracks.md`'s
+   `## Backlog` — same pattern as a service, once there's real feature
+   work to track beyond the initial scaffold.
 
 ## Prototype
 

@@ -112,16 +112,24 @@ Kafka topic/event design — not copied wholesale.
 ## Repo topology
 One repo per service (generator default), all six generated fresh into
 [`gluon/`](../README.md) (order, inventory, payment, notification,
-catalog, cart), plus:
+catalog, cart), plus one repo per frontend app under `frontends/`
+(`shopping` is the first — React/TypeScript/Vite per
+[ADR 0006](./adr/0006-react-frontend-framework.md)), plus:
 - `purerest` — shared library (test-fixture services only, not part of
   Gluon's own service set).
 - `pure-service-generator` — the generator itself.
 - this folder (`docs/`) — cross-repo vision, user stories, system design,
-  ADRs. Not code; each service repo's own `conductor/product.md` should
-  reference this doc and scope down to that repo's slice.
+  ADRs. Not code; each service/frontend repo's own `conductor/product.md`
+  should reference this doc and scope down to that repo's slice.
+
+`gluon` itself is the **platform repo** — it hosts none of the above
+services/frontends' source — see
+[ADR 0007](./adr/0007-platform-repo-vs-hosted-workloads.md) for the
+explicit split between platform changes (here) and workload changes
+(each service/frontend's own repo).
 
 Each Gluon repo pushes to GitHub under the personal account
-(`beckfordp/<service-name>`), plain names — no dedicated GitHub org (creating
+(`beckfordp/<name>`), plain names — no dedicated GitHub org (creating
 one is an account-level decision, deliberately out of scope for now).
 
 ## Related docs

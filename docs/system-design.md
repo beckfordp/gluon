@@ -224,8 +224,19 @@ Kafka) mirrors the six-service boundary and topic names above, so wiring it to
 real APIs later is a per-module swap, not a rewrite. Not yet connected to any
 real service — update this note once it is.
 
+## Frontend applications
+Gluon hosts multiple frontend apps, each its own repo under `frontends/`
+(see `../README.md`, [ADR 0007](./adr/0007-platform-repo-vs-hosted-workloads.md)).
+`shopping` (React/TypeScript/Vite, [ADR 0006](./adr/0006-react-frontend-framework.md))
+is the first — it calls the six services above directly over the REST
+contracts documented in this file, no new contracts needed. It supersedes
+the prototype above as the real client once it actually calls something —
+not yet true (scaffold only so far); update the prototype note above once
+it is. Source: [`frontends/shopping`](../frontends/shopping) (gitignored
+here, like `services/*` — see `../README.md`'s "Layout").
+
 ## Open design questions
-See adr/ for decisions (0001-0005). Revisit this section as new questions
+See adr/ for decisions (0001-0007). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
