@@ -1,0 +1,22 @@
+# Export GITHUB_TOKEN/GITHUB_ACTOR for sbt (resolving purerestlib from
+# GitHub Packages — see bin/generate-service, bin/k8s-local-up) from the
+# gh CLI's own stored credentials (macOS Keychain-backed) — no token typed
+# or pasted anywhere.
+#
+# Must be SOURCED, not executed, so the exports land in your shell:
+#   source bin/set-github-env
+if [ "${BASH_SOURCE[0]:-$0}" = "${0}" ] && [ -z "${ZSH_VERSION:-}" ]; then
+  echo "Run this with 'source bin/set-github-env' (or '. bin/set-github-env')," >&2
+  echo "not './bin/set-github-env' — otherwise the exports are lost when the" >&2
+  echo "subshell exits." >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+  echo "FAIL: gh isn't authenticated — run 'gh auth login' first." >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+export GITHUB_TOKEN="$(gh auth token)"
+export GITHUB_ACTOR="$(gh api user --jq .login)"
+echo "GITHUB_TOKEN/GITHUB_ACTOR exported for $GITHUB_ACTOR."

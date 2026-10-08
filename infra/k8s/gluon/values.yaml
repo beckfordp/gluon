@@ -1,0 +1,34 @@
+# Defaults for the generic Gluon workload chart. Every real value below is
+# overridden per workload by its own small values fragment under
+# gluon/environments/<env>/<name>.values.yaml — nothing workload-specific
+# belongs in this file.
+replicaCount: 1
+
+image:
+  repository: CHANGE_ME
+  tag: latest
+  # No registry involved for local dev — sbt's `Docker/publishLocal` (or an
+  # equivalent frontend build) puts the image straight into the cluster's
+  # own docker daemon (OrbStack shares it natively), so there's nothing to
+  # pull.
+  pullPolicy: Never
+
+port: 8080
+metricsPort: 9090
+
+# Every Gluon service already serves these two real routes (see e.g.
+# services/catalog-service/src/main/scala/catalogservice/HealthRoutes.scala)
+# — reused directly as liveness/readiness probes rather than inventing a
+# chart-specific health convention.
+healthPath: /health
+readyPath: /health/ready
+
+env: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

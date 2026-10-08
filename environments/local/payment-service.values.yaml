@@ -1,0 +1,15 @@
+image:
+  repository: payment-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: payment-postgres
+  - name: POSTGRES_DB
+    value: payment
+  - name: POSTGRES_USER
+    value: payment
+  - name: POSTGRES_PASSWORD
+    value: payment
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092

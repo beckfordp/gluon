@@ -1,0 +1,15 @@
+image:
+  repository: catalog-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: catalog-postgres
+  - name: POSTGRES_DB
+    value: catalog
+  - name: POSTGRES_USER
+    value: catalog
+  - name: POSTGRES_PASSWORD
+    value: catalog
+  - name: REDIS_URI
+    value: redis://catalog-redis:6379

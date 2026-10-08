@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      # Every service's own <NAME>_SERVICE_PORT env var (e.g.
+      # CATALOG_SERVICE_PORT) collides with k8s's own auto-injected
+      # Docker-links-style env vars for a Service named "catalog-service" —
+      # k8s would inject CATALOG_SERVICE_PORT=tcp://<ip>:8080 (a URI
+      # string), breaking pureconfig's NUMBER parse of our own same-named
+      # var. Disable that injection; nothing here relies on it — every
+      # cross-service address is passed explicitly via `env` instead.
+      enableServiceLinks: false
+      containers:
+        - name: {{ .Release.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+            - name: metrics
+              containerPort: {{ .Values.metricsPort }}
+          {{- with .Values.env }}
+          env:
+            {{- range . }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.healthPath }}
+              port: {{ .Values.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readyPath }}
+              port: {{ .Values.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

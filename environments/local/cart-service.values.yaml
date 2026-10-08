@@ -1,0 +1,7 @@
+image:
+  repository: cart-service
+  tag: latest
+
+env:
+  - name: REDIS_URI
+    value: redis://cart-redis:6379

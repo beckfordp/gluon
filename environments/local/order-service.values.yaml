@@ -1,0 +1,19 @@
+image:
+  repository: order-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: order-postgres
+  - name: POSTGRES_DB
+    value: order
+  - name: POSTGRES_USER
+    value: order
+  - name: POSTGRES_PASSWORD
+    value: order
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  - name: REDIS_URI
+    value: redis://order-redis:6379
+  - name: INVENTORY_SERVICE_URL
+    value: http://inventory-service:8080

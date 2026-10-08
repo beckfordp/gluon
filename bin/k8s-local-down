@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Tear down everything bin/k8s-local-up deployed — all 6 service Helm
+# releases, the shared local infra, and the gluon-local namespace itself.
+set -euo pipefail
+
+NAMESPACE="gluon-local"
+ALL_SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service)
+
+for svc in "${ALL_SERVICES[@]}"; do
+  helm uninstall "$svc" -n "$NAMESPACE" 2>/dev/null || true
+done
+
+kubectl delete namespace "$NAMESPACE" --ignore-not-found

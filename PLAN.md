@@ -227,13 +227,18 @@ services; a full click-through of US-1 → US-8 against real data, no mocks.
 
 ---
 
-## After all phases: cross-repo integration
+## After all phases: cross-repo integration — done
 
-Once each repo is proven against its own stubs, the next milestone is a real
-end-to-end run — all six services + Kafka + Postgres + Redis + `gshop`
-together (docker-compose or OrbStack), no stubs. The k8s manifests
-(generic chart in `infra/k8s/`, values in `environments/local/` — see
-[ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md)) are the
-actual vehicle for this once they exist; until then, docker-compose across
-repos is the fallback. That's a separate exercise, not a gate on any phase
-above, so per-repo work above is never blocked waiting for it.
+Once each repo is proven against its own stubs, the real milestone is an
+end-to-end run — all six services + Kafka + Postgres + Redis together, no
+stubs. **Done**, on local k8s (OrbStack): `bin/k8s-local-up` builds every
+service's image (`sbt Docker/publishLocal`) and deploys them via the
+generic chart in `infra/k8s/gluon/` + `environments/local/*.values.yaml`
+(see [ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md),
+`infra/k8s/README.md`). Verified with a real checkout: seeded inventory →
+`POST /orders` on order-service → synchronous reserve call to
+inventory-service → Kafka event → order status progressed
+`pending` → `confirmed`, entirely over cluster DNS, no port-forwarding for
+any cross-service hop. `gshop` isn't part of this yet — scaffold only, no
+real screens (Phase 9) — it'll point at these same cluster DNS names once
+there's real UI to test.

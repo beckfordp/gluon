@@ -1,0 +1,9 @@
+apiVersion: v2
+name: gluon
+description: >-
+  Generic chart for a Gluon workload (a service or frontend app). One Helm
+  release per workload, parameterized by a small per-workload values
+  fragment — see gluon/docs/adr/0007-platform-repo-vs-hosted-workloads.md.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

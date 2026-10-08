@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Build + deploy the whole walking skeleton (6 services) onto the local
+# OrbStack k8s cluster, no stubs. Shared infra (Postgres-per-service, Kafka)
+# as plain manifests in infra/k8s/local-infra/; each service as its own
+# Helm release of the generic infra/k8s/gluon chart, parameterized by its
+# own environments/local/<name>.values.yaml fragment — see ADR 0007.
+#
+# Usage:
+#   bin/k8s-local-up [service-name ...]   # defaults to all 6
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+NAMESPACE="gluon-local"
+
+ALL_SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service)
+if [ "$#" -gt 0 ]; then
+  SERVICES=("$@")
+else
+  SERVICES=("${ALL_SERVICES[@]}")
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "FAIL: docker isn't reachable — is OrbStack running?" >&2
+  exit 1
+fi
+if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+  echo "WARN: kubectl context is not 'orbstack' — switch with" >&2
+  echo "      'kubectl config use-context orbstack' or this will deploy" >&2
+  echo "      to whatever cluster is actually current." >&2
+fi
+if [ -z "${GITHUB_TOKEN:-}" ] || [ -z "${GITHUB_ACTOR:-}" ]; then
+  echo "WARN: GITHUB_TOKEN / GITHUB_ACTOR not set — each service's sbt build" >&2
+  echo "      resolves purerestlib from GitHub Packages and will fail without" >&2
+  echo "      a read:packages token. See bin/generate-service's own check." >&2
+fi
+
+echo "== Applying namespace + shared local infra =="
+kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/namespace.yaml"
+kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/"
+
+echo "== Waiting for shared infra to be ready (up to 3m) =="
+# Only infra pods exist in the namespace at this point — services below
+# haven't been helm-installed yet.
+kubectl wait --for=condition=Ready pod --all -n "$NAMESPACE" --timeout=180s || {
+  echo "WARN: not every pod reached Ready in time — check 'kubectl get pods -n $NAMESPACE'" >&2
+}
+
+for svc in "${SERVICES[@]}"; do
+  SERVICE_DIR="$GLUON_DIR/services/$svc"
+  VALUES_FILE="$GLUON_DIR/environments/local/$svc.values.yaml"
+  if [ ! -d "$SERVICE_DIR" ]; then
+    echo "FAIL: $SERVICE_DIR doesn't exist" >&2
+    exit 1
+  fi
+  if [ ! -f "$VALUES_FILE" ]; then
+    echo "FAIL: $VALUES_FILE doesn't exist" >&2
+    exit 1
+  fi
+
+  echo "== Building $svc image (sbt Docker/publishLocal) =="
+  (cd "$SERVICE_DIR" && sbt "Docker/publishLocal")
+
+  echo "== Deploying $svc (helm release) =="
+  helm upgrade --install "$svc" "$GLUON_DIR/infra/k8s/gluon" \
+    --namespace "$NAMESPACE" \
+    -f "$VALUES_FILE"
+done
+
+echo "== Done. Check status with: kubectl get pods -n $NAMESPACE =="

@@ -1,0 +1,7 @@
+image:
+  repository: notification-service
+  tag: latest
+
+env:
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092

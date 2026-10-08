@@ -1,0 +1,15 @@
+image:
+  repository: inventory-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: inventory-postgres
+  - name: POSTGRES_DB
+    value: inventory
+  - name: POSTGRES_USER
+    value: inventory
+  - name: POSTGRES_PASSWORD
+    value: inventory
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092

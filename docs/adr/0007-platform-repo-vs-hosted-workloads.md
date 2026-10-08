@@ -1,7 +1,10 @@
 # 0007. Separate the platform repo (gluon) from the workloads it hosts
 
 ## Status
-Proposed
+Accepted — the local-k8s deployment (`infra/k8s/gluon`'s generic chart +
+`environments/local/*.values.yaml` per workload, `bin/k8s-local-up`) is
+built on exactly this split and runs the real six-service walking skeleton
+end-to-end.
 
 ## Context
 `gluon` already holds cross-cutting docs/ADRs, codegen tooling, per-repo
@@ -62,6 +65,6 @@ incident — not pre-built now, at six-workload scale.
 - `system-design.md` remains the single point of truth for contracts
   across repos until a formal schema registry is justified; still relies
   on humans keeping it in sync (same risk already accepted by ADR 0003).
-- Left as **Proposed** rather than **Accepted** — this reshapes how
-  `infra/k8s/` and `environments/*` get populated, so it's reviewed
-  explicitly before the first chart/values land under it.
+- Accepted once `infra/k8s/gluon`'s chart and `environments/local/` were
+  actually built and exercised against the real walking skeleton, not
+  speculatively — see `infra/k8s/README.md`.
