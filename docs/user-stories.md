@@ -81,7 +81,7 @@ cancel-order epic below; no automatic recovery happens).
   `payment_failed`) and sends the matching email for each.
 
 ### Tasks
-- [ ] US-7.1: consume order.status-changed, send the matching email per status (reservation_failed / confirmed / payment_failed) (notification-service)
+- [x] US-7.1: consume order.status-changed, send the matching email per status (reservation_failed / confirmed / payment_failed) (notification-service)
 
 ## US-8 — Order history
 As a customer, I can view my past orders and their current status, so I can

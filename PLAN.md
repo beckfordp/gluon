@@ -144,7 +144,7 @@ prevents a double charge; order status correctly reaches `confirmed` /
 
 **Repo:** `notification-service` (new).
 
-- [ ] **US-7.1** — consume `order.status-changed` (`reservation_failed` /
+- [x] **US-7.1** — consume `order.status-changed` (`reservation_failed` /
       `confirmed` / `payment_failed`), send the matching email per status
 
 **Stub / fan-out for this phase:**
