@@ -17,8 +17,19 @@
 ```
 bin/k8s-local-up      # build every service's image (sbt Docker/publishLocal)
                        # and deploy everything to the gluon-local namespace
+bin/k8s-local-up <name>-service  # rebuild + redeploy just one service
 bin/k8s-local-down     # tear it all down
 ```
+
+Restarting one service to pick up code changes is `bin/k8s-local-up
+<name>-service` — same command as a full deploy, just scoped to one
+service. It also forces a `kubectl rollout restart` after the rebuild:
+the chart always references the same `<name>-service:latest` tag
+(`imagePullPolicy: Never`, no registry locally), so a plain `helm upgrade`
+with a freshly built image under that same tag leaves the Deployment's pod
+spec textually unchanged and **won't** restart the already-running pod on
+its own — the explicit rollout restart is what actually makes the new
+image take effect.
 
 Prerequisites: OrbStack running with Kubernetes enabled
 (`orbctl config set k8s.enable true`, then `orbctl stop` + reopen — see

@@ -65,6 +65,16 @@ for svc in "${SERVICES[@]}"; do
   helm upgrade --install "$svc" "$GLUON_DIR/infra/k8s/gluon" \
     --namespace "$NAMESPACE" \
     -f "$VALUES_FILE"
+
+  # The chart always references the same "<svc>:latest" tag
+  # (imagePullPolicy: Never, no registry locally) — so a rebuild that
+  # produces a new image under that same tag leaves the Deployment's pod
+  # spec textually unchanged, and `helm upgrade` alone won't restart the
+  # already-running pod. Force it so the freshly built image is actually
+  # picked up.
+  echo "== Restarting $svc to pick up the freshly built image =="
+  kubectl rollout restart "deployment/$svc" -n "$NAMESPACE"
+  kubectl rollout status "deployment/$svc" -n "$NAMESPACE" --timeout=120s
 done
 
 echo "== Done. Check status with: kubectl get pods -n $NAMESPACE =="
