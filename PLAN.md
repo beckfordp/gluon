@@ -181,7 +181,7 @@ both covered.
 
 - [ ] *(infra)* generate bare scaffold, then design the Redis cart model and
       drop the generated Postgres layer — this repo's backlog first item
-- [ ] **US-2.1** — add/remove items in a cart
+- [x] **US-2.1** — add/remove items in a cart
 
 **Stub / fan-out:** none — no external service dependencies, just a test
 Redis instance.

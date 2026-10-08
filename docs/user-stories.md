@@ -20,7 +20,7 @@ checking out.
 - Cart is ephemeral session state → Redis as primary store, no Postgres.
 
 ### Tasks
-- [ ] US-2.1: add/remove items in a cart (cart-service)
+- [x] US-2.1: add/remove items in a cart (cart-service)
 
 ## US-3 — Checkout
 As a customer, I can check out my cart, so an order is created.
