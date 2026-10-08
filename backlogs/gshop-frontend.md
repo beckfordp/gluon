@@ -7,5 +7,10 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
 - Confirm whether inventoryClient/paymentClient are needed at all, or drop
   them — per system-design.md, both look server-to-server/event-driven
   only today, no documented frontend-facing endpoint
-- Local multi-service port map (or k8s service DNS, once Phase 5/local-k8s
-  lands) — env.ts currently has no safe default to fall back to
+- Wire local dev against the real local-k8s deployment (`bin/k8s-local-up`,
+  `gluon-local` namespace) via `kubectl port-forward` per service, env vars
+  in `.env` pointing at `localhost:<forwarded-port>` — the "no local port
+  map" gap this item used to describe is resolved now that Phase 5 landed
+  (real k8s Service DNS names exist); what's left is just the per-service
+  port-forward + `.env` wiring for a dev-mode (`npm run dev`) gshop to talk
+  to it
