@@ -97,11 +97,16 @@ healthy throughout.
       retry fix rather than replacing it — retry handles transient
       errors, the DLQ handles the poison-message case retry alone can't.
 
-**Fix, TD-2.2/TD-2.3:** wrap the consumer (and, to be safe, publisher)
-streams in a restart/resubscribe loop (retry with backoff) instead of
-letting a transient broker error kill the fiber permanently. Worth doing
-once, as a shared pattern/snippet, rather than re-solving per service —
-same spirit as TD-1's generator-level fix.
+**Fix, TD-2.2/TD-2.3/TD-2.4, decided via
+[ADR 0010](./docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md),
+Proposed:** a new `purekafka` module (sibling to `purerestlib` in the
+`purerest` repo, not folded into it) providing stream supervision
+(restart-with-backoff, unbounded attempts, no circuit breaker) and
+dead-letter routing — shared code, not a per-service reimplementation.
+Also brings tracing/metrics/log correlation across the Kafka boundary.
+Not TD-3's fix — that's ADR 0008's outbox/CDC, which removes the direct
+publish call this module's generic resilience wrapper would otherwise
+protect, rather than wrapping it.
 
 ---
 

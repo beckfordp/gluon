@@ -274,7 +274,7 @@ it is. Source: [`frontends/gshop`](../frontends/gshop) (gitignored
 here, like `services/*` — see `../README.md`'s "Layout").
 
 ## Open design questions
-See adr/ for decisions (0001-0009). Revisit this section as new questions
+See adr/ for decisions (0001-0010). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 

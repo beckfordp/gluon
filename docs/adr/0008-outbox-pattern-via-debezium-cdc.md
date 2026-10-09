@@ -52,6 +52,14 @@ Connect + Debezium CDC** (option 2), not a polling publisher.
   announcing. No service calls a Kafka producer directly for these
   events any more — the local DB transaction is the only atomic write
   that has to succeed.
+- The `outbox_events` table includes explicit `trace_parent` and
+  `correlation_id` columns (not buried inside the JSON payload column),
+  written by the app in that same transaction. Debezium publishes, not
+  the app — so there's no application-level "publish" moment left to
+  attach a trace header or a metric to (see "Interaction with ADR 0010"
+  below); carrying trace context as ordinary row data, captured
+  atomically alongside everything else, is how it still reaches the
+  outgoing Kafka message.
 - A Debezium Postgres source connector, one per service's database, is
   deployed to a shared Kafka Connect cluster and tails each database's
   WAL for inserts to that service's `outbox_events` table.
@@ -63,7 +71,11 @@ Connect + Debezium CDC** (option 2), not a polling publisher.
   plain-JSON contract before it lands on the real topic — the payload
   contracts already pinned there stay the source of truth for what a
   consumer actually reads; the outbox table's own column shape is new,
-  internal, and specific to this pattern.
+  internal, and specific to this pattern. The same SMT also maps the
+  `trace_parent`/`correlation_id` columns into the outgoing Kafka
+  record's **headers** — a documented Debezium feature for carrying
+  extra outbox fields outside the envelope, not a workaround (confirm
+  the exact config key against whatever Debezium version is adopted).
 
 Local-infra and per-service work is tracked as `TECHNICAL_DEBT.md`'s
 TD-3.1 (Kafka Connect + Debezium connector in `infra/k8s/local-infra/`)
@@ -95,3 +107,14 @@ service).
   revisiting alongside ADR 0003 if this is adopted.
 - Left as **Proposed**, not **Accepted** — still being evaluated, not
   yet implemented or exercised against a real service.
+
+**Interaction with [ADR 0010](./0010-purekafka-module-for-kafka-resilience-observability.md)
+(`purekafka`):** once a service adopts this pattern, `purekafka`'s
+generic producer-call resilience wrapper has nothing left to wrap on
+that path (no direct publish call), and its application-level publish
+metrics have no publish call to instrument either. Observability for an
+outbox-published topic shifts to the **Kafka Connect/Debezium connector
+level** instead (connector lag, task health — see ADR 0010's own scope).
+`purekafka`'s consumer-side resilience/observability (stream supervision,
+DLQ, trace extraction from headers) is unaffected — consumption doesn't
+change under this ADR.
