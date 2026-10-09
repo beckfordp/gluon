@@ -14,7 +14,10 @@ sync with MWeb than two).
 **Start with [`PLAN.md`](./PLAN.md)** — the phased, cross-repo order of work
 (walking skeleton), what to stub in each repo's own tests, and when to run
 `/conductor:setup`. This README is the per-command reference; `PLAN.md` is
-the sequencing.
+the sequencing. [`TECHNICAL_DEBT.md`](./TECHNICAL_DEBT.md) tracks the
+separate list of cross-cutting gaps found while building (not derived from
+a user story) that affect more than one repo — CORS, Kafka consumer
+resilience, etc.
 
 ## Layout
 

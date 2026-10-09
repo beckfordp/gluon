@@ -1,0 +1,97 @@
+# Technical debt
+
+Cross-cutting technical gaps found while building — not derived from a
+user story, so they don't belong in `docs/user-stories.md`/`PLAN.md`, and
+not an undecided architectural question, so they don't belong in
+`docs/system-design.md`'s "Open design questions" either (that section is
+for things we haven't *decided* yet; this file is for things we've already
+decided need fixing but haven't gotten to).
+
+Each item here affects **more than one repo** — that's the bar for living
+here rather than in a single service's own `backlogs/<name>.md`. A
+single-service gap stays in that service's own backlog file; this file
+exists specifically so a cross-cutting item gets written out **once**
+instead of duplicated per affected repo. Each affected repo's own
+`backlogs/<name>.md` keeps only a one-line pointer back here, citing the
+specific `TD-N.M` task below — that pointer is still what gets pasted into
+that repo's own `conductor/tracks.md` and promoted via `/conductor:newTrack`
+when picked up; this file is not a substitute for that per-repo mechanism,
+just where the shared writeup lives.
+
+Numbered `TD-N.M` the same way `docs/user-stories.md` numbers `US-N.M` —
+`TD-N` is the gap, `TD-N.M` is a concrete, closeable task against one repo.
+
+---
+
+## TD-1 — No CORS support on any generated service
+
+None of the six generated services sends an `Access-Control-Allow-Origin`
+header. `curl` gets a clean 200/201 response with an `Origin` request
+header set, but every browser blocks the equivalent `fetch()` from gshop
+as a cross-origin request (`TypeError: Failed to fetch`) — confirmed
+server-side success, client-side block, for catalog-service, cart-service,
+and order-service (2026-10-08/09, verifying gshop's US-1/US-2/US-3).
+inventory-service, payment-service, notification-service haven't been hit
+yet (gshop never calls them directly — see `backlogs/gshop-frontend.md`'s
+inventoryClient note) but almost certainly carry the identical gap, since
+all six are scaffolded from the same `pure-service-generator` template.
+
+**Current workaround (dev-only, doesn't fix a real deployment):** gshop's
+`vite.config.ts` runs a `server.proxy` entry per service, so the browser
+calls a same-origin relative path and Vite forwards it server-to-server.
+This only works for `npm run dev`; it does nothing for a real deployment
+where gshop and these services are still different origins.
+
+### Tasks
+- [ ] TD-1.1: Fix at the generator level (`pure-service-generator`'s own
+      template) — a shared CORS middleware/config addition there fixes
+      all six at once, rather than patching each service's own http4s
+      routes individually.
+- [ ] TD-1.2: Backport to catalog-service, cart-service, order-service
+      (confirmed affected).
+- [ ] TD-1.3: Confirm and backport to inventory-service, payment-service,
+      notification-service (not yet confirmed affected, but same
+      generator).
+
+---
+
+## TD-2 — Kafka consumer/publisher fibers don't recover from a stream error
+
+Each service's background Kafka consumer/publisher runs as a backgrounded
+fiber (`.compile.drain.background.use`), and nothing restarts that fiber
+if the underlying stream errors — so a *transient* problem (a null
+message value, a broker blip) becomes a *permanent* outage for that
+service's Kafka side, invisible from the outside since the HTTP API stays
+healthy throughout.
+
+### Tasks
+- [x] TD-2.1: payment-service's `OrderReservedConsumer` — **fixed**
+      (found 2026-10-02, manually verifying US-6.1). Plain
+      `ConsumerSettings[F, String, String]`'s `String` deserializer threw
+      on a null key or value (e.g. a bare `kafka-console-producer.sh`
+      call that never sets a key, confirmed live against a real broker),
+      and the failed fiber was never observed or logged. Fixed via
+      fs2-kafka's null-safe `Deserializer.option` (`Option[String]`
+      instead of `String`) for both key and value.
+- [ ] TD-2.2: order-service's `StockEventConsumer` — same
+      `ConsumerSettings[F, String, String]` pattern as TD-2.1 before its
+      fix, likely carries the identical null-key/value crash risk. Not
+      yet fixed. (inventory-service's `StockEventPublisher` is
+      producer-side only — the null-deserializer failure mode doesn't
+      apply the same way, but publish-side resilience to a broker blip
+      hasn't been specifically verified either.)
+- [ ] TD-2.3: notification-service's `OrderStatusChangedConsumer` — found
+      2026-10-09 restarting OrbStack: broader than TD-2.1/2.2 (any stream
+      error, not just a null value). Its `onFinalizeCase`'s
+      `ExitCase.Errored` branch permanently flips its `readyRef` to
+      `false` on *any* stream error, with no retry/resubscribe at all.
+      Every other service's background consumer/publisher recovered on
+      its own once Kafka came back up after the restart; this one didn't
+      — `/health/ready` stayed `503` until the whole pod was manually
+      restarted (`kubectl rollout restart`).
+
+**Fix, TD-2.2/TD-2.3:** wrap the consumer (and, to be safe, publisher)
+streams in a restart/resubscribe loop (retry with backoff) instead of
+letting a transient broker error kill the fiber permanently. Worth doing
+once, as a shared pattern/snippet, rather than re-solving per service —
+same spirit as TD-1's generator-level fix.

@@ -60,9 +60,42 @@ Added `orderItemId` 2026-10-02 (was absent in the original US-4.1/US-4.2
 contract) to fix the correlation gap below — inventory-service treats it as
 an opaque string, no order-domain coupling implied, purely store-and-echo.
 
-No contract documented yet for any other cross-service REST call (none
-exist yet besides this one) — add one here, in this same format, whenever
-a new one is built.
+**`POST /orders`** (caller: `gshop`, US-3 checkout, done — see
+`frontends/gshop/conductor/product.md`; callee: order-service, done):
+- Request (`CreateOrderRequest`): `{"customerId": "string", "items": [{"sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int (must be > 0)"}]}` — at least one item required.
+- `201`: `OrderResponse` —
+  `{"id": "string (UUID)", "customerId": "string", "totalCents": "int", "status": "string (pending|reserved|reservation_failed|confirmed|payment_failed)", "items": [{"id": "string (UUID)", "sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int"}], "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant", "reservationFailure": "{\"sku\": \"string\", \"reason\": \"string\"} | null"}`.
+  `status` is always `"pending"` on a successful reservation in *this*
+  response — it only reaches `reserved`/`confirmed` later, via the async
+  Kafka path (US-5.2/US-6.3), not synchronously here (see "Sync vs. async
+  boundaries" above).
+  `reservationFailure` (added 2026-10-09) is non-null only when `status`
+  is `"reservation_failed"` **in this same response** — the synchronous
+  reserve call itself failed (insufficient stock / unknown sku / the call
+  erroring). **Ephemeral, sync-response-only, not persisted** — there's no
+  DB column for it, so a later `GET /orders/{id}` for the same order still
+  reports `status: "reservation_failed"` but `reservationFailure: null`. A
+  consumer that needs the failure reason must read it off this response,
+  not re-fetch it later.
+  Why ephemeral is actually fine, not just a smaller first increment: the
+  real recovery path is the customer removing the failing SKU from their
+  cart (US-2's cart screen) and retrying checkout — that happens in the
+  same session, right after this response, so nothing ever needs to look
+  up *why* a past order failed after the fact. gshop's own checkout flow
+  doesn't yet act on this (shows a generic error+retry rather than reading
+  `reservationFailure` to name the item and point back to Cart) — see
+  `../backlogs/gshop-frontend.md` or `gshop`'s own `conductor/tracks.md`
+  Backlog.
+- `400`: `{"error": "string"}` — empty `items`, a non-positive `quantity`,
+  or another item-validation failure.
+
+**`GET /orders/{id}`** (same caller/callee as above, done):
+- `200`: same `OrderResponse` shape as `POST /orders` — always
+  `reservationFailure: null` (see note above).
+- `404`: `{"error": "Order not found"}`.
+
+No contract documented yet for any other cross-service REST call — add one
+here, in this same format, whenever a new one is built.
 
 ## Kafka topics (draft)
 - `order.reserved` — producer: order-service (new task under US-5, not yet
@@ -273,21 +306,11 @@ ElastiCache/RDS confirmation ADR).
   so real `order_items.id`s exist to send — previously reserved first, then
   persisted).
 
-- **Null Kafka message key/value crashes a consumer stream silently** (found
-  2026-10-02, while manually verifying payment-service's US-6.1) —
-  `ConsumerSettings[F, String, String]`'s plain `String` deserializer throws
-  on a null key or value (e.g. a producer that never sets a key, confirmed
-  live with a bare `kafka-console-producer.sh` call against a real broker),
-  and since each service's consumer runs as a backgrounded fiber
-  (`.compile.drain.background.use`), a failed fiber is never observed or
-  logged — the HTTP API stays healthy while Kafka consumption silently dies.
-  **Fixed in payment-service's `OrderReservedConsumer`** via fs2-kafka's
-  null-safe `Deserializer.option` for both key and value (`Option[String]`
-  instead of `String`). **Not yet fixed** in inventory-service's
-  `StockEventPublisher` (producer side — n/a) or order-service's
-  `StockEventConsumer`, which uses the same
-  `ConsumerSettings[F, String, String]` pattern and likely carries the same
-  risk — worth a follow-up track there.
+~~**Null Kafka message key/value crashes a consumer stream silently**~~ —
+moved to [`../TECHNICAL_DEBT.md`](../TECHNICAL_DEBT.md) (TD-2.1 fixed,
+TD-2.2 not yet) — this was never actually an *undecided* question (the fix
+was known from the day it was found, just not yet applied everywhere), so
+it belongs there, not here.
 
 - **`purerestlib` registry migration** (ADR 0005) — local dev currently
   resolves `purerestlib` via `sbt publishLocal`, with GitHub Packages kept
