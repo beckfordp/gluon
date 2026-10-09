@@ -33,6 +33,11 @@ library test fixtures only and are not reused.
   outcome, payment, notification. None of these block the customer-facing
   request.
 
+Payment is fully async today (`payment-service` consumes `order.reserved`,
+settles later, no sync call from checkout) — see "Open design questions"
+below for why that may need to change once a real payment provider is
+chosen.
+
 ### REST contracts
 Same rule as the Kafka payloads below: no shared schema registry/OpenAPI
 registry across repos yet, so this section — not either service's own
@@ -296,6 +301,23 @@ ElastiCache/RDS confirmation ADR).
   (e.g. for CI, or for anyone else consuming `purerest`) — would touch
   `pure-service-generator`'s `build.sbt` template and all six generated
   services' `build.sbt` files. Supersede ADR 0005 with a new ADR if adopted.
+
+- **Payment auth timing: sync vs. async** (discussed 2026-10-09, holding off
+  on an ADR until a real payment provider is chosen — `payment-service` is
+  still fully simulated, no decline path exists to protect against yet).
+  Today's design is fully async end-to-end for payment: checkout doesn't
+  wait on it at all. Most real e-commerce systems keep **authorization**
+  (not settlement/capture) synchronous at checkout — same shape as the
+  existing inventory reserve call (a fast, resilience-wrapped external
+  check the checkout path needs an answer from before accepting the order)
+  — specifically to avoid telling a customer "order confirmed" and then
+  discovering the card was declined moments later. The honest tradeoff:
+  unlike inventory-service, a payment gateway is a third party with its
+  own latency/outages outside our control, so adding it as a second
+  synchronous checkout dependency has a real cost, not just a win. Revisit
+  as a proper ADR (likely: sync auth via a new client in order-service's
+  checkout path, mirroring `InventoryClient`; capture/settlement stays
+  async as today) once the provider decision lands.
 
 
 ## Design proposal to fill gaps
