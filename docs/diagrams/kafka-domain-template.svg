@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-label="A generic new service publishes to a new domain-events topic carrying the shared envelope, and any number of consumers subscribe to the same topic, each filtering for the event types it cares about. This is the reusable unit ADR 0009 generalizes for new domains.">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap');
+    :root{
+      --bg:#EEF1F6; --surface:#FFFFFF; --ink:#1B2433; --ink-dim:#5C6779;
+      --line:#CBD3E0; --accent-async:#9C6318; --accent-soft:#FBF1E1;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#10151E; --surface:#1A212D; --ink:#E7ECF4; --ink-dim:#93A0B4;
+        --line:#2C3546; --accent-async:#E3A54C; --accent-soft:#2E2311;
+      }
+    }
+    text{ font-family:"IBM Plex Mono","SFMono-Regular",ui-monospace,monospace; }
+  </style>
+  <defs>
+    <marker id="arrAsyncTiny" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="var(--accent-async)"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="720" height="190" fill="var(--bg)"/>
+  <rect x="0" y="0" width="720" height="190" fill="var(--surface)"/>
+
+  <rect x="20" y="78" width="150" height="56" rx="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"/>
+  <text x="95" y="111" font-size="12" text-anchor="middle" font-weight="600" fill="var(--ink)">shipping-service</text>
+
+  <rect x="280" y="68" width="160" height="76" rx="8" fill="var(--accent-soft)" stroke="var(--accent-async)" stroke-width="1.3"/>
+  <text x="360" y="96" font-size="11.5" text-anchor="middle" font-weight="600" fill="var(--ink)">shipping-events</text>
+  <text x="360" y="114" font-size="8.7" text-anchor="middle" fill="var(--ink-dim)">envelope + eventType</text>
+  <text x="360" y="127" font-size="7.8" text-anchor="middle" fill="var(--ink-dim)">no new topic infra per event</text>
+
+  <path d="M 170,106 L 280,106" stroke="var(--accent-async)" stroke-width="1.6" marker-end="url(#arrAsyncTiny)"/>
+  <text x="225" y="96" font-size="8.3" text-anchor="middle" fill="var(--accent-async)">publishes</text>
+
+  <path d="M 440,96 L 560,40" stroke="var(--accent-async)" stroke-width="1.5" fill="none" marker-end="url(#arrAsyncTiny)"/>
+  <rect x="560" y="18" width="140" height="44" rx="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"/>
+  <text x="630" y="44" font-size="11" text-anchor="middle" font-weight="600" fill="var(--ink)">order-service</text>
+
+  <path d="M 440,116 L 560,160" stroke="var(--accent-async)" stroke-width="1.5" fill="none" marker-end="url(#arrAsyncTiny)"/>
+  <rect x="560" y="138" width="140" height="44" rx="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4"/>
+  <text x="630" y="164" font-size="11" text-anchor="middle" font-weight="600" fill="var(--ink)">any future consumer</text>
+
+  <text x="20" y="178" font-size="9" fill="var(--ink-dim)">Same unit, different domain &#8212; one producer, one enveloped topic, as many filtering consumers as needed.</text>
+</svg>

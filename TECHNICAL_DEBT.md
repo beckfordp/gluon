@@ -89,9 +89,58 @@ healthy throughout.
       its own once Kafka came back up after the restart; this one didn't
       — `/health/ready` stayed `503` until the whole pod was manually
       restarted (`kubectl rollout restart`).
+- [ ] TD-2.4: dead-letter routing — after retry/resubscribe (TD-2.2/2.3)
+      is in place, a message that still can't be processed after N
+      retries (truly malformed, not just a transient broker blip) should
+      go to a `<topic>-dlq` topic instead of either crashing the fiber
+      again or blocking that partition indefinitely. Complements the
+      retry fix rather than replacing it — retry handles transient
+      errors, the DLQ handles the poison-message case retry alone can't.
 
 **Fix, TD-2.2/TD-2.3:** wrap the consumer (and, to be safe, publisher)
 streams in a restart/resubscribe loop (retry with backoff) instead of
 letting a transient broker error kill the fiber permanently. Worth doing
 once, as a shared pattern/snippet, rather than re-solving per service —
 same spirit as TD-1's generator-level fix.
+
+---
+
+## TD-3 — No outbox pattern: DB write and Kafka publish aren't atomic
+
+Every service that both persists state and publishes an event does the
+two as separate, non-transactional steps: a DB write (`store.reserve`/
+`store.update`/`store.create`), then a *separate* Kafka publish call
+after it. If the process dies between the two, or the publish itself
+fails, the DB and the event stream silently diverge — the state change
+is durable, the event announcing it never arrives. inventory-service's
+own code already acknowledges the publish side can fail
+(`InventoryRoutes.scala`, "Failed to publish inventory.stock-reserved" —
+logged, not retried, by design: "the sync HTTP response is already
+determined by `store.reserve`'s result and must never change because
+Kafka is slow"), but the underlying dual-write hazard was never named or
+tracked until now.
+
+**Affects:** order-service (`order.reserved`/`order.status-changed`),
+inventory-service (`inventory.stock-reserved`/`-failed`), payment-service
+(`payment.settled`/`-failed`) — every service that publishes to Kafka at
+all. catalog-service, cart-service, notification-service aren't affected
+(no Kafka publish side).
+
+**Decided (2026-10-09) via
+[ADR 0008](./docs/adr/0008-outbox-pattern-via-debezium-cdc.md), Proposed:**
+fix via the **outbox pattern**, implemented with a **Kafka Connect +
+Debezium** CDC connector per service's Postgres database, not a polling
+publisher — see the ADR for the full alternatives/consequences writeup.
+
+### Tasks
+- [ ] TD-3.1: Stand up Kafka Connect + a Debezium Postgres source
+      connector in local infra (`infra/k8s/local-infra/`, alongside the
+      existing bare Kafka broker) — new shared infra, not yet built.
+- [ ] TD-3.2: order-service — add an `outbox_events` table (Flyway
+      migration), write to it in the same transaction as the
+      order/order_items state change it announces; drop the direct
+      `OrderEventPublisher` calls in favor of the outbox write.
+- [ ] TD-3.3: inventory-service — same pattern for
+      `inventory.stock-reserved`/`-reservation-failed`.
+- [ ] TD-3.4: payment-service — same pattern for
+      `payment.settled`/`-failed`.

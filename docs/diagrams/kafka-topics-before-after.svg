@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 300" role="img" aria-label="Today, six narrow Kafka topics exist, one per event type, grouped under order, inventory, and payment. Under ADR 0009's proposed design, each group collapses into one domain topic carrying both event types as an eventType field.">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap');
+    :root{
+      --bg:#EEF1F6; --surface:#FFFFFF; --ink:#1B2433; --ink-dim:#5C6779;
+      --line:#CBD3E0; --accent-async:#9C6318; --accent-soft:#FBF1E1;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#10151E; --surface:#1A212D; --ink:#E7ECF4; --ink-dim:#93A0B4;
+        --line:#2C3546; --accent-async:#E3A54C; --accent-soft:#2E2311;
+      }
+    }
+    text{ font-family:"IBM Plex Mono","SFMono-Regular",ui-monospace,monospace; }
+  </style>
+  <defs>
+    <marker id="arrAsyncSmall" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="var(--accent-async)"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1080" height="300" fill="var(--bg)"/>
+  <rect x="0" y="0" width="1080" height="300" fill="var(--surface)"/>
+
+  <text x="20" y="22" font-size="11" letter-spacing="0.06em" fill="var(--ink-dim)">TODAY &#8212; 6 EVENT-TYPE TOPICS</text>
+
+  <!-- order group -->
+  <text x="195" y="48" font-size="11" text-anchor="middle" fill="var(--ink-dim)">order.*</text>
+  <rect x="30" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="110" y="75" font-size="10" text-anchor="middle" fill="var(--ink)">reserved</text>
+  <rect x="200" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="280" y="75" font-size="10" text-anchor="middle" fill="var(--ink)">status-changed</text>
+
+  <!-- inventory group -->
+  <text x="565" y="48" font-size="11" text-anchor="middle" fill="var(--ink-dim)">inventory.*</text>
+  <rect x="400" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="480" y="75" font-size="9.5" text-anchor="middle" fill="var(--ink)">stock-reserved</text>
+  <rect x="570" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="650" y="75" font-size="8.5" text-anchor="middle" fill="var(--ink)">stock-reservation-failed</text>
+
+  <!-- payment group -->
+  <text x="935" y="48" font-size="11" text-anchor="middle" fill="var(--ink-dim)">payment.*</text>
+  <rect x="770" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="850" y="75" font-size="10" text-anchor="middle" fill="var(--ink)">settled</text>
+  <rect x="940" y="56" width="160" height="30" rx="5" fill="var(--bg)" stroke="var(--line)"/>
+  <text x="1020" y="75" font-size="10" text-anchor="middle" fill="var(--ink)">failed</text>
+
+  <!-- converging connectors -->
+  <path d="M110,86 L195,118 M280,86 L195,118 M195,118 L195,140" stroke="var(--accent-async)" stroke-width="1.5" fill="none" marker-end="url(#arrAsyncSmall)"/>
+  <path d="M480,86 L565,118 M650,86 L565,118 M565,118 L565,140" stroke="var(--accent-async)" stroke-width="1.5" fill="none" marker-end="url(#arrAsyncSmall)"/>
+  <path d="M850,86 L935,118 M1020,86 L935,118 M935,118 L935,140" stroke="var(--accent-async)" stroke-width="1.5" fill="none" marker-end="url(#arrAsyncSmall)"/>
+
+  <text x="20" y="160" font-size="11" letter-spacing="0.06em" fill="var(--ink-dim)">PROPOSED &#8212; 3 DOMAIN TOPICS (ADR 0009)</text>
+
+  <rect x="55" y="168" width="280" height="86" rx="8" fill="var(--accent-soft)" stroke="var(--accent-async)" stroke-width="1.3"/>
+  <text x="195" y="194" font-size="13" text-anchor="middle" font-weight="600" fill="var(--ink)">order-events</text>
+  <line x1="80" y1="206" x2="310" y2="206" stroke="var(--line)"/>
+  <text x="195" y="228" font-size="9.5" text-anchor="middle" fill="var(--ink-dim)">eventType:</text>
+  <text x="195" y="243" font-size="9.5" text-anchor="middle" fill="var(--ink)">OrderReserved &#183; OrderStatusChanged</text>
+
+  <rect x="425" y="168" width="280" height="86" rx="8" fill="var(--accent-soft)" stroke="var(--accent-async)" stroke-width="1.3"/>
+  <text x="565" y="194" font-size="13" text-anchor="middle" font-weight="600" fill="var(--ink)">inventory-events</text>
+  <line x1="450" y1="206" x2="680" y2="206" stroke="var(--line)"/>
+  <text x="565" y="228" font-size="9.5" text-anchor="middle" fill="var(--ink-dim)">eventType:</text>
+  <text x="565" y="243" font-size="8.3" text-anchor="middle" fill="var(--ink)">StockReserved &#183; StockReservationFailed</text>
+
+  <rect x="795" y="168" width="280" height="86" rx="8" fill="var(--accent-soft)" stroke="var(--accent-async)" stroke-width="1.3"/>
+  <text x="935" y="194" font-size="13" text-anchor="middle" font-weight="600" fill="var(--ink)">payment-events</text>
+  <line x1="820" y1="206" x2="1050" y2="206" stroke="var(--line)"/>
+  <text x="935" y="228" font-size="9.5" text-anchor="middle" fill="var(--ink-dim)">eventType:</text>
+  <text x="935" y="243" font-size="9.5" text-anchor="middle" fill="var(--ink)">PaymentSettled &#183; PaymentFailed</text>
+
+  <text x="20" y="282" font-size="9.5" fill="var(--ink-dim)">A new event (e.g. OrderCancelled) becomes a new eventType value on an existing topic, not a new topic to provision.</text>
+</svg>

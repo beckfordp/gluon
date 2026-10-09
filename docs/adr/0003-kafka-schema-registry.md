@@ -27,3 +27,13 @@ event contracts.
 - Service scaffolding (`pure-service-generator`) will need a schema-registry
   client wired in for any Kafka-producing/consuming service generated after
   this decision.
+
+**Note (2026-10-09), still Accepted but implementation now depends on
+[ADR 0009](./0009-one-kafka-topic-per-domain.md):** this decision itself
+is unchanged (a schema registry is still the right call), but actually
+implementing it — registering schemas, picking a subject-naming strategy
+— should wait until ADR 0009's topic/envelope migration lands. Schema
+Registry's standard `TopicNameStrategy` ties one schema to one topic;
+registering schemas against today's topic shape now would mean
+redesigning them almost immediately once ADR 0009's envelope shape
+replaces it. Not yet implemented either way as of this note.

@@ -274,7 +274,7 @@ it is. Source: [`frontends/gshop`](../frontends/gshop) (gitignored
 here, like `services/*` — see `../README.md`'s "Layout").
 
 ## Open design questions
-See adr/ for decisions (0001-0007). Revisit this section as new questions
+See adr/ for decisions (0001-0009). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
@@ -341,6 +341,23 @@ it belongs there, not here.
   as a proper ADR (likely: sync auth via a new client in order-service's
   checkout path, mirroring `InventoryClient`; capture/settlement stays
   async as today) once the provider decision lands.
+
+- **Choreography vs. orchestration (saga) for the checkout flow**
+  (discussed 2026-10-09). Today's flow is pure choreography — every
+  service reacts independently to events it happens to consume, with no
+  single component owning the end-to-end sequence. This is exactly why
+  **US-10** (recover from a stale pending order, `user-stories.md`)
+  exists as an unresolved epic: nothing bounds how long the async
+  confirmation chain takes, and nothing is responsible for deciding "this
+  has taken too long, compensate" (release the reservation, cancel the
+  order). The standard alternative is **orchestration/saga** — a
+  coordinator (a role inside order-service, or a real workflow engine)
+  explicitly drives reserve → charge → confirm, owns the timeout, and
+  triggers compensation on a stuck/failed step. Choreography stays
+  simpler and more decoupled for the happy path, which is why it's been
+  fine so far; orchestration earns its complexity specifically to close
+  the US-10 gap. Not decided — revisit as its own ADR if/when US-10 is
+  actually picked up, rather than deciding it in the abstract now.
 
 
 ## Design proposal to fill gaps
