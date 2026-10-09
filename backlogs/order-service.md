@@ -1,5 +1,21 @@
 Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`.
 
+- Surface which sku failed reservation in `OrderResponse` — discovered
+  2026-10-09 while discussing gshop's checkout UX: `OrderRoutes.reserveAll`
+  already computes the exact failure reason per item (e.g.
+  `"insufficient stock for sku 'watch-rolex-submariner'"`,
+  `"unknown sku '...'"`, or the raw reservation-call error), but that
+  reason is only passed to `logger.warn` before the order is saved with
+  status `reservation_failed` — it never reaches the API response.
+  Clients (gshop included) only see the aggregate
+  `status: "reservation_failed"` with no way to tell which line item
+  caused it, or why. Add a field to `OrderResponse` (e.g. optional
+  `failedSku: Option[String]` or a richer `reservationFailure: Option[{sku,
+  reason}]`) populated from that already-computed reason when status is
+  `reservation_failed`, so a UI can say "X is out of stock" instead of a
+  generic "some items are out of stock." No workaround possible purely on
+  the client side — `inventory-service` has no GET-by-sku or list endpoint
+  either, so gshop can't independently check stock per item.
 - Add CORS support (no `Access-Control-Allow-Origin` header today) — same
   gap as catalog-service/cart-service (see `backlogs/catalog-service.md`),
   confirmed 2026-10-09 verifying gshop's US-3 Checkout button: `curl` gets
