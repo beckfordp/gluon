@@ -23,7 +23,7 @@ Numbered `TD-N.M` the same way `docs/user-stories.md` numbers `US-N.M` —
 
 ---
 
-## TD-1 — No CORS support on any generated service
+## TD-1 — No CORS support on any generated service — **RESOLVED 2026-10-10**
 
 None of the six generated services sends an `Access-Control-Allow-Origin`
 header. `curl` gets a clean 200/201 response with an `Origin` request
@@ -56,15 +56,15 @@ where gshop and these services are still different origins.
       track, implemented/reviewed/archived) — same `Cors.middleware`
       pattern, 100% coverage, verified via each repo's own
       `scripts/verify-cors.sh`.
-- [ ] TD-1.3: Confirm and backport to inventory-service, payment-service,
-      notification-service (not yet confirmed affected, but same
-      generator). inventory-service **done 2026-10-10**
-      (`inventory-service` `cors_20261010` track, archived) — confirmed
-      affected (the real end-to-end check returned a 200 with no ACAO
-      header before the fix), same `Cors.middleware` pattern, 100%
-      coverage, verified via `scripts/verify-cors.sh`. payment-service
-      **done 2026-10-10** (`payment-service` `cors_20261010` track,
-      archived) — same pattern. notification-service still open.
+- [x] TD-1.3: Confirm and backport to inventory-service, payment-service,
+      notification-service — **done 2026-10-10** (each has its own
+      `cors_20261010` track, implemented/reviewed/archived) — same
+      `Cors.middleware` pattern, 100% coverage, verified via each repo's
+      own `scripts/verify-cors.sh`. inventory-service and payment-service
+      were confirmed affected by the real end-to-end check (a 200 with no
+      ACAO header before the fix); notification-service has no CRUD API
+      at all (pure Kafka consumer) — backported for consistency anyway,
+      per explicit decision, wrapping only its two health-check routes.
 
 ---
 

@@ -303,7 +303,7 @@ walking-skeleton phases above are numbered — each one is its own
 cross-repo unit of work, sequenced where a real dependency exists between
 them, independent otherwise.
 
-## Rework 1 — CORS support (TD-1)
+## Rework 1 — CORS support (TD-1) — DONE
 
 **Repos:** `pure-service-generator` (the fix), then all six generated
 services (the backport) — `catalog-service`, `cart-service`,
@@ -320,12 +320,14 @@ the top of all seven repos' own backlogs as of 2026-10-10.
       `order-service` (gap confirmed directly via gshop's own browser
       requests) — done 2026-10-10 (`cors_20261010`,
       implemented/reviewed/archived in each of the three repos)
-- [ ] TD-1.3 — confirm + backport to `inventory-service`,
+- [x] TD-1.3 — confirm + backport to `inventory-service`,
       `payment-service`, `notification-service` (same generator
-      template, not yet independently confirmed affected).
-      `inventory-service` and `payment-service` done 2026-10-10
-      (`cors_20261010`, implemented/reviewed/archived in each — confirmed
-      affected); `notification-service` still open.
+      template, not yet independently confirmed affected) — done
+      2026-10-10 (`cors_20261010`, implemented/reviewed/archived in each
+      of the three repos). `inventory-service`/`payment-service`
+      confirmed affected; `notification-service` has no CRUD API at all
+      (pure Kafka consumer) — backported anyway for consistency, wrapping
+      only its health-check routes.
 
 **Stub / fan-out:** none — a middleware addition, verified directly
 against each real running service, no synthetic events needed.
@@ -333,6 +335,9 @@ against each real running service, no synthetic events needed.
 **Exit criteria:** gshop's Vite dev-server CORS proxy workarounds
 (`vite.config.ts`'s `server.proxy` entries) can be removed — a direct
 cross-origin `fetch()` from gshop to each service succeeds without one.
+Backend side met as of 2026-10-10 (all six services send the right
+headers, verified end-to-end); removing gshop's own proxy config is a
+gshop-side task for the agent working that repo.
 
 ---
 
