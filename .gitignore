@@ -6,6 +6,15 @@ services/*
 frontends/*
 !frontends/README.md
 
+# Platform tooling/library dependencies are their own independent git
+# repos — not nested here. Moved under gluon's own tree 2026-10-10 (were
+# sibling repos) so a gluon-rooted session can actually operate in them —
+# see docs/system-design.md's "Open design questions".
+tools/*
+!tools/README.md
+lib/*
+!lib/README.md
+
 # macOS
 .DS_Store
 

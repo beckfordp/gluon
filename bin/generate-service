@@ -13,7 +13,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-GENERATOR_DIR="$(cd "$GLUON_DIR/../pure-service-generator" && pwd)"
+GENERATOR_DIR="$(cd "$GLUON_DIR/tools/pure-service-generator" && pwd)"
 
 DOMAIN_NAME=""
 FIELD_SPEC=""

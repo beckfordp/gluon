@@ -98,16 +98,17 @@ tagless-final Cats Effect / http4s / Skunk / **Redis**, e-commerce domain
 Used as a comparison point for service boundaries, Redis usage patterns, and
 Kafka topic/event design — not copied wholesale.
 
-## Existing building blocks (already in `~/dev/personal`)
-- **purerest** — reusable Cats-Effect/http4s/Skunk platform library. Its
-  bundled `order-service`/`inventory-service` are library test fixtures only
-  (proving the library works), **not** Gluon's real order-service/
-  inventory-service — those are generated fresh like every other Gluon
-  service, not reused from here. Full local observability stack (Prometheus,
-  Grafana, Elasticsearch, Kibana, Filebeat).
-- **pure-service-generator** — giter8 template generating new purerest-based
-  services: CRUD, Postgres (one DB per service), health checks, observability,
-  CI, ready to push as their own repo.
+## Existing building blocks (`lib/`, `tools/` — see "Repo topology" below)
+- **purerest** (`lib/purerest`) — reusable Cats-Effect/http4s/Skunk platform
+  library. Its bundled `order-service`/`inventory-service` are library test
+  fixtures only (proving the library works), **not** Gluon's real
+  order-service/inventory-service — those are generated fresh like every
+  other Gluon service, not reused from here. Full local observability stack
+  (Prometheus, Grafana, Elasticsearch, Kibana, Filebeat).
+- **pure-service-generator** (`tools/pure-service-generator`) — giter8
+  template generating new purerest-based services: CRUD, Postgres (one DB
+  per service), health checks, observability, CI, ready to push as their
+  own repo.
 
 ## Repo topology
 One repo per service (generator default), all six generated fresh into
@@ -115,9 +116,12 @@ One repo per service (generator default), all six generated fresh into
 catalog, cart), plus one repo per frontend app under `frontends/`
 (`gshop` is the first — React/TypeScript/Vite per
 [ADR 0006](./adr/0006-react-frontend-framework.md)), plus:
-- `purerest` — shared library (test-fixture services only, not part of
-  Gluon's own service set).
-- `pure-service-generator` — the generator itself.
+- [`lib/purerest`](../lib/purerest) — shared library (test-fixture
+  services only, not part of Gluon's own service set). Moved under
+  `gluon`'s own tree 2026-10-10 (was a sibling repo) — own git repo,
+  gitignored here, same convention as `services/*`/`frontends/*`.
+- [`tools/pure-service-generator`](../tools/pure-service-generator) — the
+  generator itself. Same move, same reasoning.
 - this folder (`docs/`) — cross-repo vision, user stories, system design,
   ADRs. Not code; each service/frontend repo's own `conductor/product.md`
   should reference this doc and scope down to that repo's slice.

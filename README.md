@@ -27,6 +27,8 @@ gluon/
 ├── bin/             platform tooling entry points (generate-service, codegen)
 ├── services/        each generated service — its own git repo, gitignored here
 ├── frontends/       each frontend app — its own git repo, gitignored here
+├── tools/           platform tooling repos (pure-service-generator) — own git repo, gitignored here
+├── lib/             shared platform library repos (purerest) — own git repo, gitignored here
 ├── infra/
 │   ├── docker/        shared local runtime infra (Kafka, schema registry — not per-service Postgres)
 │   ├── k8s/            Helm chart(s), parameterized per environment

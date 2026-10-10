@@ -359,34 +359,27 @@ it belongs there, not here.
   the US-10 gap. Not decided — revisit as its own ADR if/when US-10 is
   actually picked up, rather than deciding it in the abstract now.
 
-- **Move `pure-service-generator` and `purerest` under `gluon`'s own
-  tree** (raised 2026-10-10, starting Rework 1's CORS work). Both
-  currently sit as sibling repos (`~/dev/personal/pure-service-generator`,
-  `~/dev/personal/purerest`), outside `gluon`'s directory tree entirely.
-  Concrete problem this caused: a Claude Code session rooted at `gluon`
-  can move its working directory freely *within* `gluon`'s own tree
-  (confirmed — into `services/catalog-service`, `frontends/gshop`, etc.)
-  but gets silently reset back to `gluon`'s root the moment it `cd`s
-  outside it (confirmed twice, both an absolute and a relative path) —
-  so Conductor work (`/conductor:newTrack`, `/conductor:implement`) can't
-  be driven against either repo from a `gluon`-rooted session; it needs
-  its own separate session opened there instead.
-  Proposed fix: relocate both *under* `gluon` — e.g. `gluon/tools/
-  pure-service-generator` and `gluon/lib/purerest` — as their own
-  independent git repos, exactly the same convention already proven for
-  `services/*` and `frontends/*` (co-located on disk for convenience,
-  gitignored from `gluon`'s own repo, pushed/versioned independently).
-  Not a new pattern to invent, just the existing one extended to the
-  platform's own tooling/library dependencies instead of only its
-  hosted workloads. Needs: new `tools/*`/`!tools/README.md` and
-  `lib/*`/`!lib/README.md` entries in `gluon`'s `.gitignore` (mirroring
-  the existing `services/*` block), and every place that currently
-  assumes `../pure-service-generator`/`../purerest` as a sibling path
-  (`bin/generate-service`, each generated service's `build.sbt`
-  GitHub Packages resolver, `bin/set-github-env`'s assumptions, etc.)
-  updated to the new location. Not decided — raised as a real fix for a
-  real friction point hit this session, not yet weighed against the cost
-  of moving two repos other tooling/muscle-memory already points at.
+- ~~**Move `pure-service-generator` and `purerest` under `gluon`'s own
+  tree**~~ — **Resolved 2026-10-10**, same day it was raised. Both were
+  sibling repos (`~/dev/personal/pure-service-generator`,
+  `~/dev/personal/purerest`), outside `gluon`'s directory tree, which
+  meant a `gluon`-rooted Claude Code session's working directory got
+  silently reset to `gluon`'s root the moment it `cd`'d outside it
+  (confirmed twice — absolute and relative path both reset) — Conductor
+  work couldn't be driven against either repo from this session. Fixed
+  by relocating both *under* `gluon` — [`tools/pure-service-generator`](../../tools/README.md),
+  [`lib/purerest`](../../lib/README.md) — as their own independent git
+  repos (`mv`, history/remotes/status all preserved), the exact same
+  convention already proven for `services/*`/`frontends/*` (co-located,
+  gitignored from `gluon`'s own repo, versioned independently). Confirmed
+  working immediately after the move: a `cd` into the new
+  `tools/pure-service-generator` path correctly updated the session's
+  working directory, instead of resetting. Updated: `.gitignore` (new
+  `tools/*`/`lib/*` blocks), `bin/generate-service`'s `GENERATOR_DIR`
+  resolution, `README.md`'s Layout tree. No `build.sbt`/
+  `bin/set-github-env` changes needed — neither held a filesystem-path
+  assumption (GitHub Packages/`publishLocal` resolution is
+  location-independent).
 
 
 ## Design proposal to fill gaps
