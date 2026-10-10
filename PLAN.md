@@ -322,7 +322,10 @@ the top of all seven repos' own backlogs as of 2026-10-10.
       implemented/reviewed/archived in each of the three repos)
 - [ ] TD-1.3 — confirm + backport to `inventory-service`,
       `payment-service`, `notification-service` (same generator
-      template, not yet independently confirmed affected)
+      template, not yet independently confirmed affected).
+      `inventory-service` done 2026-10-10 (`cors_20261010`,
+      implemented/reviewed/archived — confirmed affected); `payment-service`,
+      `notification-service` still open.
 
 **Stub / fan-out:** none — a middleware addition, verified directly
 against each real running service, no synthetic events needed.
