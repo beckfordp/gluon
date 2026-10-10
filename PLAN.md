@@ -202,7 +202,34 @@ Redis instance.
 
 ---
 
-## Phase 9 — Shopping frontend *(independent of the spine — can run anytime once its dependencies below are done)*
+## Phase 9 — Walking Skeleton Complete (Deployed and Integrated)
+
+Once each repo is proven against its own stubs, the real milestone is an
+end-to-end run — all six services + Kafka + Postgres + Redis together, no
+stubs.
+
+- [x] Generic Helm chart + per-service `environments/local/*.values.yaml`
+      for all six services (ADR 0007) — `infra/k8s/gluon/` +
+      `bin/k8s-local-up`
+- [x] All six services + Kafka/Postgres/Redis deployed together on local
+      k8s (OrbStack), no stubs (see [ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md),
+      `infra/k8s/README.md`)
+- [x] Real cross-service checkout verified: seeded inventory →
+      `POST /orders` on order-service → synchronous reserve call to
+      inventory-service → Kafka event → order status progressed
+      `pending` → `confirmed`, entirely over cluster DNS, no
+      port-forwarding for any cross-service hop
+
+`gshop` isn't part of this cluster-DNS run yet — local dev against it
+still goes through `kubectl port-forward` per service (see
+`frontends/gshop/conductor/tech-stack.md`'s "Local dev against a running
+backend") — but it's no longer scaffold-only: Phase 10's four screens and
+Phase 10b's redesign/admin-screen work are real, wired, and tested
+against these same services.
+
+---
+
+## Phase 10 — Shopping frontend
 
 **Repo:** `frontends/gshop` (new, scaffolded — see
 `frontends/gshop/README.md`).
@@ -227,7 +254,7 @@ services; a full click-through of US-1 → US-8 against real data, no mocks.
 
 ---
 
-## Phase 10 — Make the frontend usable *(independent of the spine — loose ends after the walking skeleton)*
+## Phase 10b — Make the frontend fully usable
 
 **Repos:** `frontends/gshop` (primary), `catalog-service`,
 `inventory-service` (small supporting endpoints each, tracked in full in
@@ -265,21 +292,166 @@ order history / adjust demo inventory without touching a database directly.
 
 ---
 
-## After all phases: cross-repo integration — done
+## Rework
 
-Once each repo is proven against its own stubs, the real milestone is an
-end-to-end run — all six services + Kafka + Postgres + Redis together, no
-stubs. **Done**, on local k8s (OrbStack): `bin/k8s-local-up` builds every
-service's image (`sbt Docker/publishLocal`) and deploys them via the
-generic chart in `infra/k8s/gluon/` + `environments/local/*.values.yaml`
-(see [ADR 0007](./docs/adr/0007-platform-repo-vs-hosted-workloads.md),
-`infra/k8s/README.md`). Verified with a real checkout: seeded inventory →
-`POST /orders` on order-service → synchronous reserve call to
-inventory-service → Kafka event → order status progressed
-`pending` → `confirmed`, entirely over cluster DNS, no port-forwarding for
-any cross-service hop. `gshop` isn't part of this cluster-DNS run yet —
-local dev against it still goes through `kubectl port-forward` per service
-(see `frontends/gshop/conductor/tech-stack.md`'s "Local dev against a
-running backend") — but it's no longer scaffold-only: Phase 9's four
-screens and Phase 10's redesign/admin-screen work are real, wired, and
-tested against these same services.
+The walking skeleton is complete — all six services deployed and verified
+end-to-end on local k8s (Phase 9), gshop wired against real data (Phases
+10/10b). This next stage pays down what building it surfaced: the gaps and
+decisions tracked in [`TECHNICAL_DEBT.md`](./TECHNICAL_DEBT.md) and
+`docs/adr/` 0003/0008/0009/0010. Numbered `Rework N` the same way the
+walking-skeleton phases above are numbered — each one is its own
+cross-repo unit of work, sequenced where a real dependency exists between
+them, independent otherwise.
+
+## Rework 1 — CORS support (TD-1)
+
+**Repos:** `pure-service-generator` (the fix), then all six generated
+services (the backport) — `catalog-service`, `cart-service`,
+`order-service`, `inventory-service`, `payment-service`,
+`notification-service`. Already kicked off: a CORS backlog item sits at
+the top of all seven repos' own backlogs as of 2026-10-10.
+
+- [ ] TD-1.1 — generator-level fix: wrap `routes` with http4s's
+      `org.http4s.server.middleware.CORS` in
+      `src/main/g8/src/main/scala/$package$/Main.scala`, before
+      `.orNotFound`
+- [ ] TD-1.2 — backport to `catalog-service`, `cart-service`,
+      `order-service` (gap confirmed directly via gshop's own browser
+      requests)
+- [ ] TD-1.3 — confirm + backport to `inventory-service`,
+      `payment-service`, `notification-service` (same generator
+      template, not yet independently confirmed affected)
+
+**Stub / fan-out:** none — a middleware addition, verified directly
+against each real running service, no synthetic events needed.
+
+**Exit criteria:** gshop's Vite dev-server CORS proxy workarounds
+(`vite.config.ts`'s `server.proxy` entries) can be removed — a direct
+cross-origin `fetch()` from gshop to each service succeeds without one.
+
+---
+
+## Rework 2 — One Kafka topic per domain, with envelope (ADR 0009)
+
+**Repos:** `order-service`, `inventory-service`, `payment-service`,
+`notification-service` — a coordinated cutover, not an incremental
+per-repo rollout (see ADR 0009's own Consequences).
+
+- [ ] Consolidate `order.reserved` + `order.status-changed` →
+      `order-events`
+- [ ] Consolidate `inventory.stock-reserved` +
+      `inventory.stock-reservation-failed` → `inventory-events`
+- [ ] Consolidate `payment.settled` + `payment.failed` →
+      `payment-events`
+- [ ] Every producer wraps its payload in the shared envelope
+      (`eventId`/`eventType`/`timestamp`/`source`/`correlationId`/
+      `payload`); every consumer branches on `eventType` instead of
+      relying on topic subscription to filter
+- [ ] `system-design.md`'s "Kafka topics" section and payload contracts
+      rewritten to match
+
+**Stub / fan-out:** same per-repo synthetic-event pattern Phases 3–5
+already used — update each repo's existing synthetic-event tests to the
+new envelope shape rather than inventing a new test strategy.
+
+**Exit criteria:** all four services publish/consume exclusively via the
+three domain topics; the old six event-type topics are retired;
+`system-design.md`'s contracts section matches what's actually running.
+
+---
+
+## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010)
+
+**Repos:** `purerest` (new `modules/purekafka`), then `order-service`,
+`inventory-service`, `payment-service`, `notification-service` adopt it.
+
+- [ ] Build `purekafka`: generic `F[A]` call resilience (producer side),
+      consumer stream supervision (restart-with-backoff, unbounded
+      attempts, no circuit breaker), dead-letter routing, and
+      tracing/metrics/log observability across the Kafka boundary
+- [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
+      — already fixed directly (2026-10-02), predates this module
+- [ ] TD-2.2 — order-service's `StockEventConsumer` adopts
+      `purekafka`'s stream supervision
+- [ ] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
+      adopts `purekafka`'s stream supervision
+- [ ] TD-2.4 — dead-letter routing added across all four Kafka-consuming
+      services
+
+**Stub / fan-out:** `purekafka`'s own test suite proves retry/
+supervision/DLQ against synthetic failures (same Testcontainers-Kafka
+pattern already used elsewhere); per-service adoption is a drop-in swap
+of the existing consumer stream, no new fan-out needed.
+
+**Exit criteria:** every Kafka consumer self-heals from a dropped broker
+connection — repeat the OrbStack-restart check that originally found
+TD-2.3, this time with no manual `kubectl rollout restart` needed; a
+deliberately malformed message lands on a DLQ topic instead of crashing
+or blocking its consumer.
+
+---
+
+## Rework 4 — Transactional outbox via Debezium CDC (ADR 0008)
+
+**Repos:** `order-service`, `inventory-service`, `payment-service` (the
+three publishing services), plus `gluon`'s `infra/k8s/local-infra` (new
+Kafka Connect + Debezium).
+
+**Depends on:** Rework 2 — the outbox's Debezium Event Router SMT should
+target the finished domain-topic envelope contract, not the old
+per-event-type shape, to avoid a second migration shortly after.
+
+- [ ] TD-3.1 — Kafka Connect + a Debezium Postgres source connector in
+      `infra/k8s/local-infra/`
+- [ ] TD-3.2 — order-service: `outbox_events` table (with
+      `trace_parent`/`correlation_id` columns), write in the same
+      transaction as the state change, drop the direct publish call
+- [ ] TD-3.3 — inventory-service: same pattern
+- [ ] TD-3.4 — payment-service: same pattern
+
+**Stub / fan-out:** none in the synthetic-event sense — verified against
+a real local Postgres + Debezium connector, same spirit as the original
+cross-repo integration check (Phase 9).
+
+**Exit criteria:** killing a service mid-transaction (before its old
+direct-publish call would have fired) still results in the event
+reaching Kafka once the DB transaction is visible in the WAL — no missed-
+event window; the dual-write hazard is structurally closed, not just
+logged-and-hoped-for.
+
+---
+
+## Rework 5 — Schema registry (ADR 0003 implementation)
+
+**Repos:** `gluon` (`infra/k8s/local-infra`, new schema-registry
+component), every Kafka-publishing/consuming service.
+
+**Depends on:** Rework 2 — ADR 0003 was explicitly sequenced to wait for
+ADR 0009's envelope shape to settle, so schemas get designed once
+against the final shape, not twice.
+
+- [ ] Stand up a schema registry component in local infra
+- [ ] Pick serialization format/registry implementation (ADR 0003's own
+      still-open follow-up — Avro vs. Protobuf vs. JSON Schema;
+      Confluent Schema Registry vs. Apicurio)
+- [ ] Register schemas against the final envelope shape, enforce
+      compatibility checks
+
+**Stub / fan-out:** none new.
+
+**Exit criteria:** a producer/consumer contract mismatch is caught at
+registration/publish time, not silently at runtime in a downstream
+consumer.
+
+---
+
+**Deferred, not numbered above** — both still undecided (see
+`system-design.md`'s "Open design questions"), each would need its own
+ADR before becoming a numbered Rework phase: **payment auth timing**
+(sync vs. async — blocked on a real payment provider being chosen) and
+**choreography vs. orchestration/saga** for the checkout flow (blocked on
+US-10, the stale-pending-order epic, actually being picked up).
+
+---
+
+
