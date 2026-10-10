@@ -1,9 +1,5 @@
 Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`.
 
-- TD-1.2: No CORS support — see `../TECHNICAL_DEBT.md`, cross-cutting,
-  shared writeup there. Port once `pure-service-generator`'s own
-  backlog item (TD-1.1, generator-level fix) lands — moved to the top
-  2026-10-10 as the first technical-debt item being worked.
 - Bulk lookup-by-SKU endpoint (e.g. `GET /catalogs?skus=a,b,c`) — discovered
   2026-10-09: gshop's Cart screen joins cart-service's line items (sku +
   quantity only) against the *entire* catalog list client-side to get
@@ -35,3 +31,4 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
 - Generate catalog-service + apply field-spec (infra)
 - US-1.1: browse/list catalog endpoints (done)
 - US-1.2: Redis read-through cache (done)
+- TD-1.2: CORS support (done 2026-10-10, `cors_20261010`)
