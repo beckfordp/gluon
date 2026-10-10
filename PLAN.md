@@ -318,8 +318,8 @@ the top of all seven repos' own backlogs as of 2026-10-10.
       `cors_20261010`, implemented/reviewed/archived)
 - [ ] TD-1.2 — backport to `catalog-service`, `cart-service`,
       `order-service` (gap confirmed directly via gshop's own browser
-      requests). `catalog-service` done 2026-10-10 (`cors_20261010`,
-      implemented/reviewed/archived); `cart-service`, `order-service`
+      requests). `catalog-service` and `cart-service` done 2026-10-10
+      (`cors_20261010`, implemented/reviewed/archived in each); `order-service`
       still open.
 - [ ] TD-1.3 — confirm + backport to `inventory-service`,
       `payment-service`, `notification-service` (same generator
