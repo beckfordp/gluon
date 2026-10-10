@@ -144,9 +144,3 @@ one is an account-level decision, deliberately out of scope for now).
   (specs, generate script, per-repo backlogs, UI prototype)
 - [`../PLAN.md`](../PLAN.md) — the phased, cross-repo execution order
   (walking skeleton)
-
-This folder (`docs/`) used to live at `~/Documents/MIcroservices Platform/`
-(iCloud-synced) — moved in under `gluon/` so everything's in one place and
-easier to keep in sync with one MWeb folder library. No longer iCloud-synced
-as a result — that tradeoff was intentional (the iCloud copy wasn't adding
-value on its own).

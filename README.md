@@ -7,9 +7,7 @@ under `services/` for convenience only (see "Layout" below) — nothing in
 this repo is generated automatically by an agent.
 
 See [`docs/`](./docs/) for the cross-repo vision, user stories, system
-design, and ADRs this is built from (moved in from the old iCloud folder —
-it wasn't earning its keep on its own, and one folder is easier to keep in
-sync with MWeb than two).
+design, and ADRs this is built from.
 
 **Start with [`PLAN.md`](./PLAN.md)** — the phased, cross-repo order of work
 (walking skeleton), what to stub in each repo's own tests, and when to run
