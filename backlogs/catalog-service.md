@@ -13,6 +13,18 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
   rather than adding another one-off endpoint.
 - TD-1.2: No CORS support — see `../TECHNICAL_DEBT.md`, cross-cutting,
   shared writeup there.
+- `GET /catalogs`'s Redis read-through cache (US-1.2) doesn't appear to be
+  invalidated on `POST /catalogs` — discovered 2026-10-10 while seeding the
+  boutique-redesign track's 90 new watches: a `limit=100&offset=0` request
+  made (via gshop's Cart screen) *before* seeding kept returning the
+  pre-seed 10-item result well after the 90 new items were confirmed
+  created, while other limit/offset windows (e.g. `limit=20&offset=0`,
+  never requested pre-seed) returned fresh data immediately. Looks like a
+  per-(limit,offset) cache key with either no TTL or a long one, and no
+  invalidation/bust on write. Worth a fix or at least a documented TTL —
+  gshop's Cart screen always requests the same `limit=100&offset=0` window
+  to join cart lines against the catalog, so it's a likely victim of this
+  again.
 - Seed a luxury-watch product list (brand/model/description/price/sku) via
   a new `scripts/seed-watches.sh`, POSTing each item to this service's own
   `POST /catalogs` — driven by gshop's US-1 Catalog screen track needing
