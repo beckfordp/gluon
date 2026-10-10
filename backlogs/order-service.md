@@ -1,9 +1,8 @@
 Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`.
 
-- Surface which sku failed reservation in `OrderResponse` (done — see
-  archived track `conductor/archive/reservation-failure-detail_20261009/`)
 - TD-1.2: No CORS support — see `../TECHNICAL_DEBT.md`, cross-cutting,
-  shared writeup there.
+  shared writeup there. Port once `pure-service-generator`'s own
+  backlog item (TD-1.1, generator-level fix) lands.
 - TD-2.2: `StockEventConsumer` doesn't recover from a null-key/value Kafka
   message (likely crashes the consumer fiber permanently, same as the bug
   already fixed in payment-service, TD-2.1) — see `../TECHNICAL_DEBT.md`.
