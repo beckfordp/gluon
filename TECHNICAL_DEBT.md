@@ -162,3 +162,47 @@ publisher — see the ADR for the full alternatives/consequences writeup.
       `inventory.stock-reserved`/`-reservation-failed`.
 - [ ] TD-3.4: payment-service — same pattern for
       `payment.settled`/`-failed`.
+
+---
+
+## TD-4 — No list endpoint in the generator's base template
+
+`pure-service-generator`'s base CRUD surface is create / get-by-id /
+update (PATCH) / replace (PUT) / delete — no `GET /<resource>` to
+browse/list the collection. This gap has already been hand-added,
+independently, in near-identical shape (paginated `limit`/`offset` query
+params + `X-Total-Count` response header) to two generated services:
+catalog-service's `GET /catalogs` (`listCatalogsServerEndpoint`, US-1.1)
+and inventory-service's `GET /inventorys`
+(`list-inventory-endpoint_20261010`, built for gshop's admin screen).
+order-service's `GET /orders?customerId=` (US-8.1) is the same underlying
+gap surfacing in a filtered-list shape, not a direct match worth
+generalizing from.
+
+**Decided (2026-10-10):** add a paginated list endpoint to the generator
+template by default. Bounded `limit`/`offset` (capping max page size, same
+validation shape catalog-service already uses) cleanly answers the
+obvious "could be a large number" concern — this is exactly the kind of
+repeated, proven pattern the generator exists to standardize rather than
+re-derive per service.
+
+**Explicitly rejected: a matching bulk "delete all" endpoint.**
+Destructive, hard-to-reverse, and no real use case has shown up across any
+of the six services so far. Left out of the default template — if a
+service ever genuinely needs one, it should add it deliberately with its
+own extra guardrails, not get it for free as a standard generated verb
+every service carries by default.
+
+### Tasks
+- [ ] TD-4.1: Add a paginated `GET /<resource>` list endpoint to
+      `pure-service-generator`'s base template (`src/main/g8`) — bounded
+      `limit`/`offset` query params (reuse catalog-service's existing
+      validation shape: limit 1-100, sane default, offset >= 0),
+      `X-Total-Count` response header, same `$domain_name$`-pluralized
+      path convention the existing CRUD routes already use.
+
+No forced per-service backport tasks here (unlike TD-1/CORS, which
+affected every existing service identically) — whether an
+already-generated service adopts the new template's list endpoint is
+opportunistic, only when that service's own backlog actually calls for
+it, not a required sweep across all six.

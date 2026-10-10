@@ -455,6 +455,26 @@ consumer.
 
 ---
 
+## Rework 6 — List endpoint in the generator's base template (TD-4)
+
+**Repos:** `pure-service-generator` only — no forced backport to
+already-generated services (see TD-4's own note on why).
+
+- [ ] TD-4.1 — add a paginated `GET /<resource>` list endpoint to
+      `src/main/g8`: bounded `limit`/`offset` query params (reuse
+      catalog-service's validation shape), `X-Total-Count` response
+      header, same pluralized-path convention as the existing CRUD routes
+
+**Stub / fan-out:** none — a template addition, verified via the usual
+`dev-regenerate.sh` scratch-instance flow plus a real running instance,
+same spirit as the CORS fix (Rework 1).
+
+**Exit criteria:** a freshly generated service exposes a working, bounded,
+paginated list endpoint with no hand-written follow-up required — the
+exact gap catalog-service and inventory-service each had to close by hand.
+
+---
+
 **Deferred, not numbered above** — both still undecided (see
 `system-design.md`'s "Open design questions"), each would need its own
 ADR before becoming a numbered Rework phase: **payment auth timing**
