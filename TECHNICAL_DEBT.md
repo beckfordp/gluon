@@ -62,8 +62,9 @@ where gshop and these services are still different origins.
       (`inventory-service` `cors_20261010` track, archived) — confirmed
       affected (the real end-to-end check returned a 200 with no ACAO
       header before the fix), same `Cors.middleware` pattern, 100%
-      coverage, verified via `scripts/verify-cors.sh`. payment-service,
-      notification-service still open.
+      coverage, verified via `scripts/verify-cors.sh`. payment-service
+      **done 2026-10-10** (`payment-service` `cors_20261010` track,
+      archived) — same pattern. notification-service still open.
 
 ---
 
