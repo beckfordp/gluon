@@ -50,11 +50,12 @@ where gshop and these services are still different origins.
       methods, `Content-Type` header, credentials disallowed. 100%
       statement/branch coverage; verified against a real running instance
       via the new committed `scripts/verify-cors.sh`.
-- [ ] TD-1.2: Backport to catalog-service, cart-service, order-service
-      (confirmed affected). catalog-service and cart-service **done
-      2026-10-10** (`catalog-service`/`cart-service` `cors_20261010`
-      tracks, archived) — same `Cors.middleware` pattern, 100% coverage,
-      verified via `scripts/verify-cors.sh`. order-service still open.
+- [x] TD-1.2: Backport to catalog-service, cart-service, order-service
+      (confirmed affected) — **done 2026-10-10** (`catalog-service`,
+      `cart-service`, `order-service` each have their own `cors_20261010`
+      track, implemented/reviewed/archived) — same `Cors.middleware`
+      pattern, 100% coverage, verified via each repo's own
+      `scripts/verify-cors.sh`.
 - [ ] TD-1.3: Confirm and backport to inventory-service, payment-service,
       notification-service (not yet confirmed affected, but same
       generator).

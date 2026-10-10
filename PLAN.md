@@ -316,11 +316,10 @@ the top of all seven repos' own backlogs as of 2026-10-10.
       `src/main/g8/src/main/scala/$package$/Main.scala`, before
       `.orNotFound` — done 2026-10-10 (`pure-service-generator`
       `cors_20261010`, implemented/reviewed/archived)
-- [ ] TD-1.2 — backport to `catalog-service`, `cart-service`,
+- [x] TD-1.2 — backport to `catalog-service`, `cart-service`,
       `order-service` (gap confirmed directly via gshop's own browser
-      requests). `catalog-service` and `cart-service` done 2026-10-10
-      (`cors_20261010`, implemented/reviewed/archived in each); `order-service`
-      still open.
+      requests) — done 2026-10-10 (`cors_20261010`,
+      implemented/reviewed/archived in each of the three repos)
 - [ ] TD-1.3 — confirm + backport to `inventory-service`,
       `payment-service`, `notification-service` (same generator
       template, not yet independently confirmed affected)

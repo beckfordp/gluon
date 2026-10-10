@@ -1,8 +1,5 @@
 Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`.
 
-- TD-1.2: No CORS support — see `../TECHNICAL_DEBT.md`, cross-cutting,
-  shared writeup there. Port once `pure-service-generator`'s own
-  backlog item (TD-1.1, generator-level fix) lands.
 - TD-2.2: `StockEventConsumer` doesn't recover from a null-key/value Kafka
   message (likely crashes the consumer fiber permanently, same as the bug
   already fixed in payment-service, TD-2.1) — see `../TECHNICAL_DEBT.md`.
@@ -14,3 +11,4 @@ Paste into `conductor/tracks.md`'s `## Backlog` section after `/conductor:setup`
 - US-4.2: wire resilience middleware for the reserve call to inventory-service (done)
 - US-5.2: consume inventory.stock-reserved / inventory.stock-reservation-failed, update order status (done)
 - US-8.1: order history read endpoint + Redis cache (done)
+- TD-1.2: CORS support (done 2026-10-10, `cors_20261010`)
