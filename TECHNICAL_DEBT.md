@@ -43,10 +43,13 @@ This only works for `npm run dev`; it does nothing for a real deployment
 where gshop and these services are still different origins.
 
 ### Tasks
-- [ ] TD-1.1: Fix at the generator level (`pure-service-generator`'s own
-      template) — a shared CORS middleware/config addition there fixes
-      all six at once, rather than patching each service's own http4s
-      routes individually.
+- [x] TD-1.1: Fix at the generator level — **done 2026-10-10**
+      (`pure-service-generator` `cors_20261010` track, archived).
+      `Cors.middleware` (`src/main/g8/src/main/scala/$package$/Cors.scala`)
+      wraps every response: allow-all origins, the template's 5 CRUD
+      methods, `Content-Type` header, credentials disallowed. 100%
+      statement/branch coverage; verified against a real running instance
+      via the new committed `scripts/verify-cors.sh`.
 - [ ] TD-1.2: Backport to catalog-service, cart-service, order-service
       (confirmed affected).
 - [ ] TD-1.3: Confirm and backport to inventory-service, payment-service,

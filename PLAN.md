@@ -311,10 +311,11 @@ services (the backport) — `catalog-service`, `cart-service`,
 `notification-service`. Already kicked off: a CORS backlog item sits at
 the top of all seven repos' own backlogs as of 2026-10-10.
 
-- [ ] TD-1.1 — generator-level fix: wrap `routes` with http4s's
+- [x] TD-1.1 — generator-level fix: wrap `routes` with http4s's
       `org.http4s.server.middleware.CORS` in
       `src/main/g8/src/main/scala/$package$/Main.scala`, before
-      `.orNotFound`
+      `.orNotFound` — done 2026-10-10 (`pure-service-generator`
+      `cors_20261010`, implemented/reviewed/archived)
 - [ ] TD-1.2 — backport to `catalog-service`, `cart-service`,
       `order-service` (gap confirmed directly via gshop's own browser
       requests)
