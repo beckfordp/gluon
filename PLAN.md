@@ -210,10 +210,10 @@ Redis instance.
 - [x] *(infra)* scaffold the repo (Vite + React + TypeScript, ADR 0006);
       thin per-service client modules with base URL + health check only,
       no real endpoints wired yet
-- [ ] US-1 UI — browse catalog screen, calling catalog-service
-- [ ] US-2 UI — cart screen, calling cart-service
-- [ ] US-3 UI — checkout screen, calling order-service
-- [ ] US-8 UI — order status/history screen, calling order-service
+- [x] US-1 UI — browse catalog screen, calling catalog-service
+- [x] US-2 UI — cart screen, calling cart-service
+- [x] US-3 UI — checkout screen, calling order-service
+- [x] US-8 UI — order status/history screen, calling order-service
 
 Depends on: catalog-service (Phase 6, done), cart-service (Phase 7),
 order-service checkout + history (Phases 2/8, done). US-7 (notification)
@@ -224,6 +224,44 @@ synthetic events (this is the UI layer, not another async consumer).
 
 **Exit criteria:** all four screens wired to real (locally running)
 services; a full click-through of US-1 → US-8 against real data, no mocks.
+
+---
+
+## Phase 10 — Make the frontend usable *(independent of the spine — loose ends after the walking skeleton)*
+
+**Repos:** `frontends/gshop` (primary), `catalog-service`,
+`inventory-service` (small supporting endpoints each, tracked in full in
+their own repos — see below).
+
+Once Phase 9 made gshop functionally click through end-to-end, it was still
+a bare, unstyled scaffold with a 10-item demo catalog and no operational
+tooling. This phase is polish + closing the small cross-service gaps found
+along the way, to make gshop actually presentable/usable as a demo
+storefront rather than just "technically wired."
+
+- [x] *(gshop)* Dark-luxury "watch boutique" visual redesign across all 4
+      screens — design tokens, `WatchArt` component, restyled
+      Catalog/Cart/Checkout/OrderHistory/App shell — gshop's
+      `boutique-redesign_20261010`
+- [x] *(gshop + catalog-service)* Catalog grown from 10 → 100 real luxury
+      watches — gshop's `boutique-redesign_20261010` Phase 5, backed by
+      `catalog-service`'s own `expand-watch-catalog_20261010` track
+- [x] *(gshop)* `WatchArt` switched from CSS-generated placeholder dials to
+      real licensed photography (Unsplash, hotlinked, round-robin mapped
+      across the 100-item catalog) — gshop's `watchart-photos_20261010`
+- [ ] *(gshop + inventory-service)* Admin screen: clear order history,
+      list/adjust real inventory — gshop's `admin-screen_20261010` (in
+      progress), backed by `inventory-service`'s own
+      `list-inventory-endpoint_20261010` track (done — added the
+      previously-missing `GET /inventorys` list/filter-by-sku endpoint)
+
+**Stub / fan-out:** none — this phase works against real running services
+throughout, same as Phase 9; no new stubs/synthetic events needed.
+
+**Exit criteria:** gshop presentable end-to-end as a demo storefront — one
+consistent visual language across all screens, a full 100-item catalog with
+real photography, and basic operational tooling (the admin screen) to reset
+order history / adjust demo inventory without touching a database directly.
 
 ---
 
@@ -239,6 +277,9 @@ generic chart in `infra/k8s/gluon/` + `environments/local/*.values.yaml`
 `POST /orders` on order-service → synchronous reserve call to
 inventory-service → Kafka event → order status progressed
 `pending` → `confirmed`, entirely over cluster DNS, no port-forwarding for
-any cross-service hop. `gshop` isn't part of this yet — scaffold only, no
-real screens (Phase 9) — it'll point at these same cluster DNS names once
-there's real UI to test.
+any cross-service hop. `gshop` isn't part of this cluster-DNS run yet —
+local dev against it still goes through `kubectl port-forward` per service
+(see `frontends/gshop/conductor/tech-stack.md`'s "Local dev against a
+running backend") — but it's no longer scaffold-only: Phase 9's four
+screens and Phase 10's redesign/admin-screen work are real, wired, and
+tested against these same services.
