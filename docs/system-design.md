@@ -21,10 +21,10 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (US-5.2); will publish `order.reserved`/`order.status-changed` (design decided 2026-10-02, see "Design proposal to fill gaps" — not yet built) |
-| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory.stock-reserved`/`inventory.stock-reservation-failed` (consumed by order-service, US-5.2) |
-| payment-service | US-6.1 done 2026-10-02 (consumes `order.reserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `payment.settled`; charge simulated — no real provider decided yet) | Postgres | idempotency keys (US-6.2, not yet built) | consumes `order.reserved` (US-6.1); publishes `payment.settled`/`payment.failed` (US-6.1) |
-| notification-service | new (generator, no DB module); US-7.x not started | — | — | will consume `order.status-changed` (US-7.x, not yet built) |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache) | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (eventType `StockReserved`/`StockReservationFailed`), `payment-events` (eventType `PaymentSettled`/`PaymentFailed`); publishes `order-events` (eventType `OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
+| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes stock-reservation events via fs2-kafka, plain JSON, no schema registry) | Postgres | — | publishes `inventory-events` (eventType `StockReserved`/`StockReservationFailed`), consumed by order-service — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| payment-service | US-6.1 done 2026-10-02 (consumes order-reserved events, creates+settles a `Payment` directly via `PaymentStore`, publishes payment-settlement events; charge simulated — no real provider decided yet) | Postgres | idempotency keys (US-6.2, not yet built) | consumes `order-events` (eventType `OrderReserved`); publishes `payment-events` (eventType `PaymentSettled`/`PaymentFailed`) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| notification-service | new (generator, no DB module); US-7.1 done (consumes `OrderStatusChanged`, sends the matching email) | — | — | consumes `order-events` (eventType `OrderStatusChanged`; other event types on the topic, e.g. `OrderReserved`, are silently skipped) — ADR 0009, migrated 2026-10-11 |
 
 ## Sync vs. async boundaries
 - **Sync (HTTP, resilience middleware):** checkout → order-service → reserve
@@ -97,34 +97,78 @@ an opaque string, no order-domain coupling implied, purely store-and-echo.
 No contract documented yet for any other cross-service REST call — add one
 here, in this same format, whenever a new one is built.
 
-## Kafka topics (draft)
-- `order.reserved` — producer: order-service (new task under US-5, not yet
-  built); consumer: payment-service (US-6.1, not yet built). Published once
-  an order's stock is fully `Reserved` — not at raw checkout — so
-  payment-service never charges before stock is confirmed
-- `order.status-changed` — producer: order-service (new tasks under US-6/US-7,
-  not yet built); consumer: notification-service (US-7.x, not yet built).
-  Carries `reservation_failed`/`confirmed`/`payment_failed` only — the
-  `Pending`→`Reserved` transition is `order.reserved`'s job, not this topic's
-- `inventory.stock-reserved` — producer done (inventory-service, US-5.1);
-  consumer done (order-service, US-5.2)
-- `inventory.stock-reservation-failed` — producer done (inventory-service,
-  US-5.1); consumer done (order-service, US-5.2)
-- `payment.settled`
-- `payment.failed`
+## Kafka topics
+One topic per **domain**, not per event type — [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md),
+implemented across all four Kafka-touching services 2026-10-11
+(`kafka-envelope_20261011` in each repo; see "Design proposal to fill gaps"
+below for the six-topic shape this replaced). Every message on every topic
+below is wrapped in the same envelope (see "Envelope" below); a consumer
+reads `eventType` to decide how to decode `payload`, rather than relying on
+topic subscription to filter event types for it.
 
-One topic per event type for now; revisit compaction/partitioning key once
-payment-service and notification-service exist. Schema/contract management:
-see [ADR 0003](./adr/0003-kafka-schema-registry.md) (schema registry) — no
-registry is wired up yet, so each payload below is the **only** place its
-shape is pinned; a producer and consumer in different repos must each read
-this section, not each other's source code, to agree on a wire format.
+- **`order-events`** — producer: order-service; consumers: payment-service
+  (`OrderReserved` only), notification-service (`OrderStatusChanged` only).
+  Event types: `OrderReserved` (published once an order's stock is fully
+  `Reserved` — not at raw checkout — so payment-service never charges
+  before stock is confirmed), `OrderStatusChanged` (published whenever an
+  order lands in `reservation_failed`/`confirmed`/`payment_failed` — not
+  for `pending`/`reserved`).
+- **`inventory-events`** — producer: inventory-service; consumer:
+  order-service. Event types: `StockReserved`, `StockReservationFailed`.
+- **`payment-events`** — producer: payment-service; consumer:
+  order-service. Event types: `PaymentSettled`, `PaymentFailed`.
 
-### Payload contracts (plain JSON for now — see ADR 0003)
+Partition key: each domain's natural entity id — `orderItemId` for
+`inventory-events` (see "Envelope" below for why this differs from the
+other two topics' `orderId`), `orderId` for `order-events` and
+`payment-events`. Retired 2026-10-11: the six old per-event-type topics
+(`order.reserved`, `order.status-changed`, `inventory.stock-reserved`,
+`inventory.stock-reservation-failed`, `payment.settled`, `payment.failed`)
+— no producer or consumer anywhere still targets them.
 
-**`inventory.stock-reserved`** / **`inventory.stock-reservation-failed`**
-(same shape for both; producer: inventory-service, US-5.1 + correlation-id
-follow-up, **done**; consumer: order-service, US-5.2, **done**):
+Schema/contract management: see [ADR 0003](./adr/0003-kafka-schema-registry.md)
+(schema registry) — no registry is wired up yet, so this section is the
+**only** place the envelope and payload shapes are pinned; a producer and
+consumer in different repos must each read this section, not each other's
+source code, to agree on a wire format.
+
+### Envelope (plain JSON for now — see ADR 0003)
+Every message on every domain topic above has this shape; no shared library
+between services (matching this codebase's existing pattern) — each repo
+keeps its own identical copy of the case class:
+```json
+{
+  "eventId": "string (UUID) — minted fresh per publish, for log/trace correlation only",
+  "eventType": "string — e.g. OrderReserved, StockReservationFailed, PaymentSettled; what a consumer branches on",
+  "timestamp": "string (ISO-8601 instant)",
+  "source": "string — the publishing service's name, e.g. order-service",
+  "correlationId": "string — see the per-topic note below; what a consumer filters/correlates on",
+  "payload": "object — the event-specific shape, one of the per-topic contracts below, keyed by eventType"
+}
+```
+**`correlationId` is not a single unified cross-service trace id for one
+checkout** — a known, accepted gap, not yet fixed. order-service's and
+payment-service's events use `orderId`. inventory-service's events use
+`orderItemId` instead, because inventory-service deliberately doesn't know
+`orderId` (see the `orderItemId`-correlation design below, under "REST
+contracts") — fixing this would mean changing `POST /inventorys/reservations`'s
+own contract, out of scope for the ADR 0009 topic-consolidation cutover.
+A consumer that needs to correlate across all three topics for one order
+today has to do so via each payload's own `orderId`/`orderItemId` field,
+not via `correlationId` uniformly.
+
+A consumer with an `eventType` it doesn't recognize on a topic it
+subscribes to (e.g. payment-service seeing a hypothetical future
+`order-events` eventType it doesn't handle) silently skips the message —
+this is not logged as malformed. Only a genuine envelope-decode failure, or
+a matching `eventType` with an undecodable `payload`, is a real error log
+line.
+
+### Payload contracts
+
+**`StockReserved`** / **`StockReservationFailed`** (same payload shape for
+both; producer: inventory-service, **done**; consumer: order-service,
+**done**):
 ```json
 {
   "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the POST /inventorys/reservations request above; opaque to inventory-service",
@@ -143,13 +187,13 @@ the failure path has no `Inventory` record to pull one from —
 avoids that problem since order-service mints it before the reserve call,
 not inventory-service.)
 
-`inventory.stock-reservation-failed` is only published for a genuine stock
-outcome (insufficient stock) — not for a caller-input error (unknown sku,
+`StockReservationFailed` is only published for a genuine stock outcome
+(insufficient stock) — not for a caller-input error (unknown sku,
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
 
-**`order.reserved`** (producer: order-service, new task under US-5, not yet
-built; consumer: payment-service, US-6.1, not yet built):
+**`OrderReserved`** (producer: order-service, **done**; consumer:
+payment-service, **done**):
 ```json
 {
   "orderId": "string (UUID)",
@@ -159,16 +203,13 @@ built; consumer: payment-service, US-6.1, not yet built):
 }
 ```
 Published exactly once per order, at the moment `StockEventConsumer`
-successfully transitions that order from `pending` to `reserved` — the same
-transition that's already built (US-5.2), just with this publish added
-alongside it. Not published for `reservation_failed` (see
-`order.status-changed` below instead), and not published at raw checkout
-time — payment-service should never see an order it might still need to
-reject for lack of stock.
+successfully transitions that order from `pending` to `reserved`. Not
+published for `reservation_failed` (see `OrderStatusChanged` below
+instead), and not published at raw checkout time — payment-service should
+never see an order it might still need to reject for lack of stock.
 
-**`order.status-changed`** (producer: order-service, new tasks under
-US-6/US-7, not yet built; consumer: notification-service, US-7.x, not yet
-built):
+**`OrderStatusChanged`** (producer: order-service, **done**; consumer:
+notification-service, **done**):
 ```json
 {
   "orderId": "string (UUID)",
@@ -179,47 +220,45 @@ built):
 ```
 Published whenever an order lands in one of these three statuses —
 `reservation_failed` (from either the synchronous checkout failure or the
-async `inventory.stock-reservation-failed` consumer, US-4.2/US-5.2, both
-already built — only the publish side is new), `confirmed` (new: consuming
-`payment.settled`), or `payment_failed` (new: consuming `payment.failed`).
-Not published for `pending` or `reserved` — `order.reserved` already covers
-the one transition payment-service needs, and nothing currently needs
-telling about `pending` itself.
+async `StockReservationFailed` consumer), `confirmed` (consuming
+`PaymentSettled`), or `payment_failed` (consuming `PaymentFailed`). Not
+published for `pending` or `reserved` — `OrderReserved` already covers the
+one transition payment-service needs, and nothing currently needs telling
+about `pending` itself.
 
 **Reliability (decided 2026-10-02, mechanism corrected 2026-10-02):** no
-transactional outbox. Both publishes above use a bounded retry, then log
-loudly and drop on exhaustion — originally written as "wrapped in
-`purerest.resilience`'s bounded retry," which turned out not to be possible:
-`purerest.resilience` only wraps an http4s `Client[F]` call, not an arbitrary
-Kafka producer send. Implemented instead as a hand-rolled bounded retry via
-`cats-retry` directly (available transitively through `purerestlib`, which
-uses it internally for its own `Client[F]` middleware) — the pattern
-payment-service's `PaymentEventPublisher` established first, mirrored by
-order-service's `OrderEventPublisher`. Inventory-service's own
+transactional outbox. Both `order-events` publishes above use a bounded
+retry, then log loudly and drop on exhaustion — originally written as
+"wrapped in `purerest.resilience`'s bounded retry," which turned out not to
+be possible: `purerest.resilience` only wraps an http4s `Client[F]` call,
+not an arbitrary Kafka producer send. Implemented instead as a hand-rolled
+bounded retry via `cats-retry` directly (available transitively through
+`purerestlib`, which uses it internally for its own `Client[F]` middleware)
+— the pattern payment-service's `PaymentEventPublisher` established first,
+mirrored by order-service's `OrderEventPublisher`. Inventory-service's own
 `StockEventPublisher` predates this decision and still has no retry at all
 (single attempt + timeout, log-on-failure) — lower-bar than what's described
 here, not yet revisited. Explicitly *not* crash-safe: if the process dies
 between the DB commit and the retries being exhausted, the event is lost and
 nothing downstream is told. Accepted for the walking skeleton to keep scope
 down (no new outbox table, no poller); revisit if this ever needs to survive
-a mid-retry crash reliably.
+a mid-retry crash reliably — see Rework 4 (outbox) in `../PLAN.md`.
 
-**`payment.settled`** / **`payment.failed`** (same shape for both; producer:
-payment-service, US-6.1, in progress; consumer: order-service, new
-`order.status-changed`-publishing task under US-6, not yet built):
+**`PaymentSettled`** / **`PaymentFailed`** (same payload shape for both;
+producer: payment-service, **done**; consumer: order-service, **done**):
 ```json
 {
-  "orderId": "string (UUID) — order-service's own order id; what its order.status-changed publish needs to correlate back to",
+  "orderId": "string (UUID) — order-service's own order id; what its OrderStatusChanged publish needs to correlate back to",
   "paymentId": "string (UUID) — payment-service's own Payment.id, included for cross-service log/trace correlation only",
   "amountCents": "int — the amount charged (settled) or that failed to charge",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Published once per consumed `order.reserved` event: `payment.settled` once
+Published once per consumed `OrderReserved` event: `PaymentSettled` once
 the (currently simulated — no real provider decided yet, see the ADR
-backlog item) charge succeeds, `payment.failed` otherwise. Keyed by
-`orderId`, mirroring `order.reserved`'s own keying. Same reliability stance
-as `order.reserved`/`order.status-changed` above: no transactional outbox,
+backlog item) charge succeeds, `PaymentFailed` otherwise. Keyed by
+`orderId`, mirroring `OrderReserved`'s own keying. Same reliability stance
+as `OrderReserved`/`OrderStatusChanged` above: no transactional outbox,
 bounded retry (hand-rolled via cats-retry directly — `purerest.resilience`
 is `Client[F]`-only, doesn't apply to a Kafka producer call), log loudly and
 drop on exhaustion.
@@ -277,6 +316,15 @@ here, like `services/*` — see `../README.md`'s "Layout").
 See adr/ for decisions (0001-0010). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
+
+- ~~**One Kafka topic per event type → six topics and growing**~~ —
+  **Resolved 2026-10-11** via [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md).
+  Consolidated to one topic per domain (`order-events`/`inventory-events`/
+  `payment-events`) with every message wrapped in a shared envelope
+  carrying `eventType`; implemented across all four Kafka-touching
+  services the same day (`kafka-envelope_20261011` in each repo), verified
+  end-to-end against the real local cluster, old topics deleted. See
+  "Kafka topics" above for the current shape.
 
 - ~~**`order.reserved` / "order-confirmed" event gap**~~ — **Resolved
   2026-10-02** via the "Design proposal to fill gaps" below. (Found
@@ -404,6 +452,12 @@ lightly formatted:
 - **Topic shape:** one `order.status-changed` topic carrying
   `reservation_failed`/`confirmed`/`payment_failed`, not three separate
   topics — simpler, and notification-service just filters on `status`.
+  (Superseded 2026-10-11 by ADR 0009's further consolidation to one topic
+  per *domain* — `order.status-changed` and `order.reserved` both folded
+  into `order-events`, distinguished by `eventType` instead of topic. See
+  "Kafka topics" above for the current shape; the per-status filtering
+  logic this bullet describes is unchanged, just one level further up the
+  dispatch.)
 - **Stock release on failure (gap 07) — out of scope for the walking
   skeleton.** No automatic compensation. The customer-notification email is
   the mechanism: reviewing their order and cancelling it is assumed to be a
