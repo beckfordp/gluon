@@ -276,9 +276,9 @@ storefront rather than just "technically wired."
 - [x] *(gshop)* `WatchArt` switched from CSS-generated placeholder dials to
       real licensed photography (Unsplash, hotlinked, round-robin mapped
       across the 100-item catalog) — gshop's `watchart-photos_20261010`
-- [ ] *(gshop + inventory-service)* Admin screen: clear order history,
-      list/adjust real inventory — gshop's `admin-screen_20261010` (in
-      progress), backed by `inventory-service`'s own
+- [x] *(gshop + inventory-service)* Admin screen: clear order history,
+      list/adjust real inventory — gshop's `admin-screen_20261010`,
+      backed by `inventory-service`'s own
       `list-inventory-endpoint_20261010` track (done — added the
       previously-missing `GET /inventorys` list/filter-by-sku endpoint)
 
