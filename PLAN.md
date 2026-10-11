@@ -347,17 +347,17 @@ gshop-side task for the agent working that repo.
 `notification-service` — a coordinated cutover, not an incremental
 per-repo rollout (see ADR 0009's own Consequences).
 
-- [ ] Consolidate `order.reserved` + `order.status-changed` →
+- [x] Consolidate `order.reserved` + `order.status-changed` →
       `order-events`
-- [ ] Consolidate `inventory.stock-reserved` +
+- [x] Consolidate `inventory.stock-reserved` +
       `inventory.stock-reservation-failed` → `inventory-events`
-- [ ] Consolidate `payment.settled` + `payment.failed` →
+- [x] Consolidate `payment.settled` + `payment.failed` →
       `payment-events`
-- [ ] Every producer wraps its payload in the shared envelope
+- [x] Every producer wraps its payload in the shared envelope
       (`eventId`/`eventType`/`timestamp`/`source`/`correlationId`/
       `payload`); every consumer branches on `eventType` instead of
       relying on topic subscription to filter
-- [ ] `system-design.md`'s "Kafka topics" section and payload contracts
+- [x] `system-design.md`'s "Kafka topics" section and payload contracts
       rewritten to match
 
 **Stub / fan-out:** same per-repo synthetic-event pattern Phases 3–5
