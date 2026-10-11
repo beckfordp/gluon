@@ -81,11 +81,9 @@ an opaque string, no order-domain coupling implied, purely store-and-echo.
   real recovery path is the customer removing the failing SKU from their
   cart (US-2's cart screen) and retrying checkout — that happens in the
   same session, right after this response, so nothing ever needs to look
-  up *why* a past order failed after the fact. gshop's own checkout flow
-  doesn't yet act on this (shows a generic error+retry rather than reading
-  `reservationFailure` to name the item and point back to Cart) — see
-  `../backlogs/gshop-frontend.md` or `gshop`'s own `conductor/tracks.md`
-  Backlog.
+  up *why* a past order failed after the fact. gshop's Cart screen reads
+  `reservationFailure` and names the specific item in its inline error
+  (done).
 - `400`: `{"error": "string"}` — empty `items`, a non-positive `quantity`,
   or another item-validation failure.
 

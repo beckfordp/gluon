@@ -79,9 +79,10 @@ field model; generate the bare scaffold and rework it, see its backlog).
 `Boolean`/`Instant` — no enum type. Convention: spec it as `String`, then add
 a backlog item (in that repo's own backlog file) to harden it into a real
 Scala enum + Postgres check/enum type post-generation, with the actual value
-set spelled out. Currently applies to `order.status` ({pending, reserved,
-reservation_failed}) and `payment.status` ({pending, settled, failed}) — see
-`backlogs/order-service.md` and `backlogs/payment-service.md`.
+set spelled out. Applied to `order.status` ({pending, reserved,
+reservation_failed, confirmed, payment_failed}, `order-service`'s
+`OrderStatus`) and `payment.status` ({pending, settled, failed},
+`payment-service`'s `PaymentStatus`) — both done.
 
 **Nested/collection fields:** also not codegen-able (flat scalars only) — a
 `lineItems: List[...]`-shaped field can't be spec'd at all. Convention: leave
@@ -99,7 +100,8 @@ its own Flyway migration (`V2__create_<name>.sql`, following the generated
   service, ADR-level decision): never a real FK. Snapshot the fields you'll
   need later (name, price at time of reference) as plain columns instead of
   joining live later — otherwise historical records silently show today's
-  values. Applied to `order_items` — see `backlogs/order-service.md`.
+  values. Applied to `order_items` (sku/product name/unit price snapshotted
+  from catalog-service at order time) — done.
 
 **FK-shaped fields inside a codegen'd entity:** codegen has no `UUID` type —
 `String` always maps to Postgres `TEXT` (checked `FieldRenderers.scala`), so
