@@ -1,7 +1,7 @@
 # 0009. One Kafka topic per domain, with an envelope + eventType
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 The running system's topics are one-per-*event-type*, namespaced by
@@ -112,6 +112,8 @@ against that final shape once, not twice.
   ADR 0003 stays Accepted, but its registry/Avro work shouldn't start
   before this ADR is Accepted and implemented, to avoid double-designing
   schemas.
-- Left as **Proposed** — this is a deliberate rework of already-shipped,
-  tested functionality, not a greenfield choice; it should be reviewed
-  and explicitly accepted before any of the four services change.
+- **Accepted 2026-10-11** after explicit review — this is a deliberate
+  rework of already-shipped, tested functionality, not a greenfield
+  choice, so it was held at Proposed until reviewed and explicitly
+  accepted before any of the four services change. Implementation tracked
+  as `PLAN.md`'s Rework 2.
