@@ -475,12 +475,57 @@ exact gap catalog-service and inventory-service each had to close by hand.
 
 ---
 
-**Deferred, not numbered above** — both still undecided (see
-`system-design.md`'s "Open design questions"), each would need its own
-ADR before becoming a numbered Rework phase: **payment auth timing**
-(sync vs. async — blocked on a real payment provider being chosen) and
-**choreography vs. orchestration/saga** for the checkout flow (blocked on
-US-10, the stale-pending-order epic, actually being picked up).
+## Checkout Journey
+
+The walking skeleton's checkout path was always deliberately thin — no
+shipping/billing address, no real payment method, a single instant
+create-then-settle "charge." US-11 through US-15 (`user-stories.md`, added
+2026-10-12) are new functionality the skeleton was never built to have, not
+a gap introduced by it — unlike the Rework section above, this isn't paying
+down debt from already-shipped behavior, it's building out the checkout
+journey for the first time. Numbered `Checkout Journey N` the same way the
+other sections above are numbered — each its own cross-repo unit of work.
+
+## Checkout Journey 1 — Payment: authorize then capture, stay simulated (ADR 0011)
+
+**Repos:** `payment-service`, `order-service`.
+
+**Depends on:** nothing for the authorize half (US-14.1/14.2) — only the
+already-built `OrderReserved` event. The capture half (US-14.3) is
+**blocked on US-15** (`user-stories.md`), an unrefined epic: this system
+has no shipment/fulfillment concept at all yet, so there's nothing to
+trigger a capture from.
+
+- [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
+      `simulated` interpreter (payment-service)
+- [ ] `PaymentStatus` gains `Authorized`; `Settled` redefined to mean
+      *captured* (payment-service)
+- [ ] US-14.1 — `OrderReservedConsumer` authorizes (not settles) on
+      `OrderReserved`; publishes `PaymentAuthorized`/
+      `PaymentAuthorizationFailed` on `payment-events` (payment-service)
+- [ ] US-14.2 — order-service consumes the authorization outcome; resolve
+      the open sub-question from ADR 0011 (what status means "authorized,
+      not yet captured") before building this
+- [ ] US-14.3 — capture on shipment — **not started, blocked on US-15**
+
+**Stub / fan-out:** same per-repo synthetic-event pattern as Rework 2 —
+synthetic `OrderReserved` events exercise both the authorize-success and
+authorize-decline paths against the `simulated` interpreter.
+
+**Exit criteria:** US-14.1/14.2 done and verified end-to-end (US-14.3 stays
+open, tracked against US-15 rather than blocking this phase's exit) —
+`system-design.md`'s Kafka payload contracts updated with the new event
+types.
+
+---
+
+**Deferred, not numbered above** — still undecided (see
+`system-design.md`'s "Open design questions"), each would need its own ADR
+before becoming a numbered phase: **payment auth timing** (sync vs.
+async — blocked on a real payment provider being chosen; distinct from
+Checkout Journey 1's authorize-vs-capture split, which ADR 0011 now covers)
+and **choreography vs. orchestration/saga** for the checkout flow (blocked
+on US-10, the stale-pending-order epic, actually being picked up).
 
 ---
 

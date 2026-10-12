@@ -124,8 +124,87 @@ idea, not decided), whether it auto-cancels the order or just notifies the
 customer, and how that interacts with US-9 if the reservation actually does
 complete right after the customer gives up.
 
+## US-11 — Shipping address
+As a customer, I provide a shipping address at checkout, so my order can be
+delivered to the right place.
+- New checkout step, captured once per order — no saved-address book yet
+  (future nice-to-have, not in scope).
+- Persisted on the order itself (order-service) — new fields, not a new
+  service.
+
+### Tasks
+- [ ] US-11.1: capture shipping address on `POST /orders` (order-service)
+- [ ] US-11.2: shipping address form in checkout UI (gshop)
+
+## US-12 — Billing address
+As a customer, I provide a billing address at checkout, so my payment method
+can be verified against it.
+- Distinct from shipping address (standard "same as shipping" checkbox,
+  defaulted on but overridable — still store both).
+- Persisted alongside the payment method (payment-service), not the order —
+  it's the payment side of checkout, not the fulfillment side.
+
+### Tasks
+- [ ] US-12.1: capture billing address alongside payment method (payment-service)
+- [ ] US-12.2: billing address form in checkout UI, "same as shipping" default (gshop)
+
+## US-13 — Payment method
+As a customer, I provide a payment method (card) at checkout, so it can be
+charged for my order.
+- New payment-service concept — `PaymentMethod`: card token, last4, brand,
+  expiry only. No raw PAN storage, even against a simulator — real PCI-scope
+  habit worth keeping regardless of what settles the charge.
+- Collected together with billing address (US-12), before the order is
+  placed — but the charge itself still doesn't happen until reservation
+  succeeds (see US-14), same deferred-charge shape US-6 already has.
+
+### Tasks
+- [ ] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) (payment-service)
+- [ ] US-13.2: payment method form in checkout UI (gshop)
+
+## US-14 — Authorize at checkout, capture at shipment
+As a customer, my payment method is authorized (funds held) once my order is
+reserved, and actually charged only when my order ships, so I'm not charged
+for something that might never be fulfilled.
+- Supersedes US-6's instant create-then-settle: `OrderReservedConsumer`
+  currently does `store.create` immediately followed by `store.update(...,
+  Settled)` — one step pretending to be a charge. This splits it into two real
+  steps: **authorize** (on `OrderReserved`, holds funds, no money moves) and
+  **capture** (on shipment, money actually moves) — standard card-processing
+  semantics, and the piece missing from the "Payment auth timing" open
+  question in `system-design.md`.
+- `PaymentStatus` gains `Authorized`, sitting between `Pending` and
+  `Settled`; `Settled` now specifically means *captured*, not just
+  "charge simulated."
+- The *authorize* half (US-14.1/14.2) only depends on the existing
+  `OrderReserved` event and can land on its own. The *capture* half is
+  blocked on US-15 below — there's nothing to trigger it on yet.
+
+### Tasks
+- [ ] US-14.1: on `OrderReserved`, authorize (not settle) — hold funds, publish `PaymentAuthorized`/`PaymentAuthorizationFailed` (payment-service)
+- [ ] US-14.2: order-service consumes the authorization outcome, same status-mapping shape as today's settle/fail consumer (order-service)
+- [ ] US-14.3: capture on shipment — blocked on US-15 (payment-service)
+
+## US-15 — Shipment triggers capture *(epic, not yet refined)*
+As the system, when an order ships, the held payment is captured, so the
+customer is charged at the point of fulfillment, not before.
+
+Deliberately out of scope for now — **this system has no shipment/fulfillment
+concept at all yet**: no fulfillment-service, no `Shipped` order status, no
+event anywhere that could trigger a capture. Needs real refinement before
+it's buildable — at minimum: what owns "shipped" (a new fulfillment-service,
+or just a status/field on order-service?), whether it's a manual action
+(admin marks an order shipped) or a real carrier integration (out of scope
+for a simulator either way), and what happens to an authorization that
+expires before shipment occurs (real card auth holds are time-boxed, typically
+~7 days — not yet a Gluon problem since nothing captures at all today, but
+will be once US-14/US-15 ship).
+
 ## Open questions
 - Auth/identity — no user-service yet; assumed out of scope until these stories
   need real customer accounts rather than a bare customer id.
-- Payment provider — real integration (Stripe etc.) vs. simulated, TBD via ADR
-  when payment-service is built.
+- Payment provider — real integration (Stripe etc.) vs. simulated. Staying
+  simulated for now (see `system-design.md`'s "Local payment simulation"
+  open design question); real-vs-simulated and the resulting auth/capture
+  ADR are both still TBD, now tracked against US-13/US-14/US-15 rather than
+  payment-service in the abstract.

@@ -388,6 +388,53 @@ it belongs there, not here.
   checkout path, mirroring `InventoryClient`; capture/settlement stays
   async as today) once the provider decision lands.
 
+- **Capture timing: settle immediately vs. defer to shipment** (raised
+  2026-10-12; see US-11 through US-15 in `user-stories.md`). Today's
+  `OrderReservedConsumer` collapses authorization and capture into one step —
+  `store.create` immediately followed by `store.update(..., Settled)`, no
+  real gap between them. Real card processing separates the two: an
+  **authorization** holds funds fast (same timing shape as the existing
+  "Payment auth timing" question below), while **capture** — money actually
+  moving — classically happens later, at the point of fulfillment/shipment.
+  **Decided as the target shape** (US-14): add `PaymentStatus.Authorized`,
+  authorize on `OrderReserved` instead of settling outright, capture on
+  shipment. **Not yet buildable**: this system has no shipment/fulfillment
+  concept anywhere (no fulfillment-service, no `Shipped` order status) — see
+  US-15, deliberately left as an unrefined epic until that exists. Orthogonal
+  to, not a resolution of, the sync-vs-async question immediately below —
+  that's about *when authorization happens relative to the checkout HTTP
+  response*; this is about *when capture happens relative to authorization*.
+
+- **Local payment simulation — tools/frameworks** (raised 2026-10-12).
+  Staying simulated for now (no real provider decided — see "Payment
+  provider" in `user-stories.md`'s Open questions), but want something more
+  realistic than today's always-succeeds stub once US-13/US-14 land.
+  Recommendation, favoring this codebase's existing pure-functional
+  convention (`PaymentStore` already ships both an `inMemory` and a
+  `postgres` interpreter behind one trait; `InventoryClient` is the same
+  shape for an outbound call) over pulling in new infra:
+  - **Primary: hand-rolled, in-process.** A `PaymentGatewayClient[F]`
+    tagless-final algebra (`authorize`, `capture`, maybe `void`) with a
+    `simulated` interpreter — pure `F[Either[DeclineReason, Authorization]]`,
+    no `Resource`, no network. Deterministic decline rules (e.g. a card token
+    ending in a chosen digit always declines) make both the success and
+    failure paths exercisable in tests without any external system. Zero new
+    infra, fits the "generate thin, hand-roll domain logic" pattern already
+    used everywhere else here.
+  - **Optional, if/when wire-level fidelity to a real provider matters:**
+    [`stripe-mock`](https://github.com/stripe/stripe-mock) — Stripe's own
+    open-source mock server, generated from Stripe's actual OpenAPI spec, no
+    real keys or outbound network calls. Would slot in as another local
+    container the same way Kafka/Redis/Postgres already do (ADR 0002's
+    pattern), but only earns its cost once Stripe specifically is the
+    intended real provider — premature while that's still undecided.
+  - Considered and set aside: generic HTTP stub frameworks (WireMock,
+    Mountebank, Prism). They'd simulate *a* gateway, but not idiomatically —
+    extra YAML/stub-config layer instead of just Scala, and no particular
+    fidelity to whichever real provider eventually gets chosen. `stripe-mock`
+    gives that fidelity for free *if* Stripe is the target; the hand-rolled
+    interpreter is simpler if it isn't.
+
 - **Choreography vs. orchestration (saga) for the checkout flow**
   (discussed 2026-10-09). Today's flow is pure choreography — every
   service reacts independently to events it happens to consume, with no
