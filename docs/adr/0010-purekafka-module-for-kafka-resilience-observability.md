@@ -75,6 +75,21 @@ services that actually use Kafka (order-service, inventory-service,
 payment-service, notification-service) add it as a dependency;
 catalog-service and cart-service don't.
 
+**Reusability is a first-class goal, not a side effect.** Every one of
+the four current Kafka-touching services should be able to depend on
+`purekafka` and get the same stream supervision, DLQ routing, and
+observability with zero per-service forking — same bar `purerestlib`
+already holds for HTTP (one `Resilience.middleware`, four-plus services
+wrap their `Client[F]` with it, no service maintains its own copy). This
+shapes the API: generic over topic/key/value types, no hardcoded topic
+names or service-specific branching baked into the module itself —
+anything service-specific (which `eventType`s exist, what a decoded
+payload looks like) stays in the calling service, not in `purekafka`.
+This is also *why* the two items below exist: a module nobody can see
+demonstrated outside its own unit tests is a much weaker proof of
+reusability than one every generated service picks up by default and one
+load-test run actually exercises under realistic volume.
+
 Scope:
 - **Generic call resilience** — a new `F[A] => F[A]` sibling to
   `purerest.resilience.Resilience.middleware`, reusing the same
@@ -121,16 +136,65 @@ Scope:
     instrument (see ADR 0008's "Interaction with ADR 0010") — but still
     belongs in the same dashboard: application-level metrics cover what
     the service does, connector-level metrics cover what Debezium does.
+- **Generator support, so adoption isn't a hand-rolled, per-service
+  integration.** `pure-service-generator`'s base template
+  (`src/main/g8`) already generates a worked example for the one
+  resilience primitive it knows about —
+  `src/main/g8/src/test/scala/$package$/examples/ClientResilienceExampleSuite.scala`
+  shows a generated service's `Client[F]` wrapped with
+  `Resilience.middleware` against a dummy client, so every new service
+  starts from a proven pattern instead of reading `purerestlib`'s source.
+  `purekafka` needs the same treatment: a generated producer example
+  (publish through the generic `F[A] => F[A]` resilience wrapper) and a
+  generated consumer example (a supervised `Stream[F, O]` with DLQ
+  routing), each with its own test, added to the base template alongside
+  the existing HTTP example. Without this, every one of the four
+  Kafka-touching services (and anyone generating a fifth) re-derives the
+  wiring from `purekafka`'s own docs instead of copying a proven, tested
+  example — exactly the gap that let TD-2 happen in the first place (each
+  service hand-rolled its own consumer, inconsistently). This is
+  `pure-service-generator` work, sequenced after `purekafka` itself
+  exists (the example has to compile against a real published API), not
+  a `purerest`-repo task.
+- **A load test demonstrating the observability actually works under
+  load**, not just unit-tested in isolation. `purerest` already has
+  `modules/load-test` (Gatling, see `OrderPlacementSimulation.scala`, run
+  via `sbt loadTest/Gatling/test` or
+  `scripts/verify-observability-stack.sh`) proving the HTTP resilience
+  story end-to-end — sustained traffic against order-service while
+  toggling `/admin/induced-failure`, confirming retry/circuit-breaker
+  metrics show up correctly in the observability stack. `purekafka`
+  needs its Kafka-side counterpart: a new simulation that drives
+  sustained produce/consume traffic (including induced failures — a
+  poison message to prove DLQ routing fires, a paused consumer to prove
+  the lag gauge actually climbs, a broker blip to prove stream
+  supervision restarts it) and asserts the resulting metrics/traces/logs
+  land correctly in Grafana/the trace backend. This is the real proof
+  this module closes TD-2, not just that its unit tests pass.
 
 ## Consequences
 - A new module to build, test, and maintain in `purerest`, and a new
   jar to version — reuses the existing GitHub Packages release workflow,
   not a new one.
+- **Spans two repos, not one.** Beyond `purerest` itself (the module +
+  its new load-test simulation), `pure-service-generator`'s base
+  template needs new example files (producer + consumer, mirroring
+  `ClientResilienceExampleSuite.scala`) once `purekafka` is published —
+  sequenced *after*, not alongside, since the example has to compile
+  against a real artifact. This is more work than a single-module ADR
+  usually implies; called out explicitly so it isn't underestimated when
+  this gets scheduled.
 - `TECHNICAL_DEBT.md`'s TD-2.2–2.4 become implementable against this
   module, rather than each service hand-rolling its own stream-
   supervision/DLQ code. TD-3 is unaffected by this module — its fix is
   ADR 0008's outbox/CDC, which removes the direct publish call rather
   than wrapping it.
+- The reusability bar means "done" isn't just "`purekafka` compiles and
+  its own unit tests pass" — it's (1) a generated service gets a working
+  producer/consumer example for free, and (2) the load-test simulation
+  proves the observability signals (lag gauge, DLQ rate, restart-with-
+  backoff, trace continuity across the Kafka hop) are real under load,
+  not just asserted against a mock in a unit test.
 - `catalog-service`/`cart-service` stay free of any Kafka dependency,
   transitive or otherwise.
 - Depends conceptually on [ADR 0009](./0009-one-kafka-topic-per-domain.md)
