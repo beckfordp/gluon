@@ -63,19 +63,61 @@ Connect + Debezium CDC** (option 2), not a polling publisher.
 - A Debezium Postgres source connector, one per service's database, is
   deployed to a shared Kafka Connect cluster and tails each database's
   WAL for inserts to that service's `outbox_events` table.
-- Debezium's default output is a raw row-change envelope (before/after
-  image, source metadata), not the plain JSON event shapes already
-  documented in `system-design.md`'s "Kafka topics" section. Use
-  Debezium's **Outbox Event Router** single message transform (SMT) in
-  the connector config to reshape each outbox row into that existing
-  plain-JSON contract before it lands on the real topic — the payload
-  contracts already pinned there stay the source of truth for what a
-  consumer actually reads; the outbox table's own column shape is new,
-  internal, and specific to this pattern. The same SMT also maps the
-  `trace_parent`/`correlation_id` columns into the outgoing Kafka
-  record's **headers** — a documented Debezium feature for carrying
-  extra outbox fields outside the envelope, not a workaround (confirm
-  the exact config key against whatever Debezium version is adopted).
+- **The app builds the full envelope, not the SMT.** The outbox row's
+  `payload` column holds the complete, already-assembled envelope JSON
+  (`eventId`/`eventType`/`timestamp`/`source`/`correlationId`/`payload`
+  — the exact shape `system-design.md`'s "Kafka topics" section already
+  pins), written by the app in the same transaction as the state change.
+  Debezium's **Outbox Event Router** SMT's job is routing, keying, and
+  header-promotion only — mapping the row to the right topic and Kafka
+  record key, and lifting the flat `trace_parent`/`correlation_id`
+  columns into the outgoing record's **headers** (a documented SMT
+  feature for carrying extra outbox fields outside the value). It does
+  **not** synthesize `eventId`/`timestamp`/`source` — those stay
+  app-constructed, same as today's `EventEnvelope`, just written to a
+  table instead of handed to a producer. Chosen over leaning on the SMT
+  to assemble the envelope from separate structured columns: fewer
+  moving parts, and envelope construction stays in one place (app code,
+  already tested) instead of being split between app columns and
+  per-connector SMT config.
+- **Routing is static, per service** — each service's `outbox_events`
+  table always routes to that one service's domain topic
+  (`order-events`/`inventory-events`/`payment-events`), via
+  `route.topic.replacement` with no per-row branching. ADR 0009 already
+  collapsed event-type routing to a single topic per domain, so there's
+  no dynamic aggregate-type-to-topic mapping to configure here, unlike
+  the Outbox Router's more typical use case.
+- **Logical replication prerequisites** (not optional, not yet true of
+  any of the three databases today): `wal_level=logical`, set via a
+  container `args` override on each of the three stock
+  `postgres:16-alpine` deployments — no custom Postgres image needed.
+  Decoding plugin: `pgoutput` (built into Postgres core since v10, no
+  extra install). `publication.autocreate.mode=filtered`, scoped to just
+  `outbox_events` — not Debezium's `all_tables` default, which would
+  leak every other table's changes into the WAL stream this reads. Each
+  service's existing app DB user (`order`/`inventory`/`payment`) is
+  granted `REPLICATION` directly, rather than provisioning a separate
+  connector-specific user — consistent with how trivial these
+  local-dev credentials already are everywhere else in `infra/k8s/local-infra/`.
+- **Kafka Connect deployment**: the official `debezium/connect:3.0`
+  image (bundles the Postgres connector plugin — no custom Dockerfile
+  to build/maintain), one shared worker, new `infra/k8s/local-infra/kafka-connect.yaml`.
+  Connect's internal config/offset/status topics at replication factor
+  1, matching the existing single-broker local pattern
+  (`kafka.yaml`'s `KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1`). Each
+  connector is registered by a one-shot k8s Job that POSTs its JSON
+  config to Connect's REST API once the worker reports healthy, wired
+  into `bin/k8s-local-up` rather than requiring a manual `curl` per
+  environment stand-up.
+- **Outbox row cleanup**: a scheduled CronJob per service database,
+  deleting rows older than one hour. Simplest workable policy — WAL
+  capture already happened near-real-time by the time anything's an
+  hour old, so this is pure housekeeping, not a consumption-tracked
+  delete requiring the app to know what Debezium has or hasn't read yet.
+- **Confirmed scope**: `OrderEventPublisher`, `StockEventPublisher`, and
+  `PaymentEventPublisher` are deleted outright once each service
+  migrates, not left in place unused — there's no direct-publish code
+  path left to keep.
 
 Local-infra and per-service work is tracked as `TECHNICAL_DEBT.md`'s
 TD-3.1 (Kafka Connect + Debezium connector in `infra/k8s/local-infra/`)
@@ -99,14 +141,21 @@ service).
 - catalog-service, cart-service, notification-service are unaffected —
   none of them both persist and publish (notification-service only
   consumes).
-- The Outbox Event Router SMT's config (table→topic routing, envelope
-  shaping) becomes a new piece of per-service config to keep in sync
-  with `system-design.md`'s payload contracts — if that config and the
-  documented contract drift, consumers break silently in the same way
-  ADR 0003's lack-of-schema-registry risk already accepted. Worth
-  revisiting alongside ADR 0003 if this is adopted.
-- Left as **Proposed**, not **Accepted** — still being evaluated, not
-  yet implemented or exercised against a real service.
+- The Outbox Event Router SMT's config (table→topic routing, key
+  mapping, header promotion) becomes a new piece of per-service config
+  — narrower than originally scoped above (it no longer shapes the
+  envelope, the app still owns that), but still something that can
+  silently drift from `system-design.md`'s payload contracts if a
+  column gets renamed without updating the connector config to match.
+  Same class of risk ADR 0003's lack-of-schema-registry already
+  accepted; worth revisiting alongside ADR 0003 if this is adopted.
+- New prerequisite work on all three databases before any connector can
+  run at all: `wal_level=logical`, the filtered publication, and the
+  `REPLICATION` grant (see "Logical replication prerequisites" above) —
+  none of the three Postgres deployments has any of this today.
+- Left as **Proposed**, not **Accepted** — design now concrete (image,
+  plugin, table shape, cleanup policy all decided above), but still
+  unbuilt and unexercised against a real service.
 
 **Interaction with [ADR 0010](./0010-purekafka-module-for-kafka-resilience-observability.md)
 (`purekafka`):** once a service adopts this pattern, `purekafka`'s
