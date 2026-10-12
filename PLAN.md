@@ -370,7 +370,7 @@ three domain topics; the old six event-type topics are retired;
 
 ---
 
-## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010)
+## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010) — build *after* Rework 4 & 5
 
 **Repos:** `purerest` (new `modules/purekafka`), then `order-service`,
 `inventory-service`, `payment-service`, `notification-service` adopt it.
@@ -401,7 +401,7 @@ or blocking its consumer.
 
 ---
 
-## Rework 4 — Transactional outbox via Debezium CDC (ADR 0008)
+## Rework 4 — Transactional outbox via Debezium CDC (ADR 0008) — build *before* Rework 3
 
 **Repos:** `order-service`, `inventory-service`, `payment-service` (the
 three publishing services), plus `gluon`'s `infra/k8s/local-infra` (new
@@ -431,7 +431,7 @@ logged-and-hoped-for.
 
 ---
 
-## Rework 5 — Schema registry (ADR 0003 implementation)
+## Rework 5 — Schema registry (ADR 0003 implementation) — build *before* Rework 3
 
 **Repos:** `gluon` (`infra/k8s/local-infra`, new schema-registry
 component), every Kafka-publishing/consuming service.
