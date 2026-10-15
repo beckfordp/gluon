@@ -1,7 +1,7 @@
 # 0008. Transactional outbox via Kafka Connect + Debezium CDC
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 Every service that both persists state and publishes a Kafka event does
@@ -153,9 +153,19 @@ service).
   run at all: `wal_level=logical`, the filtered publication, and the
   `REPLICATION` grant (see "Logical replication prerequisites" above) —
   none of the three Postgres deployments has any of this today.
-- Left as **Proposed**, not **Accepted** — design now concrete (image,
-  plugin, table shape, cleanup policy all decided above), but still
-  unbuilt and unexercised against a real service.
+- **Accepted 2026-10-15**, after TD-3.1 through TD-3.4 were all built and
+  verified end-to-end against the real local cluster (not just unit
+  tests): a real `POST /inventorys/reservations` call produced an
+  `outbox_events` row that Debezium actually streamed to the real
+  `inventory-events` topic, with the exact envelope shape today's
+  consumers already expect (`StringConverter` passthrough, byte-for-byte
+  identical to the old direct-publish format), `aggregate_id` as the
+  Kafka key, and `trace_parent`/`correlation_id` promoted to real message
+  headers — confirming the full Postgres → WAL → Debezium → Kafka Connect
+  → topic path works, not just that each piece exists. One correction
+  made along the way: `debezium/connect:3.0` isn't a real tag (Docker Hub
+  only publishes dotted-`.Final` releases) — pinned to
+  `debezium/connect:3.0.0.Final` instead.
 
 **Interaction with [ADR 0010](./0010-purekafka-module-for-kafka-resilience-observability.md)
 (`purekafka`):** once a service adopts this pattern, `purekafka`'s
