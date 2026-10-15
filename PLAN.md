@@ -370,15 +370,31 @@ three domain topics; the old six event-type topics are retired;
 
 ---
 
-## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010) — build *after* Rework 4 & 5
+## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010)
 
-**Repos:** `purerest` (new `modules/purekafka`), then `order-service`,
+**Repos:** `purerest` (new `modules/purekafka`), `pure-service-generator`
+(producer/consumer/outbox-CDC examples), then `order-service`,
 `inventory-service`, `payment-service`, `notification-service` adopt it.
+
+**Depends on:** nothing, as of 2026-10-15 — originally sequenced after
+Rework 4 and Rework 5 (see both their now-stale heading history) to
+avoid designing this speculatively. Rework 4 is done and confirmed the
+main risk moot (producer resilience has no real call site left to wrap);
+Rework 5's registry *deployment* was never the actual blocker, only the
+schema-format decision was, and that's settled (JSON Schema, ADR 0003).
+Rework 5 can now land in parallel, not before this. ADR 0010's own scope
+has grown since this task list was first written — AsyncAPI
+documentation, three generated examples (producer/consumer/outbox-CDC,
+not just two), a dedicated load test — see the ADR itself, not this
+stale bullet list, for the current full scope before starting a track.
 
 - [ ] Build `purekafka`: generic `F[A]` call resilience (producer side),
       consumer stream supervision (restart-with-backoff, unbounded
       attempts, no circuit breaker), dead-letter routing, and
       tracing/metrics/log observability across the Kafka boundary
+- [ ] AsyncAPI documentation, generated from a service's own Kafka
+      producer/consumer registrations, served the same way tapir serves
+      OpenAPI/Swagger at `/docs` (ADR 0010)
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
 - [ ] TD-2.2 — order-service's `StockEventConsumer` adopts
@@ -401,7 +417,7 @@ or blocking its consumer.
 
 ---
 
-## Rework 4 — Transactional outbox via Debezium CDC (ADR 0008) — build *before* Rework 3
+## Rework 4 — Transactional outbox via Debezium CDC (ADR 0008) — DONE
 
 **Repos:** `order-service`, `inventory-service`, `payment-service` (the
 three publishing services), plus `gluon`'s `infra/k8s/local-infra` (new
@@ -432,7 +448,7 @@ logged-and-hoped-for.
 
 ---
 
-## Rework 5 — Schema registry (ADR 0003 implementation) — build *before* Rework 3
+## Rework 5 — Schema registry (ADR 0003 implementation)
 
 **Repos:** `gluon` (`infra/k8s/local-infra`, new schema-registry
 component), every Kafka-publishing/consuming service.
