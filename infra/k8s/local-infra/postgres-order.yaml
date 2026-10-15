@@ -16,6 +16,7 @@ spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
+          args: ["-c", "wal_level=logical"]
           ports:
             - containerPort: 5432
           env:

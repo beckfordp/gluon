@@ -411,13 +411,14 @@ Kafka Connect + Debezium).
 target the finished domain-topic envelope contract, not the old
 per-event-type shape, to avoid a second migration shortly after.
 
-- [ ] TD-3.1 — Kafka Connect + a Debezium Postgres source connector in
-      `infra/k8s/local-infra/`
-- [ ] TD-3.2 — order-service: `outbox_events` table (with
+- [x] TD-3.1 — Kafka Connect + a Debezium Postgres source connector in
+      `infra/k8s/local-infra/` — done 2026-10-15
+- [x] TD-3.2 — order-service: `outbox_events` table (with
       `trace_parent`/`correlation_id` columns), write in the same
-      transaction as the state change, drop the direct publish call
-- [ ] TD-3.3 — inventory-service: same pattern
-- [ ] TD-3.4 — payment-service: same pattern
+      transaction as the state change, drop the direct publish call —
+      done 2026-10-15
+- [x] TD-3.3 — inventory-service: same pattern — done 2026-10-15
+- [x] TD-3.4 — payment-service: same pattern — done 2026-10-15
 
 **Stub / fan-out:** none in the synthetic-event sense — verified against
 a real local Postgres + Debezium connector, same spirit as the original

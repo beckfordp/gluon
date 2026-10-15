@@ -1,0 +1,135 @@
+# Registers the three per-service outbox connectors against the Kafka
+# Connect worker (kafka-connect.yaml) via its REST API - Debezium has no
+# manifest-based way to declare a connector, only POST /connectors, so a
+# one-shot Job does it instead. Re-running `kubectl apply` won't
+# re-trigger this once it has Succeeded - see TD-3.1's "known limitation"
+# note in PLAN.md if a connector ever needs re-registering (delete the
+# Job, then re-apply).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debezium-outbox-connectors
+  namespace: gluon-local
+data:
+  order-outbox-connector.json: |
+    {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "order-postgres",
+      "database.port": "5432",
+      "database.user": "order",
+      "database.password": "order",
+      "database.dbname": "order",
+      "topic.prefix": "order-outbox",
+      "plugin.name": "pgoutput",
+      "slot.name": "debezium_order",
+      "publication.autocreate.mode": "filtered",
+      "table.include.list": "public.outbox_events",
+      "transforms": "outbox",
+      "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+      "transforms.outbox.route.by.field": "aggregate_id",
+      "transforms.outbox.route.topic.replacement": "order-events",
+      "transforms.outbox.table.field.event.key": "aggregate_id",
+      "transforms.outbox.table.field.event.payload": "payload",
+      "transforms.outbox.table.expand.json.payload": "false",
+      "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
+    }
+  inventory-outbox-connector.json: |
+    {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "inventory-postgres",
+      "database.port": "5432",
+      "database.user": "inventory",
+      "database.password": "inventory",
+      "database.dbname": "inventory",
+      "topic.prefix": "inventory-outbox",
+      "plugin.name": "pgoutput",
+      "slot.name": "debezium_inventory",
+      "publication.autocreate.mode": "filtered",
+      "table.include.list": "public.outbox_events",
+      "transforms": "outbox",
+      "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+      "transforms.outbox.route.by.field": "aggregate_id",
+      "transforms.outbox.route.topic.replacement": "inventory-events",
+      "transforms.outbox.table.field.event.key": "aggregate_id",
+      "transforms.outbox.table.field.event.payload": "payload",
+      "transforms.outbox.table.expand.json.payload": "false",
+      "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
+    }
+  payment-outbox-connector.json: |
+    {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "payment-postgres",
+      "database.port": "5432",
+      "database.user": "payment",
+      "database.password": "payment",
+      "database.dbname": "payment",
+      "topic.prefix": "payment-outbox",
+      "plugin.name": "pgoutput",
+      "slot.name": "debezium_payment",
+      "publication.autocreate.mode": "filtered",
+      "table.include.list": "public.outbox_events",
+      "transforms": "outbox",
+      "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+      "transforms.outbox.route.by.field": "aggregate_id",
+      "transforms.outbox.route.topic.replacement": "payment-events",
+      "transforms.outbox.table.field.event.key": "aggregate_id",
+      "transforms.outbox.table.field.event.payload": "payload",
+      "transforms.outbox.table.expand.json.payload": "false",
+      "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: debezium-connector-register
+  namespace: gluon-local
+  labels:
+    app: debezium-connector-register
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app: debezium-connector-register
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: register
+          image: curlimages/curl:8.10.1
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              echo "Waiting for kafka-connect REST API..."
+              attempt=0
+              max_attempts=36 # 36 * 5s = 3m
+              until curl --fail --silent http://kafka-connect:8083/ > /dev/null; do
+                attempt=$((attempt + 1))
+                if [ "$attempt" -ge "$max_attempts" ]; then
+                  echo "FAIL: kafka-connect never became reachable after ${max_attempts} attempts" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+              for f in /connectors/*.json; do
+                name=$(basename "$f" .json)
+                echo "Registering $name..."
+                # PUT .../connectors/{name}/config is idempotent (create
+                # or update) - unlike POST /connectors, which 409s if the
+                # connector already exists. Matters because this Job can
+                # retry (backoffLimit) or be re-applied.
+                curl --fail --silent --show-error \
+                  -X PUT \
+                  -H "Content-Type: application/json" \
+                  --data "@$f" \
+                  "http://kafka-connect:8083/connectors/$name/config"
+                echo
+              done
+          volumeMounts:
+            - name: connectors
+              mountPath: /connectors
+      volumes:
+        - name: connectors
+          configMap:
+            name: debezium-outbox-connectors

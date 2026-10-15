@@ -1,0 +1,90 @@
+# Hourly housekeeping for each service's outbox_events table (ADR 0008).
+# Purely time-based, not consumption-tracked - Debezium reads the WAL,
+# not this table's current contents, so a row's job is done the instant
+# its insert commits; deleting it an hour later loses nothing.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: order-outbox-cleanup
+  namespace: gluon-local
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  value: "order"
+              command:
+                - psql
+                - -h
+                - order-postgres
+                - -U
+                - order
+                - -d
+                - order
+                - -c
+                - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: inventory-outbox-cleanup
+  namespace: gluon-local
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  value: "inventory"
+              command:
+                - psql
+                - -h
+                - inventory-postgres
+                - -U
+                - inventory
+                - -d
+                - inventory
+                - -c
+                - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: payment-outbox-cleanup
+  namespace: gluon-local
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  value: "payment"
+              command:
+                - psql
+                - -h
+                - payment-postgres
+                - -U
+                - payment
+                - -d
+                - payment
+                - -c
+                - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"

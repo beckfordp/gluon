@@ -41,9 +41,18 @@ kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/"
 
 echo "== Waiting for shared infra to be ready (up to 3m) =="
 # Only infra pods exist in the namespace at this point — services below
-# haven't been helm-installed yet.
+# haven't been helm-installed yet. The debezium-connector-register Job's
+# pod never satisfies condition=Ready (it's meant to terminate, not stay
+# ready), so this --all wait is expected to warn once that Job exists —
+# harmless, the real pass/fail signal for it is the explicit
+# `kubectl wait --for=condition=complete` below.
 kubectl wait --for=condition=Ready pod --all -n "$NAMESPACE" --timeout=180s || {
   echo "WARN: not every pod reached Ready in time — check 'kubectl get pods -n $NAMESPACE'" >&2
+}
+
+echo "== Waiting for Debezium outbox connectors to register (up to 2m) =="
+kubectl wait --for=condition=complete job/debezium-connector-register -n "$NAMESPACE" --timeout=120s || {
+  echo "WARN: connector registration didn't complete in time — check 'kubectl logs job/debezium-connector-register -n $NAMESPACE'" >&2
 }
 
 for svc in "${SERVICES[@]}"; do

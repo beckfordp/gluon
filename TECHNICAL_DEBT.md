@@ -151,17 +151,25 @@ Debezium** CDC connector per service's Postgres database, not a polling
 publisher — see the ADR for the full alternatives/consequences writeup.
 
 ### Tasks
-- [ ] TD-3.1: Stand up Kafka Connect + a Debezium Postgres source
+- [x] TD-3.1: Stand up Kafka Connect + a Debezium Postgres source
       connector in local infra (`infra/k8s/local-infra/`, alongside the
-      existing bare Kafka broker) — new shared infra, not yet built.
-- [ ] TD-3.2: order-service — add an `outbox_events` table (Flyway
+      existing bare Kafka broker) — done 2026-10-15 (`kafka-connect.yaml`,
+      `debezium-connectors-register.yaml`, `outbox-cleanup.yaml`, plus
+      `wal_level=logical` on the three Postgres deployments and a
+      `bin/k8s-local-up` wait for connector registration).
+- [x] TD-3.2: order-service — add an `outbox_events` table (Flyway
       migration), write to it in the same transaction as the
       order/order_items state change it announces; drop the direct
-      `OrderEventPublisher` calls in favor of the outbox write.
-- [ ] TD-3.3: inventory-service — same pattern for
-      `inventory.stock-reserved`/`-reservation-failed`.
-- [ ] TD-3.4: payment-service — same pattern for
-      `payment.settled`/`-failed`.
+      `OrderEventPublisher` calls in favor of the outbox write — done
+      2026-10-15 (`outbox_20261012` track, 143 tests passing).
+- [x] TD-3.3: inventory-service — same pattern for
+      `inventory.stock-reserved`/`-reservation-failed` — done 2026-10-15
+      (`outbox_20261012` track, 86 tests passing; also fixed a found
+      drift — the Kafka key is now `orderItemId`, matching
+      `system-design.md`, not `sku`).
+- [x] TD-3.4: payment-service — same pattern for
+      `payment.settled`/`-failed` — done 2026-10-15 (`outbox_20261012`
+      track, 74 tests passing).
 
 ---
 
