@@ -46,3 +46,18 @@ Verify: `kubectl get pods -n gluon-local` (everything `Running`); each
 service also answers `GET /health` over cluster DNS (the exact route every
 service already serves — see
 `services/catalog-service/src/main/scala/catalogservice/HealthRoutes.scala`).
+
+## Swagger / OpenAPI docs
+
+OrbStack resolves Kubernetes cluster DNS directly from the host — no
+`kubectl port-forward` needed. Each service's tapir-generated Swagger UI
+is reachable straight from a browser at `http://<service>.gluon-local.svc.cluster.local:8080/docs`:
+
+- http://catalog-service.gluon-local.svc.cluster.local:8080/docs
+- http://cart-service.gluon-local.svc.cluster.local:8080/docs
+- http://order-service.gluon-local.svc.cluster.local:8080/docs
+- http://inventory-service.gluon-local.svc.cluster.local:8080/docs
+- http://payment-service.gluon-local.svc.cluster.local:8080/docs
+
+`notification-service` has no entry — it's a pure Kafka consumer with no
+REST API to document (`/docs` 404s there, as expected).
