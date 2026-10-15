@@ -51,6 +51,19 @@ signal, with no HTTP equivalent at all — directly relevant to TD-2: lag
 growing alongside `/health/ready` staying `503` together confirm a truly
 dead fiber).
 
+**A third gap, found 2026-10-15 while settling ADR 0003's schema-format
+follow-up:** REST endpoints are self-documenting and explorable —
+tapir generates an OpenAPI/Swagger UI at `/docs` for every service, for
+free. Kafka topics have no equivalent: nothing documents what
+`eventType`s exist on a topic, what their payloads look like, or lets
+someone poke at a live message the way Swagger UI lets you fire a live
+HTTP request. **AsyncAPI** is the direct analogue — the OpenAPI-shaped
+standard for documenting event-driven APIs (channels/topics, message
+schemas, examples) — and composes naturally with the JSON Schema
+format ADR 0003 just settled on (AsyncAPI documents are themselves
+JSON/YAML, so a JSON Schema payload definition drops straight in, no
+translation layer).
+
 **Where this code should live:** not `purerestlib` itself.
 `purerestlib` is one monolithic jar (http4s-client, tapir, otel4s
 tracing, log4cats, cats-retry, resilience4j all bundled) — every
@@ -136,6 +149,22 @@ Scope:
     instrument (see ADR 0008's "Interaction with ADR 0010") — but still
     belongs in the same dashboard: application-level metrics cover what
     the service does, connector-level metrics cover what Debezium does.
+- **AsyncAPI documentation** — generate an AsyncAPI document from a
+  service's own Kafka producer/consumer registrations (topic names,
+  `eventType`s, payload schemas) and serve it the same way tapir already
+  serves OpenAPI/Swagger at `/docs` — giving Kafka topics the same
+  self-documenting, explorable status REST endpoints already have.
+  Payload schemas reuse whatever JSON-Schema-shaped derivation ADR 0003's
+  implementation settles on (plausibly tapir's own `Schema[T]`
+  machinery, already JSON-Schema-shaped and already used for this
+  project's REST docs — a real reuse opportunity, not a second,
+  unrelated derivation pipeline). **Scoped to documentation, not
+  interaction**: AsyncAPI's own tooling (e.g. AsyncAPI Studio) visualizes
+  and validates the *contract*, it doesn't give a Swagger-UI-style "try
+  it out" that publishes a real message — for actually watching or
+  publishing live messages against a running topic, pair this with a
+  Kafka UI tool (AKHQ, Redpanda Console), not something `purekafka`
+  itself needs to build.
 - **Generator support, so adoption isn't a hand-rolled, per-service
   integration.** `pure-service-generator`'s base template
   (`src/main/g8`) already generates a worked example for the one
@@ -145,10 +174,13 @@ Scope:
   `Resilience.middleware` against a dummy client, so every new service
   starts from a proven pattern instead of reading `purerestlib`'s source.
   `purekafka` needs the same treatment: a generated producer example
-  (publish through the generic `F[A] => F[A]` resilience wrapper) and a
+  (publish through the generic `F[A] => F[A]` resilience wrapper), a
   generated consumer example (a supervised `Stream[F, O]` with DLQ
-  routing), each with its own test, added to the base template alongside
-  the existing HTTP example. Without this, every one of the four
+  routing), **and a generated outbox-CDC producer example** (the
+  ADR 0008 shape — write an envelope row to `outbox_events` inside the
+  same transaction as a state change, no direct Kafka call at all), each
+  with its own test, added to the base template alongside the existing
+  HTTP example. Without this, every one of the four
   Kafka-touching services (and anyone generating a fifth) re-derives the
   wiring from `purekafka`'s own docs instead of copying a proven, tested
   example — exactly the gap that let TD-2 happen in the first place (each
@@ -171,6 +203,22 @@ Scope:
   supervision restarts it) and asserts the resulting metrics/traces/logs
   land correctly in Grafana/the trace backend. This is the real proof
   this module closes TD-2, not just that its unit tests pass.
+
+**Longer-term vision, explicitly *not* this ADR's immediate scope —
+recorded so it isn't lost, not committed to a timeline:** the three
+generated examples above (producer, consumer, outbox-CDC producer) are
+static today — every generated service gets the same worked examples
+verbatim. The database field-spec (`bin/generate-service --field-spec
+specs/<domain>.yaml`) already flesh out a service's generated CRUD/DB
+model from a per-domain spec file; the analogous future step is a
+**messaging spec** doing the same for Kafka — declaring a service's
+topics, event types, and payload shapes once, with the generator fleshing
+out real (not placeholder) producer/consumer code and AsyncAPI docs from
+it, the same way a field-spec fleshes out real columns and endpoints
+today. Not scoped or designed here — raised now because it changes what
+"done" might eventually mean for the generator-support bullet above, and
+because the schema-format decision in ADR 0003 (JSON Schema) was made
+partly with this in mind.
 
 ## Consequences
 - A new module to build, test, and maintain in `purerest`, and a new
@@ -201,5 +249,10 @@ Scope:
   for the `correlationId` field this module's logging/tracing keys off —
   not a hard sequencing dependency (this module doesn't require ADR 0009
   to be accepted first), but designed assuming it lands.
+- The new AsyncAPI scope item depends conceptually on
+  [ADR 0003](./0003-kafka-schema-registry.md)'s JSON Schema decision for
+  its message-payload shapes — same non-hard-sequencing relationship as
+  the `correlationId` dependency above: designed assuming it, not
+  blocked waiting for Rework 5 to finish first.
 - Left as **Proposed** — no code written yet; this records the shape and
   the "why a new module, not `purerestlib`" reasoning before building it.
