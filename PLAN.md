@@ -400,18 +400,40 @@ stale bullet list, for the current full scope before starting a track.
       there)
 - [ ] AsyncAPI documentation, generated from a service's own Kafka
       producer/consumer registrations, served the same way tapir serves
-      OpenAPI/Swagger at `/docs` (ADR 0010) — explicitly out of scope for
-      the `purekafka_20261015` track (see its own spec.md's Out of Scope
-      section); still a separate, unbuilt backlog item in `purerest`'s
-      own `conductor/tracks.md`
+      OpenAPI/Swagger at `/docs` (ADR 0010) — tracked as `purerest`'s
+      `purekafka-asyncapi_20261017` (spec'd 2026-10-17: registration
+      primitive + hand-rolled document generation + raw-spec/HTML
+      serving on `kafka-harness` as the reference consumer, static HTML
+      via `@asyncapi/generator`); not yet implemented
+- [ ] Migrate `order-service` to the same `AsyncApiChannel`/
+      `purekafka.docs` registration API once the above lands — register
+      its existing direct-Kafka consumers (`StockEventConsumer`,
+      `PaymentEventConsumer`, adopted under TD-2.2) for AsyncAPI docs;
+      note its producer side has nothing to register (Rework 4's outbox
+      pattern already removed its direct-publish call sites). Scoped as
+      a separate track in `order-service`'s own `conductor/tracks.md`,
+      sequenced after `purekafka-asyncapi_20261017`
+- [ ] Retrofit `pure-service-generator` with the same capability so
+      every future generated service gets Kafka AsyncAPI docs by
+      default, alongside its existing producer/consumer/outbox-CDC
+      examples
+- [ ] Adopt across `inventory-service`, `payment-service`,
+      `notification-service` once the generator template carries it
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
-- [ ] TD-2.2 — order-service's `StockEventConsumer` adopts
-      `purekafka`'s stream supervision
+- [x] TD-2.2 — order-service's `StockEventConsumer` adopts
+      `purekafka`'s stream supervision — done 2026-10-16/17
+      (`order-service`'s `purekafka-adoption_20261016` track, 3 phases,
+      147 tests passing; also covered `PaymentEventConsumer` in the same
+      service/track, since both were merged into one background fiber
+      and leaving one unsupervised would've been inconsistent)
 - [ ] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
       adopts `purekafka`'s stream supervision
 - [ ] TD-2.4 — dead-letter routing added across all four Kafka-consuming
-      services
+      services — **2 of 4 done**: order-service's `StockEventConsumer`
+      and `PaymentEventConsumer` (same track as TD-2.2 above);
+      payment-service's `OrderReservedConsumer` and
+      notification-service's `OrderStatusChangedConsumer` still open
 
 **Stub / fan-out:** `purekafka`'s own test suite proves retry/
 supervision/DLQ against synthetic failures (same Testcontainers-Kafka

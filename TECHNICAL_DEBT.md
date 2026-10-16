@@ -214,3 +214,41 @@ affected every existing service identically) — whether an
 already-generated service adopts the new template's list endpoint is
 opportunistic, only when that service's own backlog actually calls for
 it, not a required sweep across all six.
+
+---
+
+## TD-5 — Mismatched `testcontainersScalaVersion` across repos, one confirmed broken
+
+All six generated services pin `testcontainersScalaVersion = "0.43.6"`.
+`purerest` pinned the same `0.43.6` until 2026-10-15, when it had to be
+bumped to `0.44.1` (a major `testcontainers-java` jump, 1.21.1 → 2.0.3) to
+fix Testcontainers-Kafka startup against this machine's OrbStack/Docker
+29.8.2 — `0.43.6`'s shaded docker-java client hardcodes Docker API version
+1.32 and ignores `DOCKER_API_VERSION`/`DOCKER_HOST` overrides, which a
+modern Docker Engine (minimum supported API 1.40) rejects outright (see
+`purerest`'s `purekafka_20261015` track, Phase 5, for the full diagnosis).
+
+**Not yet understood, flagging rather than guessing:** order-service's own
+Testcontainers-Kafka suites (`StockEventConsumerSuite`,
+`PaymentEventConsumerSuite`) run fine against the *same* `0.43.6` pin,
+confirmed directly while working TD-2.2/TD-2.4 (2026-10-16) — both before
+and after that track's own changes. So this isn't simply "`0.43.6` is
+broken, full stop" — something about how `purerest`'s own
+Testcontainers-Kafka suite was configured (or some other environment
+difference) made it hit the bug where order-service's doesn't. Worth
+understanding *why* before deciding whether all six services actually
+need the bump, or whether `purerest` had something else going on.
+
+Regardless of the "why," having one repo in the ecosystem on `0.44.1` and
+six others on `0.43.6` is its own small, accumulating inconsistency —
+worth closing by migrating everyone to the same (later) version once the
+"why" above is understood, rather than leaving a quietly-diverging pin
+across seven repos.
+
+### Tasks
+- [ ] TD-5.1: Understand why `purerest`'s Testcontainers-Kafka setup hit
+      the Docker-API-version bug under `0.43.6` while order-service's
+      didn't, under the same version and same Docker host.
+- [ ] TD-5.2: Once understood, migrate all six generated services (and
+      `pure-service-generator`'s base template, so new services don't
+      regress to the old pin) to whatever version `purerest` ends up on.
