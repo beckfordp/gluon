@@ -388,13 +388,22 @@ documentation, three generated examples (producer/consumer/outbox-CDC,
 not just two), a dedicated load test — see the ADR itself, not this
 stale bullet list, for the current full scope before starting a track.
 
-- [ ] Build `purekafka`: generic `F[A]` call resilience (producer side),
+- [x] Build `purekafka`: generic `F[A]` call resilience (producer side),
       consumer stream supervision (restart-with-backoff, unbounded
       attempts, no circuit breaker), dead-letter routing, and
-      tracing/metrics/log observability across the Kafka boundary
+      tracing/metrics/log observability across the Kafka boundary — done
+      2026-10-15 (`purerest`'s `purekafka_20261015` track, 5 phases,
+      125 tests passing); also added a standalone, continuously-running
+      `kafka-harness` demo app making these metrics Grafana-visible
+      locally (`purerest`'s own `docker-compose.yml`, not gluon's
+      OrbStack cluster — see `scripts/verify-kafka-observability.sh`
+      there)
 - [ ] AsyncAPI documentation, generated from a service's own Kafka
       producer/consumer registrations, served the same way tapir serves
-      OpenAPI/Swagger at `/docs` (ADR 0010)
+      OpenAPI/Swagger at `/docs` (ADR 0010) — explicitly out of scope for
+      the `purekafka_20261015` track (see its own spec.md's Out of Scope
+      section); still a separate, unbuilt backlog item in `purerest`'s
+      own `conductor/tracks.md`
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
 - [ ] TD-2.2 — order-service's `StockEventConsumer` adopts
