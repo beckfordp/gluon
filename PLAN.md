@@ -398,13 +398,14 @@ stale bullet list, for the current full scope before starting a track.
       locally (`purerest`'s own `docker-compose.yml`, not gluon's
       OrbStack cluster — see `scripts/verify-kafka-observability.sh`
       there)
-- [ ] AsyncAPI documentation, generated from a service's own Kafka
+- [x] AsyncAPI documentation, generated from a service's own Kafka
       producer/consumer registrations, served the same way tapir serves
-      OpenAPI/Swagger at `/docs` (ADR 0010) — tracked as `purerest`'s
-      `purekafka-asyncapi_20261017` (spec'd 2026-10-17: registration
-      primitive + hand-rolled document generation + raw-spec/HTML
-      serving on `kafka-harness` as the reference consumer, static HTML
-      via `@asyncapi/generator`); not yet implemented
+      OpenAPI/Swagger at `/docs` (ADR 0010) — done 2026-10-17
+      (`purerest`'s `purekafka-asyncapi_20261017` track, 5 phases, 130
+      tests passing; `AsyncApiChannel`/`purekafka.docs.Docs` registration
+      + raw-spec route, static HTML via `@asyncapi/generator` served on
+      `kafka-harness` as the reference consumer — see
+      `scripts/verify-kafka-asyncapi-docs.sh` there); track archived
 - [ ] Migrate `order-service` to the same `AsyncApiChannel`/
       `purekafka.docs` registration API once the above lands — register
       its existing direct-Kafka consumers (`StockEventConsumer`,
