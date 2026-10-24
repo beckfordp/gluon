@@ -406,14 +406,34 @@ stale bullet list, for the current full scope before starting a track.
       + raw-spec route, static HTML via `@asyncapi/generator` served on
       `kafka-harness` as the reference consumer — see
       `scripts/verify-kafka-asyncapi-docs.sh` there); track archived
-- [ ] Migrate `order-service` to the same `AsyncApiChannel`/
-      `purekafka.docs` registration API once the above lands — register
-      its existing direct-Kafka consumers (`StockEventConsumer`,
-      `PaymentEventConsumer`, adopted under TD-2.2) for AsyncAPI docs;
-      note its producer side has nothing to register (Rework 4's outbox
-      pattern already removed its direct-publish call sites). Scoped as
-      a separate track in `order-service`'s own `conductor/tracks.md`,
-      sequenced after `purekafka-asyncapi_20261017`
+- [x] Migrate `order-service` to the same `AsyncApiChannel`/
+      `purekafka.docs` registration API — done 2026-10-17
+      (`order-service`'s `asyncapi-docs_20261017` track, 4 phases, 151
+      tests passing; registers `StockReserved`/`StockReservationFailed`
+      on `inventory-events` and `PaymentSettled`/`PaymentFailed` on
+      `payment-events` via `AsyncApiChannels`, served at
+      `/docs/asyncapi.json` + static HTML at `/docs/asyncapi` — see
+      `scripts/verify-kafka-asyncapi-docs.sh` there; no producer-side
+      registrations, as expected). Required a prerequisite `purerest`
+      fix first (`asyncapi-topic-merge_20261017`: `AsyncApiDoc.generate`
+      silently dropped all but the last channel registered per topic —
+      order-service's two topics each multiplex two event types via the
+      envelope pattern, which the original single-eventType-per-topic
+      implementation couldn't represent); both tracks archived
+- [ ] sbt plugin (shared, `purerest`) that generates the AsyncAPI static
+      HTML at build time instead of via the standalone
+      `generate-kafka-asyncapi-docs.sh`/`verify-kafka-asyncapi-docs.sh`
+      shell scripts each service currently has its own copy of — a
+      dedicated task (chained after `Compile / compile`) calls the
+      already-compiled service's registered `AsyncApiChannel` list +
+      `purekafka.docs.AsyncApiDoc.generate` directly (no HTTP server
+      needed — that function is pure, in-memory JSON), writes it to
+      `target/asyncapi-docs-spec/asyncapi.json`, then runs the same
+      `@asyncapi/cli`/patched-`html-template` pipeline the shell scripts
+      already do, writing `target/asyncapi-docs/index.html`. Tracked as
+      `purerest`'s own track; once published, wire into `order-service`'s
+      `project/plugins.sbt`/`build.sbt` and confirm via its existing
+      `scripts/verify-kafka-asyncapi-docs.sh`
 - [ ] Retrofit `pure-service-generator` with the same capability so
       every future generated service gets Kafka AsyncAPI docs by
       default, alongside its existing producer/consumer/outbox-CDC
