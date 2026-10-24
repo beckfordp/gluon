@@ -438,12 +438,25 @@ stale bullet list, for the current full scope before starting a track.
       `target/asyncapi-docs-spec/asyncapi.json` (all 3 channels:
       `inventory-events`/`payment-events`/`order-events`) and
       `target/asyncapi-docs/index.html` correctly
-- [ ] Retrofit `pure-service-generator` with the same capability so
+- [x] Retrofit `pure-service-generator` with the same capability so
       every future generated service gets Kafka AsyncAPI docs by
       default, alongside its existing producer/consumer/outbox-CDC
-      examples
+      examples — done 2026-10-24 (`pure-service-generator`'s
+      `purekafka-examples_20261024` track: three new generated examples
+      + `ExampleAsyncApiChannels`/`PureKafkaDocsPlugin` wired into the
+      base template; builds against the real v0.2.1
+      `purekafka`/`sbt-purekafka-docs` release); track archived
 - [ ] Adopt across `inventory-service`, `payment-service`,
-      `notification-service` once the generator template carries it
+      `notification-service` once the generator template carries it —
+      **1 of 3 done**: inventory-service's own `AsyncApiChannels`
+      (publish-side, `Publish(Cdc)` — this service has no consumer) +
+      `sbt-purekafka-docs` wiring, done 2026-10-24
+      (`inventory-service`'s `asyncapi-docs_20261024` track, 4 phases +
+      review fixes, 90 tests passing; also prompted a `Main.scala`
+      restructure to mirror order-service's `Telemetry`/`AppRoutes`
+      pattern); track archived. payment-service/notification-service
+      still open — each also needs TD-2.4 (DLQ) and payment-service's
+      stream-supervision adoption / notification-service's TD-2.3
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
 - [x] TD-2.2 — order-service's `StockEventConsumer` adopts
