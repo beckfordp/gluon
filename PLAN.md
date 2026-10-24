@@ -448,15 +448,21 @@ stale bullet list, for the current full scope before starting a track.
       `purekafka`/`sbt-purekafka-docs` release); track archived
 - [ ] Adopt across `inventory-service`, `payment-service`,
       `notification-service` once the generator template carries it —
-      **1 of 3 done**: inventory-service's own `AsyncApiChannels`
+      **2 of 3 done**: inventory-service's own `AsyncApiChannels`
       (publish-side, `Publish(Cdc)` — this service has no consumer) +
       `sbt-purekafka-docs` wiring, done 2026-10-24
       (`inventory-service`'s `asyncapi-docs_20261024` track, 4 phases +
       review fixes, 90 tests passing; also prompted a `Main.scala`
       restructure to mirror order-service's `Telemetry`/`AppRoutes`
-      pattern); track archived. payment-service/notification-service
-      still open — each also needs TD-2.4 (DLQ) and payment-service's
-      stream-supervision adoption / notification-service's TD-2.3
+      pattern); track archived. payment-service done 2026-10-24
+      (`payment-service`'s `purekafka-adoption_20261024` track, 3
+      phases, 75 tests passing: `AsyncApiChannels` for consumed
+      `OrderReserved`/Subscribe + published `PaymentSettled`/
+      `Publish(Cdc)` — `PaymentFailedEvent` deliberately excluded, found
+      never actually published via `PaymentStore.update`'s outbox
+      branch; also closed TD-2.4's payment-service gap and the same
+      `Telemetry`/`AppRoutes`/`KafkaConsumers` restructure); track
+      archived. notification-service still open — also needs TD-2.3
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
 - [x] TD-2.2 — order-service's `StockEventConsumer` adopts
@@ -468,9 +474,10 @@ stale bullet list, for the current full scope before starting a track.
 - [ ] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
       adopts `purekafka`'s stream supervision
 - [ ] TD-2.4 — dead-letter routing added across all four Kafka-consuming
-      services — **2 of 4 done**: order-service's `StockEventConsumer`
+      services — **3 of 4 done**: order-service's `StockEventConsumer`
       and `PaymentEventConsumer` (same track as TD-2.2 above);
-      payment-service's `OrderReservedConsumer` and
+      payment-service's `OrderReservedConsumer` done 2026-10-24 (same
+      `purekafka-adoption_20261024` track as above).
       notification-service's `OrderStatusChangedConsumer` still open
 
 **Stub / fan-out:** `purekafka`'s own test suite proves retry/
