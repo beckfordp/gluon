@@ -420,20 +420,24 @@ stale bullet list, for the current full scope before starting a track.
       order-service's two topics each multiplex two event types via the
       envelope pattern, which the original single-eventType-per-topic
       implementation couldn't represent); both tracks archived
-- [ ] sbt plugin (shared, `purerest`) that generates the AsyncAPI static
+- [x] sbt plugin (shared, `purerest`) that generates the AsyncAPI static
       HTML at build time instead of via the standalone
       `generate-kafka-asyncapi-docs.sh`/`verify-kafka-asyncapi-docs.sh`
-      shell scripts each service currently has its own copy of — a
-      dedicated task (chained after `Compile / compile`) calls the
-      already-compiled service's registered `AsyncApiChannel` list +
-      `purekafka.docs.AsyncApiDoc.generate` directly (no HTTP server
-      needed — that function is pure, in-memory JSON), writes it to
-      `target/asyncapi-docs-spec/asyncapi.json`, then runs the same
-      `@asyncapi/cli`/patched-`html-template` pipeline the shell scripts
-      already do, writing `target/asyncapi-docs/index.html`. Tracked as
-      `purerest`'s own track; once published, wire into `order-service`'s
-      `project/plugins.sbt`/`build.sbt` and confirm via its existing
-      `scripts/verify-kafka-asyncapi-docs.sh`
+      shell scripts each service currently has its own copy of — done
+      2026-10-17 (`purerest`'s `sbt-asyncapi-plugin_20261017` track,
+      already archived, predates this bullet being marked; found
+      stale while resuming Rework 3 on 2026-10-24). New
+      `modules/sbt-purekafka-docs` (Scala 2.12 `AutoPlugin`) exposes
+      `asyncApiGenerateSpec`/`asyncApiGenerate`, chained after
+      `Compile / compile` via `Def.taskDyn`; `purekafka.docs` gained
+      `AsyncApiChannelsProvider` + `AsyncApiSpecWriter` to support it.
+      `order-service` already has it wired (`PureKafkaDocsPlugin` in
+      `build.sbt`, `project/plugins.sbt`, its own
+      `scripts/verify-kafka-asyncapi-docs.sh`) — reconfirmed live
+      2026-10-24: `sbt compile` regenerated
+      `target/asyncapi-docs-spec/asyncapi.json` (all 3 channels:
+      `inventory-events`/`payment-events`/`order-events`) and
+      `target/asyncapi-docs/index.html` correctly
 - [ ] Retrofit `pure-service-generator` with the same capability so
       every future generated service gets Kafka AsyncAPI docs by
       default, alongside its existing producer/consumer/outbox-CDC
