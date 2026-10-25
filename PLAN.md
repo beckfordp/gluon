@@ -605,6 +605,25 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
       `notification-service` — wire the new sbt task, register each
       service's existing event schemas (one conductor track per
       service)
+  - [x] `order-service` — done 2026-10-25 (`order-service`'s
+        `schema-registry_20261025` track, 2 phases); bumped
+        `purekafka`/`sbt-purekafka-docs` pins to the real `0.3.0`/
+        `0.2.0-dev` GitHub Packages releases (pushed as part of this
+        work); registered all 6 real channels against the real local
+        Apicurio instance; CI runs `schemaRegistryCheck` against a
+        throwaway `docker run` Apicurio container (no OrbStack/
+        cluster-DNS access from GitHub-hosted runners). Found along the
+        way, unrelated to this track: order-service's CI had been
+        failing on every push for weeks — the `GH_PACKAGES_TOKEN` repo
+        secret didn't exist at all. Confirmed the same gap on every
+        other service repo (`inventory-service`, `payment-service`,
+        `notification-service`, `catalog-service`, `cart-service`) —
+        user added the secret to `order-service` to unblock this track;
+        the others still need it, flagged here as a standing gap, not
+        fixed as part of this track
+  - [ ] `inventory-service`
+  - [ ] `payment-service`
+  - [ ] `notification-service`
 - [ ] Retrofit `pure-service-generator`'s base template so every future
       generated service gets this by default, mirroring Rework 3's own
       generator-retrofit precedent (own conductor track)
