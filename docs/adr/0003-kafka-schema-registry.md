@@ -73,3 +73,34 @@ Avro or Protobuf.
   JSON, breaking clean plain-text reads via `kafka-console-consumer`/
   `kcat`). Both are deferred to Rework 5's actual implementation, not
   decided here.
+
+**Note (2026-10-25), resolving this ADR's remaining open follow-ups:**
+- **Wire format: plain `StringConverter` stays, registry used for
+  compatibility checking only** — no registry-aware JSON Schema Connect
+  converter. Rationale: (1) resilience — a registry-aware
+  serializer/converter makes the registry a synchronous dependency on
+  every produce/consume call; a registry outage would then block
+  message flow entirely, the opposite of what Rework 3's
+  `StreamSupervisor`/`DeadLetter` work just hardened against. (2)
+  Keeps every existing plain-text debugging path working unchanged
+  (`kafka-console-consumer`/`kcat`, and this project's own
+  `consumeOneFrom`-style test helpers across all four services' DLQ
+  tests) — a magic-byte-framed payload breaks all of them. (3) No
+  rework of the already-shipped outbox/Debezium pipeline (ADR 0008),
+  which passes a pre-built JSON string straight through via plain
+  `StringConverter` today.
+- **Registry implementation: Apicurio Registry**, not Confluent Schema
+  Registry — Apache 2.0 licensed (Confluent's is Confluent Community
+  License, not OSI open source), lighter container for local dev. Both
+  support JSON Schema as a first-class type, so this wasn't constrained
+  by the format decision.
+- **Enforcement mechanism, given the wire-format decision above means
+  nothing on the wire triggers a registry check automatically**: a
+  build-time/CI check, not a runtime one. A new sbt task (mirroring
+  `sbt-purekafka-docs`' existing auto-chained-after-compile pattern)
+  derives each event's JSON Schema from the same tapir `Schema[T]`
+  already used for AsyncAPI generation, and registers/validates it
+  against Apicurio during the build — a breaking change fails CI,
+  never reaches a running broker. This also means the registry has zero
+  presence on the runtime produce/consume path at all, maximizing the
+  resilience benefit from the wire-format decision above.
