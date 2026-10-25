@@ -621,7 +621,14 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
         user added the secret to `order-service` to unblock this track;
         the others still need it, flagged here as a standing gap, not
         fixed as part of this track
-  - [ ] `inventory-service`
+  - [x] `inventory-service` — done 2026-10-25 (`inventory-service`'s
+        `schema-registry_20261025` track, 2 phases); reused
+        order-service's settled design verbatim (no new design
+        questions); bumped `purekafka`/`sbt-purekafka-docs` pins to
+        `0.3.0`/`0.2.0-dev`; registered both real channels
+        (`StockReserved`/`StockReservationFailed`) against the real
+        local Apicurio instance; CI (`docker run` Apicurio) green after
+        the user added the missing `GH_PACKAGES_TOKEN` secret here too
   - [ ] `payment-service`
   - [ ] `notification-service`
 - [ ] Retrofit `pure-service-generator`'s base template so every future
