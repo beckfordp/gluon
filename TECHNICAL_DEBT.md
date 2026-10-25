@@ -252,3 +252,33 @@ across seven repos.
 - [ ] TD-5.2: Once understood, migrate all six generated services (and
       `pure-service-generator`'s base template, so new services don't
       regress to the old pin) to whatever version `purerest` ends up on.
+
+---
+
+## TD-6 — `PureKafkaDocsPlugin` doesn't auto-wire its AsyncAPI HTML into the Docker image
+
+Each of `order-service`, `inventory-service`, `payment-service`,
+`notification-service` (and `pure-service-generator`'s base template, so
+new services don't regress) carries an identical, hand-written `Universal
+/ mappings` block in its own `build.sbt` (added 2026-10-25, fixing a real
+gap: `asyncApiGenerate`'s rendered HTML had never actually been baked into
+any of these services' Docker images — confirmed live, 404 everywhere
+except a bare `sbt run`). `sbt-purekafka-docs` has no awareness of
+`sbt-native-packager` at all, so nothing currently wires this
+automatically — each consuming `build.sbt` has to do it by hand.
+
+**Decided:** `PureKafkaDocsPlugin` could detect — via sbt's `AutoPlugin`
+trigger/requires mechanism — that `JavaAppPackaging`/`UniversalPlugin` is
+*also* enabled on the same project, and add the `Universal/mappings` entry
+itself, removing this boilerplate from all 5 `build.sbt` files. Not done
+as part of the original fix, since it's a `purerest` plugin change with
+its own design/testing, not a prerequisite for that fix to work.
+
+### Tasks
+- [ ] TD-6.1: `purerest` — teach `PureKafkaDocsPlugin` to auto-add the
+      `Universal/mappings` entry when `JavaAppPackaging`/`UniversalPlugin`
+      is also enabled on the consuming project.
+- [ ] TD-6.2: Once done, remove the now-redundant hand-written block from
+      `order-service`/`inventory-service`/`payment-service`/
+      `notification-service`'s `build.sbt`, and from
+      `pure-service-generator`'s base template.
