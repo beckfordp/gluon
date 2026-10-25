@@ -601,7 +601,7 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
       — the verify script instead `publishLocal`s the plugin and drives
       a throwaway sbt project, the same way a real external consumer
       eventually will); track archived
-- [ ] Adopt in `order-service`, `inventory-service`, `payment-service`,
+- [x] Adopt in `order-service`, `inventory-service`, `payment-service`,
       `notification-service` — wire the new sbt task, register each
       service's existing event schemas (one conductor track per
       service)
@@ -639,7 +639,16 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
         the `GH_PACKAGES_TOKEN` secret was added. Found and fixed along
         the way, unrelated to this track: pre-existing scalafmt drift in
         2 test files (whitespace only)
-  - [ ] `notification-service`
+  - [x] `notification-service` — done 2026-10-25
+        (`notification-service`'s `schema-registry_20261025` track, 2
+        phases); reused the settled design verbatim; bumped
+        `purekafka`/`sbt-purekafka-docs` pins to `0.3.0`/`0.2.0-dev`;
+        registered its one real channel (`OrderStatusChanged`) against
+        the real local Apicurio instance; CI green on first real run
+        (`GH_PACKAGES_TOKEN` already set ahead of this track). Found and
+        fixed along the way, unrelated to this track: pre-existing
+        scalafmt drift in 5 test files (whitespace only). All 4 services
+        now adopted — this step is done
 - [ ] Retrofit `pure-service-generator`'s base template so every future
       generated service gets this by default, mirroring Rework 3's own
       generator-retrofit precedent (own conductor track)
