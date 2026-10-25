@@ -89,9 +89,18 @@ those files in; fixed 2026-10-25, confirmed live in this cluster:
 ADR 0003's build-time compatibility backend (Rework 5) — checked only
 during each service's `sbt schemaRegistryCheck`; zero presence on the
 runtime produce/consume path (confirmed: killing this pod doesn't affect
-a running service's ability to publish or consume). This deployment has
-no bundled web console — browse registered schemas via its REST API
-instead:
+a running service's ability to publish or consume).
+
+Apicurio 3.x ships the backend and its web console as two separate
+container images — browse registered schemas at:
+
+- http://apicurio-registry-ui.gluon-local.svc.cluster.local:8080/
+
+(`apicurio-registry-ui`, confirmed live — its served `config.js` points
+`artifacts.url` at the backend's real API below, not a placeholder.)
+
+For scripting, or to inspect one artifact's raw JSON Schema content
+directly, the REST API still works the same way:
 
 ```
 # Everything registered, across every service:

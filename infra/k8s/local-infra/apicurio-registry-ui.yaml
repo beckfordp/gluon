@@ -1,0 +1,51 @@
+# Apicurio Registry's web console (ADR 0003's Rework 5 follow-up) - a
+# genuinely separate container image from the backend in Apicurio 3.x, not
+# bundled into one image at all (confirmed via Apicurio's own docs/GitHub);
+# the backend alone (apicurio-registry.yaml) only ever served its own REST
+# API, with no browsable UI. REGISTRY_API_URL points this at the already-
+# deployed backend's cluster-DNS service name.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apicurio-registry-ui
+  namespace: gluon-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apicurio-registry-ui
+  template:
+    metadata:
+      labels:
+        app: apicurio-registry-ui
+    spec:
+      containers:
+        - name: apicurio-registry-ui
+          image: apicurio/apicurio-registry-ui:3.3.2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: REGISTRY_API_URL
+              value: http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - --fail
+                - --silent
+                - http://localhost:8080/
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apicurio-registry-ui
+  namespace: gluon-local
+spec:
+  selector:
+    app: apicurio-registry-ui
+  ports:
+    - port: 8080
+      targetPort: 8080
