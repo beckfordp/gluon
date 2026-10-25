@@ -69,12 +69,18 @@ REST API to document (`/docs` 404s there, as expected).
 Same cluster-DNS-from-host convenience as above. Each Kafka-touching
 service serves its AsyncAPI docs the same way tapir serves OpenAPI/Swagger
 above — raw spec at `/docs/asyncapi.json`, rendered static HTML at
-`/docs/asyncapi` ([ADR 0010](../../docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md)):
+`/docs/asyncapi/index.html`
+([ADR 0010](../../docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md)).
+The static HTML is baked into each service's Docker image at build time
+(`Universal / mappings` in `build.sbt`, each service's own
+`asyncApiGenerate` output) — previously only ever worked via a bare `sbt
+run`, since neither this deployment nor `docker-compose` ever packaged
+those files in; fixed 2026-10-25, confirmed live in this cluster:
 
-- http://order-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
-- http://inventory-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
-- http://payment-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
-- http://notification-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
+- http://order-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+- http://inventory-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+- http://payment-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+- http://notification-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
 
 `catalog-service`/`cart-service` have no entry — neither touches Kafka.
 
