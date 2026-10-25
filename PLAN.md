@@ -580,9 +580,27 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
       (2) health endpoints are served on a separate Quarkus "management
       interface" port (9000), not the main REST API/UI port (8080) —
       `readinessProbe` targets 9000.
-- [ ] New sbt task in `purerest` deriving/registering each event's JSON
+- [x] New sbt task in `purerest` deriving/registering each event's JSON
       Schema against Apicurio during the build, reusing the existing
-      tapir `Schema[T]`/AsyncAPI machinery (own conductor track)
+      tapir `Schema[T]`/AsyncAPI machinery — done 2026-10-25
+      (`purerest`'s `schema-registry_20261025` track, 2 phases; new
+      `purekafka.docs.SchemaRegistryWriter`, built on `http4s-ember-client`
+      + cats-effect `IO` for consistency with the rest of `purekafka`
+      rather than `java.net.http`; `sbt-purekafka-docs` gains
+      `schemaRegistryUrl`/`schemaRegistryGroupId` settings and a
+      `schemaRegistryCheck` task, invoked explicitly — e.g. in CI — not
+      auto-chained after `compile` like AsyncAPI generation, since this
+      one makes a real network call. End-to-end verified
+      (`scripts/verify-schema-registry-check.sh`) against the real local
+      Apicurio instance from step 1 above: first run registers + sets a
+      `BACKWARD` rule, a second identical run is a no-op, and a
+      deliberately incompatible payload change fails the task. Found
+      along the way: sbt `AutoPlugin`s only load from a build's own
+      meta-build classpath, not a sibling project's output in the same
+      build, so this couldn't be exercised via `kafka-harness` directly
+      — the verify script instead `publishLocal`s the plugin and drives
+      a throwaway sbt project, the same way a real external consumer
+      eventually will); track archived
 - [ ] Adopt in `order-service`, `inventory-service`, `payment-service`,
       `notification-service` — wire the new sbt task, register each
       service's existing event schemas (one conductor track per
