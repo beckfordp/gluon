@@ -1,0 +1,70 @@
+# Apicurio Registry (ADR 0003's Rework 5): compatibility-check backend for
+# each Kafka event's JSON Schema, derived from the same tapir `Schema[T]`
+# already used for AsyncAPI generation (ADR 0010). Checked/registered at
+# build time only (a new purerest sbt task) - this service has zero
+# presence on the runtime produce/consume path, by design (see ADR 0003's
+# 2026-10-25 note): messages stay plain `StringConverter` JSON on the wire
+# (no registry-aware Connect converter), so a registry outage never blocks
+# a running service, consistent with Rework 3's StreamSupervisor/DeadLetter
+# resilience work.
+#
+# Storage: left unconfigured deliberately - Apicurio Registry 3.x's
+# default when APICURIO_STORAGE_KIND is unset is SQL storage with an
+# embedded H2 database (no external DB container needed; confirmed live
+# 2026-10-25 - "mem" is not a valid value in this version, it errors with
+# "No Registry storage variant defined for value mem"). Local-dev-only,
+# mirrors every other local-infra component's own ephemeral-storage
+# convention (even Postgres here uses a plain `emptyDir`, not a real PVC -
+# see postgres-catalog.yaml). Schemas don't survive a pod restart, but the
+# source of truth is the code; the build-time task just
+# re-registers/validates on every run anyway, so restart-loses-data is
+# low-stakes for this local-only, single-developer setup. KafkaSQL storage
+# (reusing the already-deployed broker, surviving restarts) is a
+# reasonable future upgrade if that changes, not needed now.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apicurio-registry
+  namespace: gluon-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apicurio-registry
+  template:
+    metadata:
+      labels:
+        app: apicurio-registry
+    spec:
+      containers:
+        - name: apicurio-registry
+          image: apicurio/apicurio-registry:3.3.2
+          ports:
+            - containerPort: 8080
+            - containerPort: 9000
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - --fail
+                - --silent
+                # Health endpoints are served on the separate Quarkus
+                # "management interface" port (9000), not the main REST
+                # API/UI port (8080) - confirmed live 2026-10-25: curling
+                # 8080/health/ready 404s.
+                - http://localhost:9000/health/ready
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apicurio-registry
+  namespace: gluon-local
+spec:
+  selector:
+    app: apicurio-registry
+  ports:
+    - port: 8080
+      targetPort: 8080

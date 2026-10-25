@@ -7,8 +7,10 @@
   why this is one shared chart rather than one per workload.
 - `local-infra/` — plain k8s manifests (no chart) for shared local
   dependencies: the `gluon-local` namespace, one Postgres per service that
-  needs it, one Redis per service that needs it, and a single shared Kafka
-  broker — mirrors each service's own `docker-compose.yml` almost 1:1.
+  needs it, one Redis per service that needs it, a single shared Kafka
+  broker, and Apicurio Registry (ADR 0003's schema-compatibility backend,
+  checked at build time only — no presence on the runtime produce/consume
+  path) — mirrors each service's own `docker-compose.yml` almost 1:1.
   Local-only; dev/staging/prod will use managed equivalents (RDS/
   ElastiCache/MSK), not yet decided via ADR.
 
