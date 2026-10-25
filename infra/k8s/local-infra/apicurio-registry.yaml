@@ -42,6 +42,28 @@ spec:
           ports:
             - containerPort: 8080
             - containerPort: 9000
+          env:
+            # Default CORS allow-list is just localhost:8888/127.0.0.1:8888
+            # (confirmed live: a real browser request from
+            # apicurio-registry-ui's own cluster-DNS origin got a 403 "CORS
+            # Rejected - Invalid origin") - allow-all, same local-dev-only
+            # convention this repo's own generated services' CORS fix uses
+            # (TD-1).
+            - name: QUARKUS_HTTP_CORS_ORIGINS
+              value: "*"
+            # All three deletion toggles default to false (confirmed live:
+            # DELETE on an artifact or a whole group both 405'd) - enabled
+            # here so stale local-dev artifacts (e.g. left over from a
+            # schemaRegistryGroupId change) can actually be cleaned up,
+            # same local-dev-only "allow it" posture as CORS above. Storage
+            # is ephemeral anyway (see this file's own storage comment
+            # above), so this isn't guarding anything real here.
+            - name: APICURIO_REST_DELETION_ARTIFACT_ENABLED
+              value: "true"
+            - name: APICURIO_REST_DELETION_ARTIFACT_VERSION_ENABLED
+              value: "true"
+            - name: APICURIO_REST_DELETION_GROUP_ENABLED
+              value: "true"
           readinessProbe:
             exec:
               command:
