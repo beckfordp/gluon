@@ -629,7 +629,16 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
         (`StockReserved`/`StockReservationFailed`) against the real
         local Apicurio instance; CI (`docker run` Apicurio) green after
         the user added the missing `GH_PACKAGES_TOKEN` secret here too
-  - [ ] `payment-service`
+  - [x] `payment-service` — done 2026-10-25 (`payment-service`'s
+        `schema-registry_20261025` track, 2 phases); reused the settled
+        design verbatim; bumped `purekafka`/`sbt-purekafka-docs` pins to
+        `0.3.0`/`0.2.0-dev`; registered both real channels
+        (`OrderReserved`/`PaymentSettled` — `PaymentFailedEvent`
+        deliberately excluded, never actually published) against the
+        real local Apicurio instance; CI green on first real run after
+        the `GH_PACKAGES_TOKEN` secret was added. Found and fixed along
+        the way, unrelated to this track: pre-existing scalafmt drift in
+        2 test files (whitespace only)
   - [ ] `notification-service`
 - [ ] Retrofit `pure-service-generator`'s base template so every future
       generated service gets this by default, mirroring Rework 3's own
