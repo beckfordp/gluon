@@ -370,7 +370,7 @@ three domain topics; the old six event-type topics are retired;
 
 ---
 
-## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010)
+## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010) — DONE
 
 **Repos:** `purerest` (new `modules/purekafka`), `pure-service-generator`
 (producer/consumer/outbox-CDC examples), then `order-service`,
@@ -446,9 +446,9 @@ stale bullet list, for the current full scope before starting a track.
       + `ExampleAsyncApiChannels`/`PureKafkaDocsPlugin` wired into the
       base template; builds against the real v0.2.1
       `purekafka`/`sbt-purekafka-docs` release); track archived
-- [ ] Adopt across `inventory-service`, `payment-service`,
+- [x] Adopt across `inventory-service`, `payment-service`,
       `notification-service` once the generator template carries it —
-      **2 of 3 done**: inventory-service's own `AsyncApiChannels`
+      **3 of 3 done**. inventory-service's own `AsyncApiChannels`
       (publish-side, `Publish(Cdc)` — this service has no consumer) +
       `sbt-purekafka-docs` wiring, done 2026-10-24
       (`inventory-service`'s `asyncapi-docs_20261024` track, 4 phases +
@@ -462,7 +462,16 @@ stale bullet list, for the current full scope before starting a track.
       never actually published via `PaymentStore.update`'s outbox
       branch; also closed TD-2.4's payment-service gap and the same
       `Telemetry`/`AppRoutes`/`KafkaConsumers` restructure); track
-      archived. notification-service still open — also needs TD-2.3
+      archived. notification-service done 2026-10-24/25
+      (`notification-service`'s `purekafka-adoption_20261024` track, 3
+      phases + review fixes, 21 tests passing: `AsyncApiChannels` for
+      consumed `OrderStatusChanged`/Subscribe — the only service with no
+      producer side at all; also closed TD-2.3/TD-2.4's
+      notification-service gaps, replaced the hand-rolled `readyRef`
+      restart signal that caused the 2026-10-09 stuck-at-503 incident,
+      and fixed this repo's own Testcontainers-Kafka Docker-API-version
+      blocker along the way — `testcontainersScalaVersion` 0.43.6 →
+      0.44.1, same fix `purerest` already applied); track archived
 - [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
       — already fixed directly (2026-10-02), predates this module
 - [x] TD-2.2 — order-service's `StockEventConsumer` adopts
@@ -471,14 +480,16 @@ stale bullet list, for the current full scope before starting a track.
       147 tests passing; also covered `PaymentEventConsumer` in the same
       service/track, since both were merged into one background fiber
       and leaving one unsupervised would've been inconsistent)
-- [ ] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
-      adopts `purekafka`'s stream supervision
-- [ ] TD-2.4 — dead-letter routing added across all four Kafka-consuming
-      services — **3 of 4 done**: order-service's `StockEventConsumer`
+- [x] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
+      adopts `purekafka`'s stream supervision — done 2026-10-24/25
+      (same `purekafka-adoption_20261024` track as above)
+- [x] TD-2.4 — dead-letter routing added across all four Kafka-consuming
+      services — **4 of 4 done**: order-service's `StockEventConsumer`
       and `PaymentEventConsumer` (same track as TD-2.2 above);
       payment-service's `OrderReservedConsumer` done 2026-10-24 (same
-      `purekafka-adoption_20261024` track as above).
-      notification-service's `OrderStatusChangedConsumer` still open
+      `purekafka-adoption_20261024` track as above); notification-service's
+      `OrderStatusChangedConsumer` done 2026-10-24/25 (same
+      `purekafka-adoption_20261024` track as above)
 
 **Stub / fan-out:** `purekafka`'s own test suite proves retry/
 supervision/DLQ against synthetic failures (same Testcontainers-Kafka
@@ -489,7 +500,13 @@ of the existing consumer stream, no new fan-out needed.
 connection — repeat the OrbStack-restart check that originally found
 TD-2.3, this time with no manual `kubectl rollout restart` needed; a
 deliberately malformed message lands on a DLQ topic instead of crashing
-or blocking its consumer.
+or blocking its consumer. All four services' adoption done and verified
+via Testcontainers-Kafka synthetic DLQ-routing tests (the stub/fan-out
+convention above) as of 2026-10-25 — the literal live OrbStack-restart
+repeat-check hasn't been separately re-run on the deployed cluster, but
+the mechanism (`StreamSupervisor`'s unbounded restart-with-backoff) is
+now identical across all four services and directly fixes the bug that
+check originally found.
 
 ---
 
