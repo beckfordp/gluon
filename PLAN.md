@@ -544,24 +544,54 @@ logged-and-hoped-for.
 ## Rework 5 — Schema registry (ADR 0003 implementation)
 
 **Repos:** `gluon` (`infra/k8s/local-infra`, new schema-registry
-component), every Kafka-publishing/consuming service.
+component), `purerest` (new build-time registration/check tooling),
+`pure-service-generator` (retrofit so future services get it by
+default), every Kafka-publishing/consuming service (`order-service`,
+`inventory-service`, `payment-service`, `notification-service`).
 
 **Depends on:** Rework 2 — ADR 0003 was explicitly sequenced to wait for
 ADR 0009's envelope shape to settle, so schemas get designed once
-against the final shape, not twice.
+against the final shape, not twice. (Done; this was already unblocked.)
 
-- [ ] Stand up a schema registry component in local infra
-- [ ] Pick serialization format/registry implementation (ADR 0003's own
-      still-open follow-up — Avro vs. Protobuf vs. JSON Schema;
-      Confluent Schema Registry vs. Apicurio)
-- [ ] Register schemas against the final envelope shape, enforce
-      compatibility checks
+**Design, resolved 2026-10-25 (see ADR 0003's own dated notes for full
+rationale):** JSON Schema (already settled 2026-10-15) + **Apicurio
+Registry** (Apache 2.0, not Confluent's Community-licensed one).
+Messages stay plain, framing-free JSON on the wire — no registry-aware
+Kafka Connect converter — so compatibility is enforced at **build
+time**, not on the runtime produce/consume path: a new sbt task derives
+each event's JSON Schema from the same tapir `Schema[T]` already used
+for AsyncAPI generation (ADR 0010) and registers/validates it against
+Apicurio during the build, mirroring `sbt-purekafka-docs`'
+auto-chained-after-compile pattern. This keeps the registry's blast
+radius at zero on the hot path (a registry outage never blocks
+produce/consume, consistent with Rework 3's `StreamSupervisor`/
+`DeadLetter` resilience work) and keeps every plain-text debugging tool
+(`kafka-console-consumer`, `kcat`, this project's own
+`consumeOneFrom`-style DLQ test helpers) working unchanged.
 
-**Stub / fan-out:** none new.
+- [ ] Stand up Apicurio Registry in `infra/k8s/local-infra` (direct
+      engineering work — no conductor track, same as every other
+      infra-level item in this plan)
+- [ ] New sbt task in `purerest` deriving/registering each event's JSON
+      Schema against Apicurio during the build, reusing the existing
+      tapir `Schema[T]`/AsyncAPI machinery (own conductor track)
+- [ ] Adopt in `order-service`, `inventory-service`, `payment-service`,
+      `notification-service` — wire the new sbt task, register each
+      service's existing event schemas (one conductor track per
+      service)
+- [ ] Retrofit `pure-service-generator`'s base template so every future
+      generated service gets this by default, mirroring Rework 3's own
+      generator-retrofit precedent (own conductor track)
+
+**Stub / fan-out:** none new — the build-time check runs directly
+against a real (local) Apicurio instance, same spirit as the AsyncAPI
+docs generation it reuses.
 
 **Exit criteria:** a producer/consumer contract mismatch is caught at
-registration/publish time, not silently at runtime in a downstream
-consumer.
+build/CI time via the new sbt task, never silently at runtime in a
+downstream consumer; the registry has no presence on the runtime
+produce/consume path (confirmed: killing the registry doesn't affect a
+running service's ability to publish or consume).
 
 ---
 
