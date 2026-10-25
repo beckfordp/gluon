@@ -569,9 +569,17 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
 (`kafka-console-consumer`, `kcat`, this project's own
 `consumeOneFrom`-style DLQ test helpers) working unchanged.
 
-- [ ] Stand up Apicurio Registry in `infra/k8s/local-infra` (direct
-      engineering work — no conductor track, same as every other
-      infra-level item in this plan)
+- [x] Stand up Apicurio Registry in `infra/k8s/local-infra` — done
+      2026-10-25, deployed and verified live against the real local
+      OrbStack cluster (REST API responds correctly over cluster DNS:
+      `{"name":"Apicurio Registry (SQL)","version":"3.3.2"}`). Two fixes
+      found along the way, not in the original plan: (1)
+      `APICURIO_STORAGE_KIND=mem` isn't a valid value in 3.3.2 — the env
+      var is simply omitted, which defaults to SQL storage with an
+      embedded H2 database (same ephemeral-local-dev effect intended);
+      (2) health endpoints are served on a separate Quarkus "management
+      interface" port (9000), not the main REST API/UI port (8080) —
+      `readinessProbe` targets 9000.
 - [ ] New sbt task in `purerest` deriving/registering each event's JSON
       Schema against Apicurio during the build, reusing the existing
       tapir `Schema[T]`/AsyncAPI machinery (own conductor track)
