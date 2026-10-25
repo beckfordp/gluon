@@ -63,3 +63,38 @@ is reachable straight from a browser at `http://<service>.gluon-local.svc.cluste
 
 `notification-service` has no entry — it's a pure Kafka consumer with no
 REST API to document (`/docs` 404s there, as expected).
+
+## AsyncAPI docs
+
+Same cluster-DNS-from-host convenience as above. Each Kafka-touching
+service serves its AsyncAPI docs the same way tapir serves OpenAPI/Swagger
+above — raw spec at `/docs/asyncapi.json`, rendered static HTML at
+`/docs/asyncapi` ([ADR 0010](../../docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md)):
+
+- http://order-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
+- http://inventory-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
+- http://payment-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
+- http://notification-service.gluon-local.svc.cluster.local:8080/docs/asyncapi
+
+`catalog-service`/`cart-service` have no entry — neither touches Kafka.
+
+## Schema Registry (Apicurio)
+
+ADR 0003's build-time compatibility backend (Rework 5) — checked only
+during each service's `sbt schemaRegistryCheck`; zero presence on the
+runtime produce/consume path (confirmed: killing this pod doesn't affect
+a running service's ability to publish or consume). This deployment has
+no bundled web console — browse registered schemas via its REST API
+instead:
+
+```
+# Everything registered, across every service:
+curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/search/artifacts
+
+# One service's own group (one group per service, its name.value):
+curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/order-service/artifacts
+
+# One artifact's actual JSON Schema content — artifact ids are
+# <topic>-<eventType>:
+curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/order-service/artifacts/order-events-OrderReserved/versions/1/content
+```

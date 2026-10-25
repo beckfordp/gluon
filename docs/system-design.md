@@ -125,10 +125,15 @@ other two topics' `orderId`), `orderId` for `order-events` and
 — no producer or consumer anywhere still targets them.
 
 Schema/contract management: see [ADR 0003](./adr/0003-kafka-schema-registry.md)
-(schema registry) — no registry is wired up yet, so this section is the
-**only** place the envelope and payload shapes are pinned; a producer and
-consumer in different repos must each read this section, not each other's
-source code, to agree on a wire format.
+(schema registry) — Apicurio Registry now enforces backward compatibility
+at **build time** (Rework 5, done 2026-10-25: a `schemaRegistryCheck` sbt
+task, adopted by all 4 Kafka-touching services, and in every future
+generated service by default). It only checks the raw JSON Schema shape
+though, with none of this section's narrative (publish timing,
+`correlationId` gaps, etc.) — this remains the human source of truth for
+*why* each payload looks the way it does, not just its shape. See
+[`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio)
+for how to browse the live registered schemas.
 
 ### Envelope (plain JSON for now — see ADR 0003)
 Every message on every domain topic above has this shape; no shared library
