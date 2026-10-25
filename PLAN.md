@@ -649,9 +649,20 @@ produce/consume, consistent with Rework 3's `StreamSupervisor`/
         fixed along the way, unrelated to this track: pre-existing
         scalafmt drift in 5 test files (whitespace only). All 4 services
         now adopted — this step is done
-- [ ] Retrofit `pure-service-generator`'s base template so every future
+- [x] Retrofit `pure-service-generator`'s base template so every future
       generated service gets this by default, mirroring Rework 3's own
-      generator-retrofit precedent (own conductor track)
+      generator-retrofit precedent — done 2026-10-25
+      (`pure-service-generator`'s `schema-registry_20261025` track, 1
+      phase); bumped `purekafka`/`sbt-purekafka-docs` pins to
+      `0.3.0`/`0.2.0-dev` in the g8 template, added the same
+      `schemaRegistryUrl`/`schemaRegistryGroupId` settings and
+      `docker run` CI step as the 4 adopted services, updated
+      `docs/examples.md`. Verified via a real scratch-instance
+      generation (`scripts/dev-regenerate.sh`, this repo's own
+      established template-testing convention, not a new service repo):
+      68/68 tests passed; `schemaRegistryCheck` registered the example
+      channel against the real local Apicurio instance. **Rework 5 is
+      now fully complete** — all 4 steps done.
 
 **Stub / fan-out:** none new — the build-time check runs directly
 against a real (local) Apicurio instance, same spirit as the AsyncAPI
