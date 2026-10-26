@@ -726,15 +726,15 @@ already-built `OrderReserved` event. The capture half (US-14.3) is
 **unblocked** — see Checkout Journey 4 below, which builds it.
 
 - [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
-      `simulated` interpreter (payment-service)
+      `simulated` interpreter, outcome keyed by card token via a
+      PureConfig map (payment-service)
 - [ ] `PaymentStatus` gains `Authorized`; `Settled` redefined to mean
       *captured* (payment-service)
-- [ ] US-14.1 — `OrderReservedConsumer` authorizes (not settles) on
-      `OrderReserved`; publishes `PaymentAuthorized`/
-      `PaymentAuthorizationFailed` on `payment-events` (payment-service)
-- [ ] US-14.2 — order-service consumes the authorization outcome; resolve
-      the open sub-question from ADR 0011 (what status means "authorized,
-      not yet captured") before building this
+- [ ] US-14.1 — `POST /payments/authorize`; publishes `PaymentAuthorized`
+      on success only, decline stays synchronous (payment-service)
+- [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors
+      `InventoryClient`, circuit-breaker-wrapped), called synchronously
+      right after reservation succeeds (order-service)
 - [ ] US-14.3 — capture on shipment — see Checkout Journey 4
 
 **Stub / fan-out:** same per-repo synthetic-event pattern as Rework 2 —

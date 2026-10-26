@@ -111,23 +111,21 @@ inventory-service (no release endpoint exists there either), whether
 cancellation is allowed once payment has settled, and whether it's a new
 `OrderStatus` case or reuses an existing terminal one.
 
-## US-10 — Recover from a stale pending order *(epic, placeholder only)*
-As a customer, if my order never reaches `Reserved` within a reasonable time,
-I'm told something went wrong instead of being left waiting indefinitely, so
-I'm not stuck on a checkout flow that will never resolve.
+## US-10 — Recover from a stale dispatch *(epic, placeholder only)*
+As a customer, if my order never reaches `DISPATCHED` within a reasonable
+time, I'm told something went wrong instead of being left waiting
+indefinitely, so I'm not stuck on an order that will never resolve.
 
-Surfaced 2026-10-02 while specifying the checkout UI's waiting screen:
-`POST /orders` returns synchronously once each item passes inventory's
-*synchronous* check, but the order stays `pending` until the *asynchronous*
-`inventory.stock-reserved` event is consumed (US-5.2) — there's no bound on
-how long that takes, and no path at all for the case where it never arrives
-(inventory-service down, event lost, consumer stalled). Deliberately out of
-scope for the walking skeleton — placeholder only, needs real refinement
-before it's buildable — at minimum: what counts as "too long," who/what
-detects it (a background sweep over stale `pending` orders is the leading
-idea, not decided), whether it auto-cancels the order or just notifies the
-customer, and how that interacts with US-9 if the reservation actually does
-complete right after the customer gives up.
+Surfaced 2026-10-02, narrowed 2026-10-26: reservation and payment
+authorization are both synchronous at checkout now (see "Payment auth
+timing" in `system-design.md`), so this risk no longer spans the whole
+order — it's bounded to the async `DISPATCHING` phase (pick/pack/dispatch,
+US-17/18), which has no owner for "this has taken too long." Deliberately
+out of scope for the walking skeleton — placeholder only, needs real
+refinement before it's buildable — at minimum: what counts as "too long,"
+who/what detects it (a background sweep is the leading idea, not decided,
+same shape as US-20's expiry sweep), whether it auto-cancels/compensates
+or just notifies the customer, and how that interacts with US-9.
 
 ## US-11 — Shipping address
 As a customer, I provide a shipping address at checkout, so my order can be
@@ -174,21 +172,21 @@ for something that might never be fulfilled.
 - Supersedes US-6's instant create-then-settle: `OrderReservedConsumer`
   currently does `store.create` immediately followed by `store.update(...,
   Settled)` — one step pretending to be a charge. This splits it into two real
-  steps: **authorize** (on `OrderReserved`, holds funds, no money moves) and
+  steps: **authorize** (synchronous, at checkout, holds funds) and
   **capture** (on shipment, money actually moves) — standard card-processing
-  semantics, and the piece missing from the "Payment auth timing" open
-  question in `system-design.md`.
+  semantics. See "Payment auth timing" in `system-design.md` (decided
+  2026-10-26: authorization is synchronous, not event-driven).
 - `PaymentStatus` gains `Authorized`, sitting between `Pending` and
   `Settled`; `Settled` now specifically means *captured*, not just
   "charge simulated."
-- The *authorize* half (US-14.1/14.2) only depends on the existing
-  `OrderReserved` event and can land on its own. The *capture* half was
-  blocked on US-15 below ("there's nothing to trigger it on yet") — now
-  unblocked by US-17/US-19's `fulfilment-service`.
+- The *authorize* half (US-14.1/14.2) depends only on stock reservation
+  succeeding and can land on its own. The *capture* half was blocked on
+  US-15 below ("there's nothing to trigger it on yet") — now unblocked by
+  US-17/US-19's `fulfilment-service`.
 
 ### Tasks
-- [ ] US-14.1: on `OrderReserved`, authorize (not settle) — hold funds, publish `PaymentAuthorized`/`PaymentAuthorizationFailed` (payment-service)
-- [ ] US-14.2: order-service consumes the authorization outcome, same status-mapping shape as today's settle/fail consumer (order-service)
+- [ ] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
+- [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; maps the response to `authorized`/`payment_failed` (order-service)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
 
 ## US-15 — Shipment triggers capture *(refined 2026-10-26 — see US-17/US-19)*
@@ -308,8 +306,8 @@ nothing stays stuck holding an expired authorization indefinitely.
 - ~~Auth/identity — no user-service yet~~ — **Resolved 2026-10-26** via
   US-16: a new `user-service` handles signup/login, issuing a token real
   customer accounts can be built against instead of a bare customer id.
-- Payment provider — real integration (Stripe etc.) vs. simulated. Staying
-  simulated for now (see `system-design.md`'s "Local payment simulation"
-  open design question); real-vs-simulated and the resulting auth/capture
-  ADR are both still TBD, now tracked against US-13/US-14/US-15 rather than
-  payment-service in the abstract.
+- ~~Payment provider — real integration (Stripe etc.) vs. simulated~~ —
+  **Resolved 2026-10-26**: staying simulated, via `PaymentGatewayClient[F]`
+  (ADR 0011) with a PureConfig-driven per-card-token stub (see
+  `system-design.md`'s "Local payment simulation"). Revisit only if a real
+  integration is ever actually needed.
