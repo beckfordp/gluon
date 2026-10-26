@@ -470,7 +470,7 @@ exact gap catalog-service and inventory-service each had to close by hand.
 
 ---
 
-## Rework 7 — Bring Kafka messaging in line with the sync-payment-auth design
+## Rework 7 — Bring Kafka messaging in line with the sync-payment-auth design — DONE
 
 **Repos:** `payment-service`, `order-service`.
 
@@ -482,20 +482,24 @@ as its own unit of work so Checkout Journey 1's business logic has the
 message shapes to publish/consume against from the start, not bolted on
 after.
 
-- [ ] payment-service: retire `PaymentSettled`; add `PaymentAuthorized`
+- [x] payment-service: retire `PaymentSettled`; add `PaymentAuthorized`
       (authorize success only), `PaymentCaptured` (capture),
       `PaymentAuthorizationExpired` (sweep); `PaymentFailed` stays, now
       published from two places (authorize-decline is sync/no-event —
-      only capture-decline publishes it)
-- [ ] payment-service: stop consuming `order-events: OrderReserved` —
-      superseded by the sync `POST /payments/authorize` call
-- [ ] order-service: stop consuming `payment-events: PaymentAuthorized`
+      only capture-decline publishes it) — done 2026-10-26
+- [x] payment-service: stop consuming `order-events: OrderReserved` —
+      superseded by the sync `POST /payments/authorize` call — done
+      2026-10-26
+- [x] order-service: stop consuming `payment-events: PaymentAuthorized`
       (learned synchronously instead); add `PaymentCaptured`/
-      `PaymentAuthorizationExpired` consumers
-- [ ] `schemaRegistryCheck` run against the updated schemas — new event
+      `PaymentAuthorizationExpired` consumers — done 2026-10-26
+      (`Cancelled` status + migration included)
+- [x] `schemaRegistryCheck` run against the updated schemas — new event
       types register as new artifacts, no `BACKWARD`-compatibility
       conflict expected (see `system-design.md`'s payload contracts for
-      the pinned shapes)
+      the pinned shapes) — done 2026-10-26. Two artifacts were deliberately
+      reset in the local registry (PaymentFailed's added `reason`,
+      OrderStatusChanged's widened enum); documented in each track's plan.
 
 **Exit criteria:** payment-service/order-service's actual AsyncAPI docs
 and registered schemas match `system-design.md`'s payload contracts
