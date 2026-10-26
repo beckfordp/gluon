@@ -202,12 +202,13 @@ own extra guardrails, not get it for free as a standard generated verb
 every service carries by default.
 
 ### Tasks
-- [ ] TD-4.1: Add a paginated `GET /<resource>` list endpoint to
+- [x] TD-4.1: Add a paginated `GET /<resource>` list endpoint to
       `pure-service-generator`'s base template (`src/main/g8`) — bounded
       `limit`/`offset` query params (reuse catalog-service's existing
       validation shape: limit 1-100, sane default, offset >= 0),
       `X-Total-Count` response header, same `$domain_name$`-pluralized
-      path convention the existing CRUD routes already use.
+      path convention the existing CRUD routes already use. — **done
+      2026-10-26**
 
 No forced per-service backport tasks here (unlike TD-1/CORS, which
 affected every existing service identically) — whether an

@@ -439,15 +439,16 @@ on the runtime produce/consume path. Met.
 
 ---
 
-## Rework 6 — List endpoint in the generator's base template (TD-4)
+## Rework 6 — List endpoint in the generator's base template (TD-4) — DONE
 
 **Repos:** `pure-service-generator` only — no forced backport to
 already-generated services (see TD-4's own note on why).
 
-- [ ] TD-4.1 — add a paginated `GET /<resource>` list endpoint to
+- [x] TD-4.1 — add a paginated `GET /<resource>` list endpoint to
       `src/main/g8`: bounded `limit`/`offset` query params (reuse
       catalog-service's validation shape), `X-Total-Count` response
       header, same pluralized-path convention as the existing CRUD routes
+      — done 2026-10-26
 
 **Stub / fan-out:** none — a template addition, verified via the usual
 `dev-regenerate.sh` scratch-instance flow plus a real running instance,
