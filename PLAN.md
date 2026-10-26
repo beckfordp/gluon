@@ -700,12 +700,22 @@ exact gap catalog-service and inventory-service each had to close by hand.
 
 The walking skeleton's checkout path was always deliberately thin — no
 shipping/billing address, no real payment method, a single instant
-create-then-settle "charge." US-11 through US-15 (`user-stories.md`, added
-2026-10-12) are new functionality the skeleton was never built to have, not
-a gap introduced by it — unlike the Rework section above, this isn't paying
-down debt from already-shipped behavior, it's building out the checkout
-journey for the first time. Numbered `Checkout Journey N` the same way the
-other sections above are numbered — each its own cross-repo unit of work.
+create-then-settle "charge." US-11 through US-20 (`user-stories.md`, added
+2026-10-12, extended 2026-10-26 with the user-service/fulfilment-service
+design — see `docs/diagrams/order state model.svg`, `happy path sequence
+flow.svg`, `alternative paths sequence flow.svg`) are new functionality the
+skeleton was never built to have, not a gap introduced by it — unlike the
+Rework section above, this isn't paying down debt from already-shipped
+behavior, it's building out the checkout journey for the first time.
+Numbered `Checkout Journey N` the same way the other sections above are
+numbered — each its own cross-repo unit of work.
+
+**Dependency chain across Journeys 1/3/4/5** (not a strict build order —
+Journey 2 is fully independent, can run anytime): Journey 1's
+`PaymentAuthorized` is what Journey 3's fulfilment-service consumes to
+start pick/pack, and what Journey 5's expiry sweep scans for; Journey 3's
+`DispatchConfirmed` is what Journey 4 captures against. So: **1 → 3 → 4**,
+with **5** startable right after **1**, in parallel with **3**/**4**.
 
 ## Checkout Journey 1 — Payment: authorize then capture, stay simulated (ADR 0011)
 
@@ -713,9 +723,7 @@ other sections above are numbered — each its own cross-repo unit of work.
 
 **Depends on:** nothing for the authorize half (US-14.1/14.2) — only the
 already-built `OrderReserved` event. The capture half (US-14.3) is
-**blocked on US-15** (`user-stories.md`), an unrefined epic: this system
-has no shipment/fulfillment concept at all yet, so there's nothing to
-trigger a capture from.
+**unblocked** — see Checkout Journey 4 below, which builds it.
 
 - [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
       `simulated` interpreter (payment-service)
@@ -727,16 +735,150 @@ trigger a capture from.
 - [ ] US-14.2 — order-service consumes the authorization outcome; resolve
       the open sub-question from ADR 0011 (what status means "authorized,
       not yet captured") before building this
-- [ ] US-14.3 — capture on shipment — **not started, blocked on US-15**
+- [ ] US-14.3 — capture on shipment — see Checkout Journey 4
 
 **Stub / fan-out:** same per-repo synthetic-event pattern as Rework 2 —
 synthetic `OrderReserved` events exercise both the authorize-success and
 authorize-decline paths against the `simulated` interpreter.
 
 **Exit criteria:** US-14.1/14.2 done and verified end-to-end (US-14.3 stays
-open, tracked against US-15 rather than blocking this phase's exit) —
-`system-design.md`'s Kafka payload contracts updated with the new event
-types.
+open, tracked against Checkout Journey 4 rather than blocking this phase's
+exit) — `system-design.md`'s Kafka payload contracts updated with the new
+event types (done 2026-10-26, ahead of the code).
+
+---
+
+## Checkout Journey 2 — User registration and login (US-16)
+
+**Repos:** `user-service` (new — generate via `pure-service-generator`),
+`notification-service`, `gshop`.
+
+**Depends on:** nothing — fully independent of Journeys 1/3/4/5, can be
+built in parallel with any of them.
+
+- [ ] Generate `user-service` via `pure-service-generator`
+- [ ] US-16.1 — `POST /auth/signup` — create user, issue token
+      (user-service)
+- [ ] US-16.2 — `POST /auth/login` — authenticate, issue token +
+      refreshToken (user-service)
+- [ ] US-16.3 — publish `user-events: UserRegistered` on signup
+      (user-service)
+- [ ] US-16.4 — consume `UserRegistered`, send welcome email
+      (notification-service)
+- [ ] US-16.5 — signup/login forms in checkout UI (gshop)
+
+**Stub / fan-out:** notification-service's consumer tested against a
+synthetic `UserRegistered` event, same pattern as every other per-repo
+Kafka consumer test in this codebase.
+
+**Exit criteria:** signup → login → welcome-email path verified end-to-end
+against the real local cluster; `system-design.md`'s `POST /auth/signup`/
+`POST /auth/login` REST contracts and `UserRegistered` payload contract
+updated (done 2026-10-26, ahead of the code).
+
+---
+
+## Checkout Journey 3 — Fulfilment: pick, pack, dispatch (US-17/18)
+
+**Repos:** `fulfilment-service` (new — generate via
+`pure-service-generator`), `order-service`, `payment-service`,
+`notification-service`.
+
+**Depends on:** Checkout Journey 1's `PaymentAuthorized` event.
+
+- [ ] Generate `fulfilment-service` via `pure-service-generator`
+- [ ] US-17.1 — consume `PaymentAuthorized`, create pick/pack task
+      (fulfilment-service)
+- [ ] US-17.2 — internal state machine `PENDING -> PICKING -> PACKED ->
+      DISPATCHED {trackingNo, carrier}` (fulfilment-service)
+- [ ] US-17.3 — publish `fulfilment-events: DispatchConfirmed {orderId,
+      trackingNo, items}` (fulfilment-service)
+- [ ] US-17.4 — order-service consumes `DispatchConfirmed`, status ->
+      `Dispatched` (order-service)
+- [ ] US-17.5 — notification-service consumes `DispatchConfirmed`, sends
+      "your order shipped" email (notification-service)
+- [ ] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,
+      reason}` on a pick/pack exception (fulfilment-service)
+- [ ] US-18.2 — consume `DispatchFailed`, void the authorization
+      (payment-service)
+- [ ] US-18.3 — `OrderStatus` gains `DispatchFailed`; order-service
+      consumes `DispatchFailed`, updates status, releases inventory
+      reservations (order-service)
+- [ ] US-18.4 — notification-service consumes `DispatchFailed`, sends
+      "dispatch failed" email (notification-service)
+
+**Stub / fan-out:** synthetic `PaymentAuthorized` events exercise both the
+dispatch-success and dispatch-failure paths; no real warehouse/carrier
+integration (out of scope — see US-17/18's own notes in `user-stories.md`).
+
+**Exit criteria:** both paths verified end-to-end against the real local
+cluster — `system-design.md`'s `fulfilment-events` topic and
+`DispatchConfirmed`/`DispatchFailed` payload contracts updated (done
+2026-10-26, ahead of the code).
+
+---
+
+## Checkout Journey 4 — Capture on dispatch (US-19, resolves US-15)
+
+**Repos:** `payment-service`, `order-service`, `notification-service`.
+
+**Depends on:** Checkout Journey 3's `DispatchConfirmed` event.
+
+- [ ] US-19.1 — consume `DispatchConfirmed`, idempotency check, capture,
+      publish `PaymentCaptured`/`PaymentFailed {reason: capture_failed}`
+      (payment-service)
+- [ ] US-19.2 — order-service consumes `PaymentCaptured` -> status
+      `Confirmed` (order-service)
+- [ ] US-19.3 — order-service consumes the capture-failure outcome ->
+      status `PaymentFailed`, flagged for manual reconciliation, not
+      automatic inventory release (order-service)
+- [ ] US-19.4 — notification-service sends receipt email on
+      `PaymentCaptured`, "payment problem on dispatch" email on capture
+      failure (notification-service)
+
+**Stub / fan-out:** synthetic `DispatchConfirmed` events exercise both the
+capture-success and capture-failure paths against the `simulated`
+interpreter's `capture` operation.
+
+**Exit criteria:** both paths verified end-to-end — this closes out
+Checkout Journey 1's US-14.3 and `user-stories.md`'s US-15.
+`system-design.md`'s `PaymentCaptured` payload contract updated (done
+2026-10-26, ahead of the code).
+
+---
+
+## Checkout Journey 5 — Authorization expiry (US-20)
+
+**Repos:** `payment-service`, `order-service`, `inventory-service`,
+`fulfilment-service`, `notification-service`.
+
+**Depends on:** Checkout Journey 1's `PaymentAuthorized` event (needs
+`Authorized` payments with a real `expiresAt` to scan for). Independent of
+Journeys 3/4 — can run in parallel with either.
+
+- [ ] US-20.1 — background sweep for expired authorizations, publish
+      `PaymentAuthorizationExpired {orderId}` (payment-service) —
+      mechanism (CronJob vs. in-process scheduler) not yet decided, see
+      `user-stories.md`
+- [ ] US-20.2 — `OrderStatus` gains `Cancelled`; order-service consumes
+      `PaymentAuthorizationExpired`, status -> `Cancelled` (order-service)
+- [ ] US-20.3 — inventory-service consumes `PaymentAuthorizationExpired`,
+      releases reservations (inventory-service)
+- [ ] US-20.4 — fulfilment-service consumes `PaymentAuthorizationExpired`,
+      cancels any in-flight pick/pack task (fulfilment-service)
+- [ ] US-20.5 — notification-service consumes
+      `PaymentAuthorizationExpired`, sends "order cancelled — auth
+      expired" email (notification-service)
+
+**Stub / fan-out:** a synthetic `Authorized` payment with an already-past
+`expiresAt`, seeded directly in payment-service's own test DB — proves the
+sweep's query/publish logic without waiting out a real expiry window.
+
+**Exit criteria:** verified end-to-end against the real local cluster —
+`system-design.md`'s `PaymentAuthorizationExpired` payload contract updated
+(done 2026-10-26, ahead of the code). Reconciling this system-initiated
+`Cancelled` with US-9's customer-initiated cancel epic is explicitly
+deferred, not this journey's job.
 
 ---
 
