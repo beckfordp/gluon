@@ -79,6 +79,11 @@ cancel-order epic below; no automatic recovery happens).
 - New `notification-service`, Kafka consumer only, no database. Consumes
   `order.status-changed` (filtered to `reservation_failed`/`confirmed`/
   `payment_failed`) and sends the matching email for each.
+- Extended by US-16.4 (welcome email), US-17.5 (shipped), US-18.4 (dispatch
+  failed), US-19.4 (receipt / payment problem on dispatch), and US-20.5
+  (cancelled — auth expired) — each new status/event notification-service
+  needs to handle is tracked as its own task under the story that
+  introduces the event, not duplicated here.
 
 ### Tasks
 - [x] US-7.1: consume order.status-changed, send the matching email per status (reservation_failed / confirmed / payment_failed) (notification-service)
@@ -177,32 +182,132 @@ for something that might never be fulfilled.
   `Settled`; `Settled` now specifically means *captured*, not just
   "charge simulated."
 - The *authorize* half (US-14.1/14.2) only depends on the existing
-  `OrderReserved` event and can land on its own. The *capture* half is
-  blocked on US-15 below — there's nothing to trigger it on yet.
+  `OrderReserved` event and can land on its own. The *capture* half was
+  blocked on US-15 below ("there's nothing to trigger it on yet") — now
+  unblocked by US-17/US-19's `fulfilment-service`.
 
 ### Tasks
 - [ ] US-14.1: on `OrderReserved`, authorize (not settle) — hold funds, publish `PaymentAuthorized`/`PaymentAuthorizationFailed` (payment-service)
 - [ ] US-14.2: order-service consumes the authorization outcome, same status-mapping shape as today's settle/fail consumer (order-service)
-- [ ] US-14.3: capture on shipment — blocked on US-15 (payment-service)
+- [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
 
-## US-15 — Shipment triggers capture *(epic, not yet refined)*
+## US-15 — Shipment triggers capture *(refined 2026-10-26 — see US-17/US-19)*
 As the system, when an order ships, the held payment is captured, so the
 customer is charged at the point of fulfillment, not before.
 
-Deliberately out of scope for now — **this system has no shipment/fulfillment
-concept at all yet**: no fulfillment-service, no `Shipped` order status, no
-event anywhere that could trigger a capture. Needs real refinement before
-it's buildable — at minimum: what owns "shipped" (a new fulfillment-service,
-or just a status/field on order-service?), whether it's a manual action
-(admin marks an order shipped) or a real carrier integration (out of scope
-for a simulator either way), and what happens to an authorization that
-expires before shipment occurs (real card auth holds are time-boxed, typically
-~7 days — not yet a Gluon problem since nothing captures at all today, but
-will be once US-14/US-15 ship).
+Was deliberately out of scope ("this system has no shipment/fulfillment
+concept at all yet") — resolved by the new `fulfilment-service` (US-17):
+its `fulfilment-events: DispatchConfirmed` is the concrete trigger this
+epic was missing. US-19 builds the capture-on-dispatch consumer itself;
+this entry stays only as the historical pointer to that resolution.
+
+## US-16 — User registration and login
+As a customer, I can sign up and log in, so my identity is established before
+I check out.
+- New `user-service`: `POST /auth/signup` (creates a user, issues a token),
+  `POST /auth/login` (authenticates, issues a token + refreshToken).
+- Publishes `user-events: UserRegistered` on signup — consumed by
+  notification-service for a welcome email.
+- Resolves this doc's own "Auth/identity" open question (now below, marked
+  resolved).
+
+### Tasks
+- [ ] US-16.1: `POST /auth/signup` — create user, issue token (user-service)
+- [ ] US-16.2: `POST /auth/login` — authenticate, issue token + refreshToken (user-service)
+- [ ] US-16.3: publish `user-events: UserRegistered` on signup (user-service)
+- [ ] US-16.4: consume `UserRegistered`, send welcome email (notification-service)
+- [ ] US-16.5: signup/login forms in checkout UI (gshop)
+
+## US-17 — Fulfilment: pick, pack, dispatch
+As a customer, once my payment is authorized, my order is picked, packed, and
+dispatched, so it's actually shipped to me.
+- New `fulfilment-service`: consumes `payment-events: PaymentAuthorized`,
+  creates a pick/pack task, tracks internal state `PENDING -> PICKING ->
+  PACKED -> DISPATCHED`, publishes `fulfilment-events: DispatchConfirmed
+  {orderId, trackingNo, items}` on success.
+- order-service consumes `DispatchConfirmed`, moves order status to
+  `Dispatched`.
+- Will need the shipping address from US-11 once both are built (nothing to
+  ship *to* otherwise) — not a blocking dependency for drafting either
+  story now.
+- This is the concrete "shipment" trigger US-15 was blocked on not
+  existing.
+
+### Tasks
+- [ ] US-17.1: consume `PaymentAuthorized`, create pick/pack task (fulfilment-service)
+- [ ] US-17.2: internal state machine `PENDING -> PICKING -> PACKED -> DISPATCHED {trackingNo, carrier}` (fulfilment-service)
+- [ ] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service)
+- [ ] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service)
+- [ ] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service)
+
+## US-18 — Dispatch failure
+As a customer, if my order can't actually be dispatched (a warehouse
+exception), my payment authorization is released and I'm told, so I'm not
+left holding a reservation and a payment hold for an order that won't ship.
+- fulfilment-service publishes `fulfilment-events: DispatchFailed {orderId,
+  reason}` instead of `DispatchConfirmed`.
+- payment-service consumes it and voids the authorization — the first real
+  use of the `void` operation from `PaymentGatewayClient[F]` (ADR 0011).
+- order-service consumes it, status -> `DispatchFailed` (new `OrderStatus`
+  case, not present in today's model), releases inventory reservations.
+
+### Tasks
+- [ ] US-18.1: publish `fulfilment-events: DispatchFailed {orderId, reason}` on a pick/pack exception (fulfilment-service)
+- [ ] US-18.2: consume `DispatchFailed`, void the authorization (payment-service)
+- [ ] US-18.3: `OrderStatus` gains `DispatchFailed`; order-service consumes `DispatchFailed`, updates status, releases inventory reservations (order-service)
+- [ ] US-18.4: notification-service consumes `DispatchFailed`, sends "dispatch failed" email (notification-service)
+
+## US-19 — Capture on dispatch *(resolves US-15)*
+As a customer, my payment is actually charged once my order is confirmed
+dispatched, not before, so I'm only charged for something that's genuinely
+shipping.
+- payment-service consumes `fulfilment-events: DispatchConfirmed`, captures
+  the held authorization, publishes `payment-events: PaymentCaptured
+  {orderId, amount}` on success or `PaymentFailed {orderId, reason:
+  capture_failed}` on failure.
+- Idempotency check on `orderId` before capturing — closes US-6.2's gap for
+  this path too.
+- order-service consumes the outcome: `PaymentCaptured` -> status
+  `Confirmed`; capture-failure -> status `PaymentFailed` again, with
+  inventory release flagged for **manual reconciliation** rather than an
+  automatic release (items may already be physically shipped by this
+  point).
+
+### Tasks
+- [ ] US-19.1: consume `DispatchConfirmed`, idempotency check, capture, publish `PaymentCaptured`/`PaymentFailed {reason: capture_failed}` (payment-service)
+- [ ] US-19.2: order-service consumes `PaymentCaptured` -> status `Confirmed` (order-service)
+- [ ] US-19.3: order-service consumes the capture-failure outcome -> status `PaymentFailed`, flagged for manual reconciliation, not automatic inventory release (order-service)
+- [ ] US-19.4: notification-service sends receipt email on `PaymentCaptured`, "payment problem on dispatch" email on capture failure (notification-service)
+
+## US-20 — Authorization expiry
+As the system, if an order's payment authorization expires before it
+dispatches, the order is automatically cancelled and stock released, so
+nothing stays stuck holding an expired authorization indefinitely.
+- New background sweep in payment-service: periodically scans for
+  `{status: Authorized, expiresAt < now}`, publishes `payment-events:
+  PaymentAuthorizationExpired {orderId}`.
+- Consumed by order-service (status -> `Cancelled`), inventory-service
+  (release reservations), fulfilment-service (cancel any in-flight
+  pick/pack task).
+- Mechanism (scheduled CronJob vs. an in-process scheduler) not yet decided
+  — same design question shape as the existing outbox-cleanup CronJob
+  precedent (`TECHNICAL_DEBT.md`'s TD-3).
+- The `Cancelled` status reached this way is system-initiated (auth
+  expiry); US-9 above is customer-initiated cancellation — related but
+  distinct, worth reconciling once US-9 is actually picked up, not
+  decided here.
+
+### Tasks
+- [ ] US-20.1: background sweep for expired authorizations, publish `PaymentAuthorizationExpired {orderId}` (payment-service) — mechanism TBD
+- [ ] US-20.2: `OrderStatus` gains `Cancelled`; order-service consumes `PaymentAuthorizationExpired`, status -> `Cancelled` (order-service)
+- [ ] US-20.3: inventory-service consumes `PaymentAuthorizationExpired`, releases reservations (inventory-service)
+- [ ] US-20.4: fulfilment-service consumes `PaymentAuthorizationExpired`, cancels any in-flight pick/pack task (fulfilment-service)
+- [ ] US-20.5: notification-service consumes `PaymentAuthorizationExpired`, sends "order cancelled — auth expired" email (notification-service)
 
 ## Open questions
-- Auth/identity — no user-service yet; assumed out of scope until these stories
-  need real customer accounts rather than a bare customer id.
+- ~~Auth/identity — no user-service yet~~ — **Resolved 2026-10-26** via
+  US-16: a new `user-service` handles signup/login, issuing a token real
+  customer accounts can be built against instead of a bare customer id.
 - Payment provider — real integration (Stripe etc.) vs. simulated. Staying
   simulated for now (see `system-design.md`'s "Local payment simulation"
   open design question); real-vs-simulated and the resulting auth/capture
