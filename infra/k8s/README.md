@@ -71,11 +71,13 @@ service serves its AsyncAPI docs the same way tapir serves OpenAPI/Swagger
 above — raw spec at `/docs/asyncapi.json`, rendered static HTML at
 `/docs/asyncapi/index.html`
 ([ADR 0010](../../docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md)).
-The static HTML is baked into each service's Docker image at build time
-(`Universal / mappings` in `build.sbt`, each service's own
-`asyncApiGenerate` output) — previously only ever worked via a bare `sbt
-run`, since neither this deployment nor `docker-compose` ever packaged
-those files in; fixed 2026-10-25, confirmed live in this cluster:
+The static HTML is baked into each service's Docker image at build time by
+the `sbt-purekafka-docs` plugin, which auto-adds each service's
+`asyncApiGenerate` output to `Universal / mappings` when native-packager is
+enabled (TD-6; previously each build hand-wrote that mapping) — it only ever
+worked via a bare `sbt run` before the mapping existed, since neither this
+deployment nor `docker-compose` packaged those files in; fixed 2026-10-25,
+made automatic 2026-10-26, confirmed live in this cluster:
 
 - http://order-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
 - http://inventory-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
