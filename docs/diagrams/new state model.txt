@@ -1,0 +1,30 @@
+            ┌──────────────┐
+POST ────►  │   PENDING    │  (reservation failed, awaiting retry or cancel)
+            └──────────────┘
+                    │  retry / item back in stock
+                    ▼
+            ┌──────────────┐
+            │   RESERVED   │  OrderReserved emitted → payment authorizes
+            └──────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+  ┌──────────┐            ┌─────────────┐
+  │ PAYMENT_ │            │  AUTHORIZED │  PaymentReserved → fulfilment starts
+  │  FAILED  │            └─────────────┘
+  └──────────┘                    │
+        │                         ▼
+        │                 ┌──────────────┐
+        │                 │  DISPATCHING │  (picking/packing)
+        │                 └──────────────┘
+        │                         │
+        │                 ┌───────┴────────┐
+        │                 ▼                ▼
+        │           ┌────────────┐  ┌──────────────┐
+        │           │ DISPATCHED │  │ AUTH_EXPIRED │  PaymentAuthorisationExpired
+        │           └────────────┘  └──────────────┘
+        │                 │                │
+        │                 ▼                ▼
+        │           ┌────────────┐  ┌──────────────┐
+        └──────────►│ CONFIRMED  │  │  CANCELLED   │  (release stock, notify)
+                    └────────────┘  └──────────────┘
