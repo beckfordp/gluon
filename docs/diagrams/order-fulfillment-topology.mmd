@@ -1,0 +1,49 @@
+flowchart LR
+    G["gshop<br/>(React / TypeScript)"]
+
+    subgraph services["Gluon services"]
+        CAT["catalog-service"]
+        CART["cart-service"]
+        O["order-service"]
+        I["inventory-service"]
+        P["payment-service"]
+        F["fulfilment-service<br/>(not yet built)"]
+        N["notification-service"]
+        U["user-service<br/>(not yet built)"]
+    end
+
+    subgraph stores["Stores"]
+        CATDB[("catalog Postgres<br/>+ Redis cache")]
+        CARTDB[("cart Redis<br/>(primary)")]
+        ODB[("order Postgres<br/>+ Redis history cache")]
+        IDB[("inventory Postgres")]
+        PDB[("payment Postgres<br/>+ Redis idempotency keys")]
+    end
+
+    K[("Kafka event bus<br/>domain topics + envelope")]
+
+    G -->|"browse catalog"| CAT
+    G -->|"cart"| CART
+    G -->|"POST /orders"| O
+    G -->|"POST /payments/methods"| P
+    O -->|"POST /inventorys/reservations<br/>(sync)"| I
+    O -->|"POST /payments/authorize<br/>(sync)"| P
+
+    CAT --- CATDB
+    CART --- CARTDB
+    O --- ODB
+    I --- IDB
+    P --- PDB
+
+    O -.->|"order-events"| K
+    I -.->|"inventory-events"| K
+    P -.->|"payment-events"| K
+    F -.->|"fulfilment-events"| K
+    U -.->|"user-events"| K
+
+    classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
+    classDef store fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    classDef bus fill:#fff5ad,stroke:#FACC15,stroke-width:2px
+    class CAT,CART,O,I,P,F,N,U service
+    class CATDB,CARTDB,ODB,IDB,PDB store
+    class K bus

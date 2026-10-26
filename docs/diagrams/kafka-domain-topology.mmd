@@ -1,0 +1,50 @@
+flowchart LR
+    G["gshop<br/>(checkout form)"]
+
+    subgraph services["Services"]
+        O["order-service"]
+        I["inventory-service"]
+        P["payment-service"]
+        F["fulfilment-service<br/>(not yet built)"]
+        N["notification-service"]
+        U["user-service<br/>(not yet built)"]
+    end
+
+    subgraph topics["Kafka domain topics<br/>(one topic per domain + shared envelope)"]
+        OE[("order-events")]
+        IE[("inventory-events")]
+        PE[("payment-events")]
+        FE[("fulfilment-events")]
+        UE[("user-events")]
+    end
+
+    G -->|"POST /payments/methods"| P
+    G -->|"POST /orders"| O
+    O -->|"POST /inventorys/reservations<br/>(per item, sync)"| I
+    O -->|"POST /payments/authorize<br/>(sync)"| P
+
+    O -->|"publishes OrderReserved,<br/>OrderStatusChanged"| OE
+    I -->|"publishes StockReserved,<br/>StockReservationFailed"| IE
+    P -->|"publishes PaymentAuthorized, PaymentCaptured,<br/>PaymentFailed, PaymentAuthorizationExpired"| PE
+    F -->|"publishes DispatchConfirmed, DispatchFailed"| FE
+    U -->|"publishes UserRegistered"| UE
+
+    IE -->|"StockReserved, StockReservationFailed<br/>(retired when TD-7 lands)"| O
+    OE -->|"OrderStatusChanged"| N
+    PE -->|"PaymentCaptured, PaymentFailed,<br/>PaymentAuthorizationExpired"| O
+    PE -->|"PaymentAuthorized,<br/>PaymentAuthorizationExpired"| F
+    PE -->|"PaymentCaptured, PaymentFailed,<br/>PaymentAuthorizationExpired"| N
+    PE -->|"PaymentAuthorizationExpired<br/>(release reservations)"| I
+    FE -->|"DispatchConfirmed, DispatchFailed"| O
+    FE -->|"DispatchConfirmed, DispatchFailed"| P
+    FE -->|"DispatchConfirmed, DispatchFailed"| N
+    UE -->|"UserRegistered"| N
+
+    NOTE["OrderReserved is still published but has no consumer —<br/>order-service learns authorization synchronously.<br/>catalog-service/cart-service publish nothing and are omitted."]
+
+    classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
+    classDef topic fill:#fff5ad,stroke:#FACC15,stroke-width:2px
+    classDef note fill:#f4f4f4,stroke:#999999
+    class O,I,P,F,N,U service
+    class OE,IE,PE,FE,UE topic
+    class NOTE note

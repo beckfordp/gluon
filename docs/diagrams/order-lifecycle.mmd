@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> PENDING: POST /orders
+    PENDING --> RESERVATION_FAILED: reservation fails<br/>(sync, per item)
+    RESERVATION_FAILED --> [*]: "item out of stock" email<br/>retry creates a new order
+
+    PENDING --> RESERVED: all items reserved<br/>(sync)
+    RESERVED --> PAYMENT_FAILED: authorize declined<br/>(sync, 402)
+    PAYMENT_FAILED --> [*]: "payment failed" email<br/>(reservation remains held)
+
+    RESERVED --> AUTHORIZED: authorize succeeds<br/>(sync, 200)
+    AUTHORIZED --> DISPATCHING: PaymentAuthorized event
+    DISPATCHING --> DISPATCHED: DispatchConfirmed
+    DISPATCHING --> DISPATCH_FAILED: DispatchFailed
+    DISPATCHING --> AUTH_EXPIRED: PaymentAuthorizationExpired<br/>(background sweep)
+
+    DISPATCHED --> CONFIRMED: PaymentCaptured
+    DISPATCHED --> PAYMENT_FAILED: PaymentFailed<br/>(capture_failed, manual reconciliation)
+
+    AUTH_EXPIRED --> CANCELLED: release stock, notify
+    DISPATCH_FAILED --> CANCELLED: void authorization,<br/>release stock, notify
+
+    CONFIRMED --> [*]: receipt email
+    CANCELLED --> [*]: cancellation email

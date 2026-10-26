@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor C as Customer
+    participant G as gshop
+    participant O as order-service
+    participant I as inventory-service
+    participant P as payment-service
+    participant F as fulfilment-service
+    participant N as notification-service
+
+    C->>G: Fill checkout form<br/>(shipping, billing, card)
+    G->>P: POST /payments/methods {card, billingAddress}
+    P->>P: tokenize PAN (never stored)
+    P-->>G: 201 {id, last4, brand, expiry}
+    G->>O: POST /orders {items, shippingAddress, paymentMethodId}
+    O->>O: persist order (status = PENDING)
+    loop for each line item
+        O->>I: POST /inventorys/reservations {sku, qty, orderItemId}
+        I-->>O: 200 reserved
+    end
+    O->>O: status = RESERVED
+    O->>P: POST /payments/authorize {orderId, amountCents, paymentMethodId}
+    P->>P: authorize via simulated provider
+    P-->>O: 200 {authId, expiresAt}
+    P--)F: payment-events: PaymentAuthorized {orderId, authId, expiresAt}
+    O-->>G: 201 {status: authorized, shippingAddress, ...}
+    G->>G: clear cart id
+    F->>F: PENDING → PICKING → PACKED → DISPATCHED
+    F--)O: fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}
+    F--)P: fulfilment-events: DispatchConfirmed
+    F--)N: fulfilment-events: DispatchConfirmed
+    O->>O: status = DISPATCHED
+    N->>N: enqueue "your order shipped" email
+    P->>P: capture (idempotency check on orderId)
+    P--)O: payment-events: PaymentCaptured {orderId, amountCents}
+    P--)N: payment-events: PaymentCaptured
+    O->>O: status = CONFIRMED
+    N->>N: enqueue receipt email
+    C-->>G: poll/websocket status = CONFIRMED

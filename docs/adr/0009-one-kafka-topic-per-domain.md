@@ -17,10 +17,8 @@ the opposite default: **one topic per domain** (`order-events`,
 `inventory-events`, `payment-events`, ...), with every event type for
 that domain carried on it, distinguished by an `eventType` field inside a
 shared envelope. Diagrams (vector, open in a browser or Preview to zoom):
-[`../diagrams/kafka-topics-before-after.svg`](../diagrams/kafka-topics-before-after.svg)
-(today's 6 topics vs. the proposed 3),
 [`../diagrams/kafka-domain-topology.svg`](../diagrams/kafka-domain-topology.svg)
-(the full message flow across the walking skeleton under this scheme), and
+(the full message flow across the current design), and
 [`../diagrams/kafka-domain-template.svg`](../diagrams/kafka-domain-template.svg)
 (the generic producer → topic → N-consumers shape this generalizes to for
 a new domain).

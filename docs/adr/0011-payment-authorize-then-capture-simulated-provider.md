@@ -3,6 +3,15 @@
 ## Status
 Proposed
 
+> **Amendment 2026-10-26:** Decision 4 below ("sync-vs-async authorization
+> timing is untouched") is superseded. Authorization is now a synchronous
+> REST call on the checkout path (`POST /payments/authorize`, called by
+> order-service), not an `OrderReserved` consumer reaction; the
+> `PaymentAuthorizationFailed` event is retired before being built. The
+> authorize/capture split and the simulated-provider decision still stand.
+> Authoritative contracts: `system-design.md`'s "REST contracts" and
+> "Sync vs. async boundaries".
+
 ## Context
 `payment-service`'s `OrderReservedConsumer` (US-6.1, done 2026-10-02) treats
 authorization and capture as the same instant: on `OrderReserved` it does

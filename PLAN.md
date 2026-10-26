@@ -519,7 +519,10 @@ skeleton was never built to have, not a gap introduced by it — unlike the
 Rework section above, this isn't paying down debt from already-shipped
 behavior, it's building out the checkout journey for the first time.
 Numbered `Checkout Journey N` the same way the other sections above are
-numbered — each its own cross-repo unit of work.
+numbered — each its own cross-repo unit of work. gshop UI work can start
+against the in-browser checkout mock (`VITE_CHECKOUT_MOCK=true`) while the
+service contracts land; only the service changes gate real end-to-end
+verification.
 
 **Dependency chain across Journeys 1/3/4/5** (not a strict build order —
 Journey 2 is fully independent, can run anytime): Journey 1's
@@ -528,34 +531,62 @@ start pick/pack, and what Journey 5's expiry sweep scans for; Journey 3's
 `DispatchConfirmed` is what Journey 4 captures against. So: **1 → 3 → 4**,
 with **5** startable right after **1**, in parallel with **3**/**4**.
 
-## Checkout Journey 1 — Payment: authorize then capture, stay simulated (ADR 0011)
+## Checkout Journey 1 — Checkout form, addresses, payment method, authorize (US-11–US-14, ADR 0011)
 
-**Repos:** `payment-service`, `order-service`.
+**Repos:** `payment-service`, `order-service`, `gshop`.
 
 **Depends on:** Rework 7 (Kafka message/schema layer) above for the event
 shapes this publishes/consumes. The capture half (US-14.3) is
-**unblocked** — see Checkout Journey 4 below, which builds it.
+**unblocked** — see Checkout Journey 4 below, which builds it. gshop UI
+work can start immediately against `VITE_CHECKOUT_MOCK=true`; the service
+changes determine real end-to-end verification.
 
+**Services**
 - [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
       `simulated` interpreter, outcome keyed by card token via a
       PureConfig map (payment-service)
 - [ ] `PaymentStatus` gains `Authorized`; `Settled` redefined to mean
       *captured* (payment-service)
-- [ ] US-14.1 — `POST /payments/authorize`; publishes `PaymentAuthorized`
-      on success only, decline stays synchronous (payment-service)
+- [ ] US-13.1 — `PaymentMethod` domain + store + simulated tokenizer
+      (payment-service)
+- [ ] US-13.2 — `POST /payments/methods` + `US-12.1` billing address
+      (payment-service)
+- [ ] US-14.1 — `POST /payments/authorize` (request takes
+      `paymentMethodId`); publishes `PaymentAuthorized` on success only,
+      decline stays synchronous (payment-service)
+- [ ] US-11.1 — shipping address on `POST /orders` request/persistence/
+      response (order-service)
 - [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors
       `InventoryClient`, circuit-breaker-wrapped), called synchronously
-      right after reservation succeeds (order-service)
-- [ ] US-14.3 — capture on shipment — see Checkout Journey 4
+      right after reservation succeeds; maps `authorized`/`payment_failed`
+      and returns `paymentFailure` (order-service)
+- [ ] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service)
 
-**Stub / fan-out:** same per-repo synthetic-event pattern as Rework 2 —
-synthetic `OrderReserved` events exercise both the authorize-success and
-authorize-decline paths against the `simulated` interpreter.
+**gshop UI**
+- [ ] US-11.2 — shipping address section + validation; displayed on
+      confirmation (gshop)
+- [ ] US-12.2 — billing address section with "same as shipping" (gshop)
+- [ ] US-13.3 — card number/expiry section; `paymentClient.createMethod`
+      (gshop)
+- [ ] US-14.4 — checkout submit orchestration; authorised →
+      confirmation; declined → inline reason/card retry; reservation failure
+      → named line + Remove/retry (gshop)
+- [ ] checkout types/gateway + in-browser mock (`VITE_CHECKOUT_MOCK`);
+      Cart → Checkout navigation; OrderConfirmation extraction; App state
+      and cart clearing on success (gshop)
 
-**Exit criteria:** US-14.1/14.2 done and verified end-to-end (US-14.3 stays
-open, tracked against Checkout Journey 4 rather than blocking this phase's
-exit) — `system-design.md`'s Kafka payload contracts updated with the new
-event types (done 2026-10-26, ahead of the code).
+**Stub / fan-out:** services — synthetic authorize-success/decline tests
+against the `simulated` interpreter (same pattern as Rework 2). gshop UI —
+mock mode scenarios: normal, item unavailable, card declined, service
+error; prototype implemented and usability-signed-off 2026-10-26.
+
+**Exit criteria:** prototype UX signed off in mock mode; US-11.1/12.1/
+13.1/13.2/14.1/14.2 done and unit-tested; real-path checkout verified
+end-to-end for authorised, reservation-failed, and declined cards once the
+service contracts land (US-14.3 stays open, tracked against Checkout
+Journey 4).
+`system-design.md`'s REST and Kafka contracts updated (done 2026-10-26,
+ahead of the code); bulk reservation remains deferred as TD-7.
 
 ---
 
@@ -593,7 +624,7 @@ updated (done 2026-10-26, ahead of the code).
 
 **Repos:** `fulfilment-service` (new — generate via
 `pure-service-generator`), `order-service`, `payment-service`,
-`notification-service`.
+`notification-service`, `gshop`.
 
 **Depends on:** Checkout Journey 1's `PaymentAuthorized` event.
 
@@ -617,6 +648,8 @@ updated (done 2026-10-26, ahead of the code).
       reservations (order-service)
 - [ ] US-18.4 — notification-service consumes `DispatchFailed`, sends
       "dispatch failed" email (notification-service)
+- [ ] US-17.6 — Order History displays `Dispatched` (gshop)
+- [ ] US-18.5 — Order History displays `Dispatch failed` (gshop)
 
 **Stub / fan-out:** synthetic `PaymentAuthorized` events exercise both the
 dispatch-success and dispatch-failure paths; no real warehouse/carrier
@@ -631,7 +664,8 @@ cluster — `system-design.md`'s `fulfilment-events` topic and
 
 ## Checkout Journey 4 — Capture on dispatch (US-19, resolves US-15)
 
-**Repos:** `payment-service`, `order-service`, `notification-service`.
+**Repos:** `payment-service`, `order-service`, `notification-service`,
+`gshop`.
 
 **Depends on:** Checkout Journey 3's `DispatchConfirmed` event.
 
@@ -646,6 +680,8 @@ cluster — `system-design.md`'s `fulfilment-events` topic and
 - [ ] US-19.4 — notification-service sends receipt email on
       `PaymentCaptured`, "payment problem on dispatch" email on capture
       failure (notification-service)
+- [ ] US-19.5 — Order History displays `Confirmed` and capture-failure
+      `Payment failed` (gshop)
 
 **Stub / fan-out:** synthetic `DispatchConfirmed` events exercise both the
 capture-success and capture-failure paths against the `simulated`
@@ -661,7 +697,7 @@ Checkout Journey 1's US-14.3 and `user-stories.md`'s US-15.
 ## Checkout Journey 5 — Authorization expiry (US-20)
 
 **Repos:** `payment-service`, `order-service`, `inventory-service`,
-`fulfilment-service`, `notification-service`.
+`fulfilment-service`, `notification-service`, `gshop`.
 
 **Depends on:** Checkout Journey 1's `PaymentAuthorized` event (needs
 `Authorized` payments with a real `expiresAt` to scan for). Independent of
@@ -680,6 +716,7 @@ Journeys 3/4 — can run in parallel with either.
 - [ ] US-20.5 — notification-service consumes
       `PaymentAuthorizationExpired`, sends "order cancelled — auth
       expired" email (notification-service)
+- [ ] US-20.6 — Order History displays `Cancelled` (gshop)
 
 **Stub / fan-out:** a synthetic `Authorized` payment with an already-past
 `expiresAt`, seeded directly in payment-service's own test DB — proves the
@@ -694,12 +731,11 @@ deferred, not this journey's job.
 ---
 
 **Deferred, not numbered above** — still undecided (see
-`system-design.md`'s "Open design questions"), each would need its own ADR
-before becoming a numbered phase: **payment auth timing** (sync vs.
-async — blocked on a real payment provider being chosen; distinct from
-Checkout Journey 1's authorize-vs-capture split, which ADR 0011 now covers)
-and **choreography vs. orchestration/saga** for the checkout flow (blocked
-on US-10, the stale-pending-order epic, actually being picked up).
+`system-design.md`'s "Open design questions"): **choreography vs.
+orchestration/saga** for the checkout flow (blocked on US-10, the
+stale-pending-order epic, actually being picked up). Payment auth timing is
+no longer deferred — synchronous authorization was decided 2026-10-26 and
+is covered by Checkout Journey 1/ADR 0011.
 
 ---
 

@@ -9,12 +9,14 @@ Diagrams: [`diagrams/order-fulfillment-topology.svg`](./diagrams/order-fulfillme
 [`diagrams/alternative paths sequence flow.svg`](./diagrams/alternative paths sequence flow.svg)
 — vector, open in a browser (Chrome is the default `.svg` handler on this
 machine) or Preview to zoom. Regenerate/update if this doc's shape changes
-materially (they'll drift silently otherwise). `order-lifecycle.svg`
-(regenerated 2026-10-26) tracks the order status state machine, color-coded
-green (already live) vs. dashed orange (decided, not yet built — everything
-from `AUTHORIZED` onward, per US-14/17/18/19/20 below); the three newer
-diagrams detail the state transitions and full message flow (happy path,
-then the five alternative/failure scenarios) that extension is built from.
+materially (they'll drift silently otherwise). All checkout diagrams were
+regenerated 2026-10-26 from the Mermaid sources kept beside them
+(`*.mmd`): `order-lifecycle.svg` tracks statuses plus their notification
+emails, `order state model.svg` is the compact state machine, and
+`happy path sequence flow.svg`/`alternative paths sequence flow.svg` show
+the sync authorize flow and the five failure scenarios. Edit the `.mmd`
+source and re-render with `@mermaid-js/mermaid-cli`; do not hand-edit the
+minified SVGs.
 
 All services below are generated fresh via `pure-service-generator` into
 [`gluon/`](../README.md) — see [`../PLAN.md`](../PLAN.md) for the phased
@@ -27,9 +29,9 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (not yet built) adds a required shipping address to `POST /orders`; US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes stock-reservation events via fs2-kafka, plain JSON, no schema registry). US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes `inventory-events` (`StockReserved`/`StockReservationFailed`), consumed by order-service; consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
-| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): US-13.1/13.2 (not yet built) add a `PaymentMethod` store and the gshop-facing `POST /payments/methods`; `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4/17.5/18.4/19.4/20.5 extend it (not yet built) to cover the new fulfilment-journey statuses/events below | — | — | consumes `order-events` (`OrderStatusChanged`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built), `user-events` (`UserRegistered`, not yet built) |
 | user-service | new 2026-10-26 (US-16, not yet built) — signup/login, issues a token | Postgres (assumed — not yet decided) | — | publishes `user-events` (eventType `UserRegistered`) |
 | fulfilment-service | new 2026-10-26 (US-17/18, not yet built) — pick/pack/dispatch | Postgres (assumed — not yet decided) | — | consumes `payment-events` (`PaymentAuthorized`), `payment-events` (`PaymentAuthorizationExpired`, cancels in-flight pick/pack); publishes `fulfilment-events` (eventType `DispatchConfirmed`/`DispatchFailed`) |
@@ -41,7 +43,10 @@ library test fixtures only and are not reused.
   not yet built — see US-14/Checkout Journey 1). Both need a fast yes/no to
   show the customer, same reasoning, same resilience-middleware shape (a
   new `PaymentClient[F]` in order-service, mirroring the existing
-  `InventoryClient`).
+  `InventoryClient`). Separately, gshop calls payment-service **directly and
+  synchronously** to create a `PaymentMethod` before `POST /orders` (US-13,
+  `POST /payments/methods`) — a frontend-facing call; the card token stays
+  server-side and only the method id reaches order-service.
 - **Async (Kafka):** everything downstream of authorization — capture (on
   dispatch, US-19), notification, fulfilment. None of these block the
   customer-facing request.
@@ -77,12 +82,29 @@ Added `orderItemId` 2026-10-02 (was absent in the original US-4.1/US-4.2
 contract) to fix the correlation gap below — inventory-service treats it as
 an opaque string, no order-domain coupling implied, purely store-and-echo.
 
+**`Address`** (shared by shipping and billing, US-11/US-12):
+`{"line1": "string", "line2": "string | null", "city": "string", "postalCode": "string", "country": "string (ISO 3166-1 alpha-2)"}`.
+
+**`POST /payments/methods`** (caller: `gshop`, US-13.3; callee:
+payment-service, US-13.1/US-13.2, not yet built):
+- Request: `{"customerId": "string", "cardNumber": "string (simulated PAN, request-only)", "expiry": "string (MM/YY)", "billingAddress": Address}`.
+- `201`: `{"id": "string (UUID)", "last4": "string", "brand": "string (visa|mastercard|amex|other)", "expiry": "string (MM/YY)"}`.
+- `400`: `{"error": "string"}` — invalid card, expiry, or billing address.
+- payment-service tokenizes the PAN immediately and never stores it. The
+  simulated token is deterministic and human-readable
+  (`tok_<brand>_<last4>`) so PureConfig test-card outcomes are expressible;
+  it is **simulator-only and collision-prone** (two cards sharing brand and
+  last four collide), not a real tokenization scheme. The token is stored
+  server-side and never returned to the browser — gshop receives only the
+  opaque method `id`.
+
 **`POST /payments/authorize`** (caller: order-service, via a new
 `PaymentClient[F]` mirroring `InventoryClient`, US-14.2; callee:
 payment-service, US-14.1; both not yet built — **decided 2026-10-26**,
 synchronous, same checkout-path shape as `POST /inventorys/reservations`
 above):
-- Request: `{"orderId": "string (UUID)", "amountCents": "int", "cardToken": "string — from the PaymentMethod captured at checkout, US-13.1"}`.
+- Request: `{"orderId": "string (UUID)", "amountCents": "int", "paymentMethodId": "string (UUID) — PaymentMethod.id from POST /payments/methods, US-13"}`. payment-service resolves the stored method's card token internally.
+- `404`: `{"error": "Payment method not found"}` — unknown `paymentMethodId`.
 - `200`: `{"authId": "string", "expiresAt": "string (ISO-8601 instant)"}` —
   authorized; payment-service also publishes `payment-events:
   PaymentAuthorized` as an async side effect (fulfilment-service's
@@ -100,9 +122,9 @@ above):
 
 **`POST /orders`** (caller: `gshop`, US-3 checkout, done — see
 `frontends/gshop/conductor/product.md`; callee: order-service, done):
-- Request (`CreateOrderRequest`): `{"customerId": "string", "items": [{"sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int (must be > 0)"}]}` — at least one item required.
+- Request (`CreateOrderRequest`): `{"customerId": "string", "items": [{"sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int (must be > 0)"}], "shippingAddress": Address, "paymentMethodId": "string (UUID) — from POST /payments/methods"}` — at least one item, a valid shipping address, and a known payment method required.
 - `201`: `OrderResponse` —
-  `{"id": "string (UUID)", "customerId": "string", "totalCents": "int", "status": "string (pending|reservation_failed|authorized|payment_failed|dispatched|dispatch_failed|confirmed|cancelled)", "items": [{"id": "string (UUID)", "sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int"}], "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant", "reservationFailure": "{\"sku\": \"string\", \"reason\": \"string\"} | null", "paymentFailure": "{\"reason\": \"string\"} | null — added 2026-10-26, same ephemeral shape as reservationFailure below, see US-14.2"}`.
+  `{"id": "string (UUID)", "customerId": "string", "totalCents": "int", "status": "string (pending|reservation_failed|authorized|payment_failed|dispatched|dispatch_failed|confirmed|cancelled)", "items": [{"id": "string (UUID)", "sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int"}], "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant", "shippingAddress": "Address | null — null only for orders created before US-11", "reservationFailure": "{\"sku\": \"string\", \"reason\": \"string\"} | null", "paymentFailure": "{\"reason\": \"string\"} | null — added 2026-10-26, same ephemeral shape as reservationFailure below, see US-14.2"}`.
   **Changed 2026-10-26**: `status` now also reflects authorization
   directly (`"authorized"` or `"payment_failed"`), since that call is
   synchronous too — `reserved` is no longer a response value, just an
@@ -123,15 +145,28 @@ above):
   real recovery path is the customer removing the failing SKU from their
   cart (US-2's cart screen) and retrying checkout — that happens in the
   same session, right after this response, so nothing ever needs to look
-  up *why* a past order failed after the fact. gshop's Cart screen reads
-  `reservationFailure` and names the specific item in its inline error
-  (done).
+  up *why* a past order failed after the fact. gshop's Checkout screen
+  reads `reservationFailure`/`paymentFailure` and shows them inline; for a
+  failed reservation it names the item and offers a Remove action before
+  retrying.
+  **Checkout sequence (US-11–US-14):** gshop creates the `PaymentMethod`,
+  then calls `POST /orders`; order-service creates the order, reserves each
+  line synchronously, then authorizes synchronously. A reservation failure
+  returns `status: "reservation_failed"` with the one failing line in
+  `reservationFailure` (today's per-item call short-circuits on the first
+  failure — bulk reporting is tracked as TD-7 in `TECHNICAL_DEBT.md`); the
+  customer removes that line and retries with a new order. An authorize
+  decline returns `status: "payment_failed"` with `paymentFailure`; the
+  customer changes card and retries with a new order. **Accepted gap:** a
+  declined order's successful reservation stays held — no automatic
+  release exists until US-9's cancel epic, so retries accumulate held stock.
 - `400`: `{"error": "string"}` — empty `items`, a non-positive `quantity`,
-  or another item-validation failure.
+  an invalid/missing `shippingAddress`, an unknown `paymentMethodId`, or
+  another validation failure.
 
 **`GET /orders/{id}`** (same caller/callee as above, done):
 - `200`: same `OrderResponse` shape as `POST /orders` — always
-  `reservationFailure: null` (see note above).
+  `reservationFailure: null` and `paymentFailure: null` (see note above).
 - `404`: `{"error": "Order not found"}`.
 
 **`POST /auth/signup`** (caller: `gshop`; callee: user-service, US-16.1,
@@ -480,12 +515,15 @@ real service — update this note once it is.
 Gluon hosts multiple frontend apps, each its own repo under `frontends/`
 (see `../README.md`, [ADR 0007](./adr/0007-platform-repo-vs-hosted-workloads.md)).
 `gshop` (React/TypeScript/Vite, [ADR 0006](./adr/0006-react-frontend-framework.md))
-is the first — it calls the six services above directly over the REST
-contracts documented in this file, no new contracts needed. It supersedes
-the prototype above as the real client once it actually calls something —
-not yet true (scaffold only so far); update the prototype note above once
-it is. Source: [`frontends/gshop`](../frontends/gshop) (gitignored
-here, like `services/*` — see `../README.md`'s "Layout").
+is the first live client: US-1/US-2/US-3/US-8 call catalog-service,
+cart-service, and order-service today, and the checkout journey adds a
+direct gshop → payment-service `POST /payments/methods` call before
+`POST /orders` (US-11–US-14) — the first frontend-facing payment contract.
+Its single-page checkout form is prototyped against an in-browser mock
+(`VITE_CHECKOUT_MOCK=true`) until those backend contracts land; the mock
+is a demo path, not a replacement for them. gshop supersedes the prototype
+above as the real client. Source: [`frontends/gshop`](../frontends/gshop)
+(gitignored here, like `services/*` — see `../README.md`'s "Layout").
 
 ## Open design questions
 See adr/ for decisions (0001-0010). Revisit this section as new questions
@@ -558,8 +596,22 @@ it belongs there, not here.
   ADR 0011) with a `simulated` interpreter, outcome keyed by card token via
   a PureConfig map (approve, or decline + reason) — editable per
   environment, no code change, same convention as real payment gateways'
-  own test-card sandboxes. `stripe-mock` remains the fallback option if
-  wire-level fidelity to a real provider matters later.
+  own test-card sandboxes. Shape:
+
+  ```hocon
+  payment-gateway.simulated {
+    default-outcome = "approve"
+    outcomes {
+      "tok_visa_0002" = "decline:insufficient_funds"
+    }
+  }
+  ```
+
+  Keys are the simulated card tokens (`tok_<brand>_<last4>`, simulator-only
+  — see the `POST /payments/methods` contract), values are `approve` or
+  `decline:<reason>`, and unlisted tokens use `default-outcome`.
+  `stripe-mock` remains the fallback option if wire-level fidelity to a
+  real provider matters later.
 
 - **Choreography vs. orchestration (saga) for the checkout flow**
   (discussed 2026-10-09; narrowed 2026-10-26). Reserve and authorize are

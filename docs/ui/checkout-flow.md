@@ -1,5 +1,13 @@
 # Checkout Flow — UI Spec (Reserve → Pay)
 
+> **Superseded 2026-10-26.** This draft predates gshop and the synchronous
+> authorize decision. Checkout now collects shipping/billing address and a
+> payment method, then calls `POST /orders` once; reservation and
+> authorization are both synchronous and the response is final
+> (`authorized` / `reservation_failed` / `payment_failed`). There is no
+> "Reserving your order" polling screen. Authoritative: `system-design.md`'s
+> "REST contracts" and gshop's Checkout screen.
+
 Status: draft, first pass — placeholder timeout path (see US-10). Gluon has no
 frontend repo yet; this spec exists so the walking skeleton's backend state
 machine (see [`../system-design.md`](../system-design.md) and

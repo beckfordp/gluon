@@ -1,0 +1,54 @@
+sequenceDiagram
+    actor C as Customer
+    participant G as gshop
+    participant O as order-service
+    participant I as inventory-service
+    participant P as payment-service
+    participant F as fulfilment-service
+    participant N as notification-service
+
+    Note over G,N: Scenario A — reservation fails (per-item — bulk is TD-7)
+    G->>O: POST /orders {items, shippingAddress, paymentMethodId}
+    O->>I: POST /inventorys/reservations {sku, qty, orderItemId}
+    I-->>O: 409 {error: "Insufficient stock"}
+    O->>O: status = RESERVATION_FAILED
+    O--)G: 201 {status: reservation_failed, reservationFailure {sku, reason}}
+    G->>G: show failed line + Remove action
+    G->>G: remove line from cart, retry (new order)
+
+    Note over G,N: Scenario B — authorization declined (synchronous)
+    O->>P: POST /payments/authorize {orderId, amountCents, paymentMethodId}
+    P-->>O: 402 {error, reason}
+    O->>O: status = PAYMENT_FAILED
+    O--)N: order-events: OrderStatusChanged {status: payment_failed}
+    N->>N: enqueue "payment failed" email
+    O-->>G: 201 {status: payment_failed, paymentFailure {reason}}
+    Note over O,I: Accepted gap: the reservation stays held.<br/>Retry creates a new order and reservation.<br/>No automatic release until US-9.
+
+    Note over G,N: Scenario C — authorization expires before dispatch
+    P->>P: sweep {status: AUTHORIZED, expiresAt < now}
+    P--)O: payment-events: PaymentAuthorizationExpired {orderId}
+    P--)I: payment-events: PaymentAuthorizationExpired {orderId}
+    P--)F: payment-events: PaymentAuthorizationExpired {orderId}
+    O->>O: status = CANCELLED
+    O--)N: order-events: OrderStatusChanged {status: cancelled}
+    I->>I: release reservations
+    F->>F: cancel in-flight pick/pack
+    N->>N: enqueue "auth expired" email
+
+    Note over G,N: Scenario D — dispatch fails (warehouse exception)
+    F--)O: fulfilment-events: DispatchFailed {orderId, reason}
+    F--)P: fulfilment-events: DispatchFailed
+    O->>O: status = DISPATCH_FAILED
+    P->>P: void authorization
+    O->>I: release reservations
+    O--)N: order-events: OrderStatusChanged {status: dispatch_failed}
+    N->>N: enqueue "dispatch failed" email
+
+    Note over G,N: Scenario E — capture fails after dispatch
+    P->>P: capture fails (DispatchConfirmed consumed)
+    P--)O: payment-events: PaymentFailed {orderId, reason: capture_failed}
+    O->>O: status = PAYMENT_FAILED
+    O--)N: order-events: OrderStatusChanged {status: payment_failed}
+    N->>N: enqueue "payment problem on dispatch" email
+    Note over O,I: Items may already be shipped —<br/>manual reconciliation, no automatic release.

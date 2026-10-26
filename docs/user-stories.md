@@ -136,8 +136,8 @@ delivered to the right place.
   service.
 
 ### Tasks
-- [ ] US-11.1: capture shipping address on `POST /orders` (order-service)
-- [ ] US-11.2: shipping address form in checkout UI (gshop)
+- [ ] US-11.1: capture shipping address on `POST /orders` — request field, persistence, `OrderResponse` echo (order-service)
+- [ ] US-11.2: shipping address section in checkout form, inline validation, displayed on confirmation (gshop)
 
 ## US-12 — Billing address
 As a customer, I provide a billing address at checkout, so my payment method
@@ -148,8 +148,8 @@ can be verified against it.
   it's the payment side of checkout, not the fulfillment side.
 
 ### Tasks
-- [ ] US-12.1: capture billing address alongside payment method (payment-service)
-- [ ] US-12.2: billing address form in checkout UI, "same as shipping" default (gshop)
+- [ ] US-12.1: capture billing address alongside the payment method in `POST /payments/methods` (payment-service)
+- [ ] US-12.2: billing address section in checkout form, "same as shipping" checkbox defaulted on (gshop)
 
 ## US-13 — Payment method
 As a customer, I provide a payment method (card) at checkout, so it can be
@@ -162,8 +162,9 @@ charged for my order.
   succeeds (see US-14), same deferred-charge shape US-6 already has.
 
 ### Tasks
-- [ ] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) (payment-service)
-- [ ] US-13.2: payment method form in checkout UI (gshop)
+- [ ] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) and simulated tokenizer — PAN never stored (payment-service)
+- [ ] US-13.2: `POST /payments/methods` endpoint, 201/400 contract (payment-service)
+- [ ] US-13.3: card number/expiry section in checkout form and `paymentClient.createMethod` (gshop)
 
 ## US-14 — Authorize at checkout, capture at shipment
 As a customer, my payment method is authorized (funds held) once my order is
@@ -188,6 +189,14 @@ for something that might never be fulfilled.
 - [ ] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
 - [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; maps the response to `authorized`/`payment_failed` (order-service)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
+- [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; authorised → confirmation; declined → inline `paymentFailure.reason` with card editable and retry; reservation failure → failed-line Remove/retry (gshop)
+
+**Accepted gap (2026-10-26):** an authorize decline leaves the successful
+stock reservation held. Retry creates a new order (and a new reservation);
+there is no automatic release on payment failure until US-9's cancel epic.
+The checkout form states this implicitly by retrying with a new order, and
+the diagrams have been corrected to stop showing a release on
+`payment_failed`.
 
 ## US-15 — Shipment triggers capture *(refined 2026-10-26 — see US-17/US-19)*
 As the system, when an order ships, the held payment is captured, so the
@@ -198,6 +207,9 @@ concept at all yet") — resolved by the new `fulfilment-service` (US-17):
 its `fulfilment-events: DispatchConfirmed` is the concrete trigger this
 epic was missing. US-19 builds the capture-on-dispatch consumer itself;
 this entry stays only as the historical pointer to that resolution.
+
+No standalone tasks: resolved by US-17/US-19 (the named services) and
+surfaced to gshop UI via US-14.4/US-19.5.
 
 ## US-16 — User registration and login
 As a customer, I can sign up and log in, so my identity is established before
@@ -237,6 +249,7 @@ dispatched, so it's actually shipped to me.
 - [ ] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service)
 - [ ] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service)
 - [ ] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service)
+- [ ] US-17.6: Order History displays the `Dispatched` status (gshop)
 
 ## US-18 — Dispatch failure
 As a customer, if my order can't actually be dispatched (a warehouse
@@ -254,6 +267,7 @@ left holding a reservation and a payment hold for an order that won't ship.
 - [ ] US-18.2: consume `DispatchFailed`, void the authorization (payment-service)
 - [ ] US-18.3: `OrderStatus` gains `DispatchFailed`; order-service consumes `DispatchFailed`, updates status, releases inventory reservations (order-service)
 - [ ] US-18.4: notification-service consumes `DispatchFailed`, sends "dispatch failed" email (notification-service)
+- [ ] US-18.5: Order History displays the `Dispatch failed` status (gshop)
 
 ## US-19 — Capture on dispatch *(resolves US-15)*
 As a customer, my payment is actually charged once my order is confirmed
@@ -276,6 +290,7 @@ shipping.
 - [ ] US-19.2: order-service consumes `PaymentCaptured` -> status `Confirmed` (order-service)
 - [ ] US-19.3: order-service consumes the capture-failure outcome -> status `PaymentFailed`, flagged for manual reconciliation, not automatic inventory release (order-service)
 - [ ] US-19.4: notification-service sends receipt email on `PaymentCaptured`, "payment problem on dispatch" email on capture failure (notification-service)
+- [ ] US-19.5: Order History displays `Confirmed` (captured) and capture-failure `Payment failed` statuses (gshop)
 
 ## US-20 — Authorization expiry
 As the system, if an order's payment authorization expires before it
@@ -301,6 +316,7 @@ nothing stays stuck holding an expired authorization indefinitely.
 - [ ] US-20.3: inventory-service consumes `PaymentAuthorizationExpired`, releases reservations (inventory-service)
 - [ ] US-20.4: fulfilment-service consumes `PaymentAuthorizationExpired`, cancels any in-flight pick/pack task (fulfilment-service)
 - [ ] US-20.5: notification-service consumes `PaymentAuthorizationExpired`, sends "order cancelled — auth expired" email (notification-service)
+- [ ] US-20.6: Order History displays the `Cancelled` status (gshop)
 
 ## Open questions
 - ~~Auth/identity — no user-service yet~~ — **Resolved 2026-10-26** via
