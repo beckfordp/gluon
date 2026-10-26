@@ -439,16 +439,26 @@ on the runtime produce/consume path. Met.
 
 ---
 
-## Rework 6 — List endpoint in the generator's base template (TD-4) — DONE
+## Rework 6 — Generator template: list endpoint (TD-4) + AsyncAPI Docker auto-wiring (TD-6) — DONE
 
-**Repos:** `pure-service-generator` only — no forced backport to
-already-generated services (see TD-4's own note on why).
+**Repos:** `pure-service-generator` for TD-4 (no forced backport to
+already-generated services — see TD-4's own note on why); `purerest`,
+`pure-service-generator`, `order-service`, `inventory-service`,
+`payment-service`, `notification-service` for TD-6.
 
 - [x] TD-4.1 — add a paginated `GET /<resource>` list endpoint to
       `src/main/g8`: bounded `limit`/`offset` query params (reuse
       catalog-service's validation shape), `X-Total-Count` response
       header, same pluralized-path convention as the existing CRUD routes
       — done 2026-10-26
+- [x] TD-6.1 — `purerest`: teach `PureKafkaDocsPlugin` to auto-add the
+      `Universal/mappings` entry when `JavaAppPackaging`/`UniversalPlugin`
+      is also enabled on the consuming project, then release the updated
+      plugin — done 2026-10-26 (plugin 0.3.0-dev, purerest v0.3.1)
+- [x] TD-6.2 — remove the now-redundant hand-written `Universal/mappings`
+      block from `order-service`, `inventory-service`, `payment-service`,
+      `notification-service`, and `pure-service-generator`'s base template;
+      bump each repo's `sbt-purekafka-docs` plugin version — done 2026-10-26
 
 **Stub / fan-out:** none — a template addition, verified via the usual
 `dev-regenerate.sh` scratch-instance flow plus a real running instance,

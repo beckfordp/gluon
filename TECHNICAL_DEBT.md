@@ -276,10 +276,11 @@ as part of the original fix, since it's a `purerest` plugin change with
 its own design/testing, not a prerequisite for that fix to work.
 
 ### Tasks
-- [ ] TD-6.1: `purerest` — teach `PureKafkaDocsPlugin` to auto-add the
+- [x] TD-6.1: `purerest` — teach `PureKafkaDocsPlugin` to auto-add the
       `Universal/mappings` entry when `JavaAppPackaging`/`UniversalPlugin`
-      is also enabled on the consuming project.
-- [ ] TD-6.2: Once done, remove the now-redundant hand-written block from
+      is also enabled on the consuming project. — **done 2026-10-26**
+      (plugin 0.3.0-dev, released with purerest v0.3.1)
+- [x] TD-6.2: Once done, remove the now-redundant hand-written block from
       `order-service`/`inventory-service`/`payment-service`/
       `notification-service`'s `build.sbt`, and from
-      `pure-service-generator`'s base template.
+      `pure-service-generator`'s base template. — **done 2026-10-26**
