@@ -305,39 +305,14 @@ them, independent otherwise.
 
 ## Rework 1 — CORS support (TD-1) — DONE
 
-**Repos:** `pure-service-generator` (the fix), then all six generated
-services (the backport) — `catalog-service`, `cart-service`,
-`order-service`, `inventory-service`, `payment-service`,
-`notification-service`. Already kicked off: a CORS backlog item sits at
-the top of all seven repos' own backlogs as of 2026-10-10.
+**Repos:** `pure-service-generator` + all six generated services.
 
-- [x] TD-1.1 — generator-level fix: wrap `routes` with http4s's
-      `org.http4s.server.middleware.CORS` in
-      `src/main/g8/src/main/scala/$package$/Main.scala`, before
-      `.orNotFound` — done 2026-10-10 (`pure-service-generator`
-      `cors_20261010`, implemented/reviewed/archived)
-- [x] TD-1.2 — backport to `catalog-service`, `cart-service`,
-      `order-service` (gap confirmed directly via gshop's own browser
-      requests) — done 2026-10-10 (`cors_20261010`,
-      implemented/reviewed/archived in each of the three repos)
-- [x] TD-1.3 — confirm + backport to `inventory-service`,
-      `payment-service`, `notification-service` (same generator
-      template, not yet independently confirmed affected) — done
-      2026-10-10 (`cors_20261010`, implemented/reviewed/archived in each
-      of the three repos). `inventory-service`/`payment-service`
-      confirmed affected; `notification-service` has no CRUD API at all
-      (pure Kafka consumer) — backported anyway for consistency, wrapping
-      only its health-check routes.
+- [x] TD-1.1/1.2/1.3 — http4s CORS middleware wrapped around `routes` at
+      the generator level, backported to all six services — done
+      2026-10-10
 
-**Stub / fan-out:** none — a middleware addition, verified directly
-against each real running service, no synthetic events needed.
-
-**Exit criteria:** gshop's Vite dev-server CORS proxy workarounds
-(`vite.config.ts`'s `server.proxy` entries) can be removed — a direct
-cross-origin `fetch()` from gshop to each service succeeds without one.
-Backend side met as of 2026-10-10 (all six services send the right
-headers, verified end-to-end); removing gshop's own proxy config is a
-gshop-side task for the agent working that repo.
+**Exit criteria:** a direct cross-origin `fetch()` from gshop to each
+service succeeds with no dev-server proxy workaround needed. Met.
 
 ---
 
@@ -372,141 +347,30 @@ three domain topics; the old six event-type topics are retired;
 
 ## Rework 3 — `purekafka` module: Kafka resilience + observability (ADR 0010) — DONE
 
-**Repos:** `purerest` (new `modules/purekafka`), `pure-service-generator`
-(producer/consumer/outbox-CDC examples), then `order-service`,
-`inventory-service`, `payment-service`, `notification-service` adopt it.
+**Repos:** `purerest` (new `modules/purekafka`), `pure-service-generator`,
+then `order-service`, `inventory-service`, `payment-service`,
+`notification-service` adopt it.
 
-**Depends on:** nothing, as of 2026-10-15 — originally sequenced after
-Rework 4 and Rework 5 (see both their now-stale heading history) to
-avoid designing this speculatively. Rework 4 is done and confirmed the
-main risk moot (producer resilience has no real call site left to wrap);
-Rework 5's registry *deployment* was never the actual blocker, only the
-schema-format decision was, and that's settled (JSON Schema, ADR 0003).
-Rework 5 can now land in parallel, not before this. ADR 0010's own scope
-has grown since this task list was first written — AsyncAPI
-documentation, three generated examples (producer/consumer/outbox-CDC,
-not just two), a dedicated load test — see the ADR itself, not this
-stale bullet list, for the current full scope before starting a track.
-
-- [x] Build `purekafka`: generic `F[A]` call resilience (producer side),
-      consumer stream supervision (restart-with-backoff, unbounded
-      attempts, no circuit breaker), dead-letter routing, and
-      tracing/metrics/log observability across the Kafka boundary — done
-      2026-10-15 (`purerest`'s `purekafka_20261015` track, 5 phases,
-      125 tests passing); also added a standalone, continuously-running
-      `kafka-harness` demo app making these metrics Grafana-visible
-      locally (`purerest`'s own `docker-compose.yml`, not gluon's
-      OrbStack cluster — see `scripts/verify-kafka-observability.sh`
-      there)
-- [x] AsyncAPI documentation, generated from a service's own Kafka
+- [x] `purekafka`: producer-side call resilience, consumer stream
+      supervision (restart-with-backoff, unbounded attempts, no circuit
+      breaker), dead-letter routing, and tracing/metrics/log
+      observability across the Kafka boundary
+- [x] AsyncAPI documentation (ADR 0010): generated from a service's own
       producer/consumer registrations, served the same way tapir serves
-      OpenAPI/Swagger at `/docs` (ADR 0010) — done 2026-10-17
-      (`purerest`'s `purekafka-asyncapi_20261017` track, 5 phases, 130
-      tests passing; `AsyncApiChannel`/`purekafka.docs.Docs` registration
-      + raw-spec route, static HTML via `@asyncapi/generator` served on
-      `kafka-harness` as the reference consumer — see
-      `scripts/verify-kafka-asyncapi-docs.sh` there); track archived
-- [x] Migrate `order-service` to the same `AsyncApiChannel`/
-      `purekafka.docs` registration API — done 2026-10-17
-      (`order-service`'s `asyncapi-docs_20261017` track, 4 phases, 151
-      tests passing; registers `StockReserved`/`StockReservationFailed`
-      on `inventory-events` and `PaymentSettled`/`PaymentFailed` on
-      `payment-events` via `AsyncApiChannels`, served at
-      `/docs/asyncapi.json` + static HTML at `/docs/asyncapi` — see
-      `scripts/verify-kafka-asyncapi-docs.sh` there; no producer-side
-      registrations, as expected). Required a prerequisite `purerest`
-      fix first (`asyncapi-topic-merge_20261017`: `AsyncApiDoc.generate`
-      silently dropped all but the last channel registered per topic —
-      order-service's two topics each multiplex two event types via the
-      envelope pattern, which the original single-eventType-per-topic
-      implementation couldn't represent); both tracks archived
-- [x] sbt plugin (shared, `purerest`) that generates the AsyncAPI static
-      HTML at build time instead of via the standalone
-      `generate-kafka-asyncapi-docs.sh`/`verify-kafka-asyncapi-docs.sh`
-      shell scripts each service currently has its own copy of — done
-      2026-10-17 (`purerest`'s `sbt-asyncapi-plugin_20261017` track,
-      already archived, predates this bullet being marked; found
-      stale while resuming Rework 3 on 2026-10-24). New
-      `modules/sbt-purekafka-docs` (Scala 2.12 `AutoPlugin`) exposes
-      `asyncApiGenerateSpec`/`asyncApiGenerate`, chained after
-      `Compile / compile` via `Def.taskDyn`; `purekafka.docs` gained
-      `AsyncApiChannelsProvider` + `AsyncApiSpecWriter` to support it.
-      `order-service` already has it wired (`PureKafkaDocsPlugin` in
-      `build.sbt`, `project/plugins.sbt`, its own
-      `scripts/verify-kafka-asyncapi-docs.sh`) — reconfirmed live
-      2026-10-24: `sbt compile` regenerated
-      `target/asyncapi-docs-spec/asyncapi.json` (all 3 channels:
-      `inventory-events`/`payment-events`/`order-events`) and
-      `target/asyncapi-docs/index.html` correctly
-- [x] Retrofit `pure-service-generator` with the same capability so
-      every future generated service gets Kafka AsyncAPI docs by
-      default, alongside its existing producer/consumer/outbox-CDC
-      examples — done 2026-10-24 (`pure-service-generator`'s
-      `purekafka-examples_20261024` track: three new generated examples
-      + `ExampleAsyncApiChannels`/`PureKafkaDocsPlugin` wired into the
-      base template; builds against the real v0.2.1
-      `purekafka`/`sbt-purekafka-docs` release); track archived
-- [x] Adopt across `inventory-service`, `payment-service`,
-      `notification-service` once the generator template carries it —
-      **3 of 3 done**. inventory-service's own `AsyncApiChannels`
-      (publish-side, `Publish(Cdc)` — this service has no consumer) +
-      `sbt-purekafka-docs` wiring, done 2026-10-24
-      (`inventory-service`'s `asyncapi-docs_20261024` track, 4 phases +
-      review fixes, 90 tests passing; also prompted a `Main.scala`
-      restructure to mirror order-service's `Telemetry`/`AppRoutes`
-      pattern); track archived. payment-service done 2026-10-24
-      (`payment-service`'s `purekafka-adoption_20261024` track, 3
-      phases, 75 tests passing: `AsyncApiChannels` for consumed
-      `OrderReserved`/Subscribe + published `PaymentSettled`/
-      `Publish(Cdc)` — `PaymentFailedEvent` deliberately excluded, found
-      never actually published via `PaymentStore.update`'s outbox
-      branch; also closed TD-2.4's payment-service gap and the same
-      `Telemetry`/`AppRoutes`/`KafkaConsumers` restructure); track
-      archived. notification-service done 2026-10-24/25
-      (`notification-service`'s `purekafka-adoption_20261024` track, 3
-      phases + review fixes, 21 tests passing: `AsyncApiChannels` for
-      consumed `OrderStatusChanged`/Subscribe — the only service with no
-      producer side at all; also closed TD-2.3/TD-2.4's
-      notification-service gaps, replaced the hand-rolled `readyRef`
-      restart signal that caused the 2026-10-09 stuck-at-503 incident,
-      and fixed this repo's own Testcontainers-Kafka Docker-API-version
-      blocker along the way — `testcontainersScalaVersion` 0.43.6 →
-      0.44.1, same fix `purerest` already applied); track archived
-- [x] TD-2.1 — payment-service's `OrderReservedConsumer` null-key crash
-      — already fixed directly (2026-10-02), predates this module
-- [x] TD-2.2 — order-service's `StockEventConsumer` adopts
-      `purekafka`'s stream supervision — done 2026-10-16/17
-      (`order-service`'s `purekafka-adoption_20261016` track, 3 phases,
-      147 tests passing; also covered `PaymentEventConsumer` in the same
-      service/track, since both were merged into one background fiber
-      and leaving one unsupervised would've been inconsistent)
-- [x] TD-2.3 — notification-service's `OrderStatusChangedConsumer`
-      adopts `purekafka`'s stream supervision — done 2026-10-24/25
-      (same `purekafka-adoption_20261024` track as above)
-- [x] TD-2.4 — dead-letter routing added across all four Kafka-consuming
-      services — **4 of 4 done**: order-service's `StockEventConsumer`
-      and `PaymentEventConsumer` (same track as TD-2.2 above);
-      payment-service's `OrderReservedConsumer` done 2026-10-24 (same
-      `purekafka-adoption_20261024` track as above); notification-service's
-      `OrderStatusChangedConsumer` done 2026-10-24/25 (same
-      `purekafka-adoption_20261024` track as above)
-
-**Stub / fan-out:** `purekafka`'s own test suite proves retry/
-supervision/DLQ against synthetic failures (same Testcontainers-Kafka
-pattern already used elsewhere); per-service adoption is a drop-in swap
-of the existing consumer stream, no new fan-out needed.
+      OpenAPI/Swagger at `/docs`; `sbt-purekafka-docs` (new
+      `modules/sbt-purekafka-docs` sbt plugin) generates the static HTML
+      at build time
+- [x] `order-service`, `inventory-service`, `payment-service`,
+      `notification-service` all migrated to the `AsyncApiChannel`
+      registration API and adopted `purekafka`'s stream supervision +
+      dead-letter routing (TD-2.1/2.2/2.3/2.4, all closed)
+- [x] Retrofitted into `pure-service-generator`'s base template so every
+      future generated service gets Kafka AsyncAPI docs and resilience by
+      default
 
 **Exit criteria:** every Kafka consumer self-heals from a dropped broker
-connection — repeat the OrbStack-restart check that originally found
-TD-2.3, this time with no manual `kubectl rollout restart` needed; a
-deliberately malformed message lands on a DLQ topic instead of crashing
-or blocking its consumer. All four services' adoption done and verified
-via Testcontainers-Kafka synthetic DLQ-routing tests (the stub/fan-out
-convention above) as of 2026-10-25 — the literal live OrbStack-restart
-repeat-check hasn't been separately re-run on the deployed cluster, but
-the mechanism (`StreamSupervisor`'s unbounded restart-with-backoff) is
-now identical across all four services and directly fixes the bug that
-check originally found.
+connection; a deliberately malformed message lands on a DLQ topic instead
+of crashing or blocking its consumer. Met across all four services.
 
 ---
 
@@ -541,138 +405,37 @@ logged-and-hoped-for.
 
 ---
 
-## Rework 5 — Schema registry (ADR 0003 implementation)
+## Rework 5 — Schema registry (ADR 0003 implementation) — DONE
 
-**Repos:** `gluon` (`infra/k8s/local-infra`, new schema-registry
-component), `purerest` (new build-time registration/check tooling),
-`pure-service-generator` (retrofit so future services get it by
-default), every Kafka-publishing/consuming service (`order-service`,
-`inventory-service`, `payment-service`, `notification-service`).
+**Repos:** `gluon` (`infra/k8s/local-infra`), `purerest`,
+`pure-service-generator`, `order-service`, `inventory-service`,
+`payment-service`, `notification-service`.
 
-**Depends on:** Rework 2 — ADR 0003 was explicitly sequenced to wait for
-ADR 0009's envelope shape to settle, so schemas get designed once
-against the final shape, not twice. (Done; this was already unblocked.)
+**Design (ADR 0003):** JSON Schema + **Apicurio Registry** (Apache 2.0).
+Messages stay plain, framing-free JSON on the wire — compatibility is
+enforced at **build time**, not on the runtime produce/consume path: an
+sbt task (`schemaRegistryCheck`, `sbt-purekafka-docs`) derives each
+event's JSON Schema from the same tapir `Schema[T]` used for AsyncAPI
+generation and registers/validates it against Apicurio during the
+build, invoked explicitly (e.g. in CI), not auto-chained after
+`compile`. Zero blast radius on the hot path — a registry outage never
+blocks produce/consume.
 
-**Design, resolved 2026-10-25 (see ADR 0003's own dated notes for full
-rationale):** JSON Schema (already settled 2026-10-15) + **Apicurio
-Registry** (Apache 2.0, not Confluent's Community-licensed one).
-Messages stay plain, framing-free JSON on the wire — no registry-aware
-Kafka Connect converter — so compatibility is enforced at **build
-time**, not on the runtime produce/consume path: a new sbt task derives
-each event's JSON Schema from the same tapir `Schema[T]` already used
-for AsyncAPI generation (ADR 0010) and registers/validates it against
-Apicurio during the build, mirroring `sbt-purekafka-docs`'
-auto-chained-after-compile pattern. This keeps the registry's blast
-radius at zero on the hot path (a registry outage never blocks
-produce/consume, consistent with Rework 3's `StreamSupervisor`/
-`DeadLetter` resilience work) and keeps every plain-text debugging tool
-(`kafka-console-consumer`, `kcat`, this project's own
-`consumeOneFrom`-style DLQ test helpers) working unchanged.
-
-- [x] Stand up Apicurio Registry in `infra/k8s/local-infra` — done
-      2026-10-25, deployed and verified live against the real local
-      OrbStack cluster (REST API responds correctly over cluster DNS:
-      `{"name":"Apicurio Registry (SQL)","version":"3.3.2"}`). Two fixes
-      found along the way, not in the original plan: (1)
-      `APICURIO_STORAGE_KIND=mem` isn't a valid value in 3.3.2 — the env
-      var is simply omitted, which defaults to SQL storage with an
-      embedded H2 database (same ephemeral-local-dev effect intended);
-      (2) health endpoints are served on a separate Quarkus "management
-      interface" port (9000), not the main REST API/UI port (8080) —
-      `readinessProbe` targets 9000.
-- [x] New sbt task in `purerest` deriving/registering each event's JSON
-      Schema against Apicurio during the build, reusing the existing
-      tapir `Schema[T]`/AsyncAPI machinery — done 2026-10-25
-      (`purerest`'s `schema-registry_20261025` track, 2 phases; new
-      `purekafka.docs.SchemaRegistryWriter`, built on `http4s-ember-client`
-      + cats-effect `IO` for consistency with the rest of `purekafka`
-      rather than `java.net.http`; `sbt-purekafka-docs` gains
-      `schemaRegistryUrl`/`schemaRegistryGroupId` settings and a
-      `schemaRegistryCheck` task, invoked explicitly — e.g. in CI — not
-      auto-chained after `compile` like AsyncAPI generation, since this
-      one makes a real network call. End-to-end verified
-      (`scripts/verify-schema-registry-check.sh`) against the real local
-      Apicurio instance from step 1 above: first run registers + sets a
-      `BACKWARD` rule, a second identical run is a no-op, and a
-      deliberately incompatible payload change fails the task. Found
-      along the way: sbt `AutoPlugin`s only load from a build's own
-      meta-build classpath, not a sibling project's output in the same
-      build, so this couldn't be exercised via `kafka-harness` directly
-      — the verify script instead `publishLocal`s the plugin and drives
-      a throwaway sbt project, the same way a real external consumer
-      eventually will); track archived
-- [x] Adopt in `order-service`, `inventory-service`, `payment-service`,
-      `notification-service` — wire the new sbt task, register each
-      service's existing event schemas (one conductor track per
-      service)
-  - [x] `order-service` — done 2026-10-25 (`order-service`'s
-        `schema-registry_20261025` track, 2 phases); bumped
-        `purekafka`/`sbt-purekafka-docs` pins to the real `0.3.0`/
-        `0.2.0-dev` GitHub Packages releases (pushed as part of this
-        work); registered all 6 real channels against the real local
-        Apicurio instance; CI runs `schemaRegistryCheck` against a
-        throwaway `docker run` Apicurio container (no OrbStack/
-        cluster-DNS access from GitHub-hosted runners). Found along the
-        way, unrelated to this track: order-service's CI had been
-        failing on every push for weeks — the `GH_PACKAGES_TOKEN` repo
-        secret didn't exist at all. Confirmed the same gap on every
-        other service repo (`inventory-service`, `payment-service`,
-        `notification-service`, `catalog-service`, `cart-service`) —
-        user added the secret to `order-service` to unblock this track;
-        the others still need it, flagged here as a standing gap, not
-        fixed as part of this track
-  - [x] `inventory-service` — done 2026-10-25 (`inventory-service`'s
-        `schema-registry_20261025` track, 2 phases); reused
-        order-service's settled design verbatim (no new design
-        questions); bumped `purekafka`/`sbt-purekafka-docs` pins to
-        `0.3.0`/`0.2.0-dev`; registered both real channels
-        (`StockReserved`/`StockReservationFailed`) against the real
-        local Apicurio instance; CI (`docker run` Apicurio) green after
-        the user added the missing `GH_PACKAGES_TOKEN` secret here too
-  - [x] `payment-service` — done 2026-10-25 (`payment-service`'s
-        `schema-registry_20261025` track, 2 phases); reused the settled
-        design verbatim; bumped `purekafka`/`sbt-purekafka-docs` pins to
-        `0.3.0`/`0.2.0-dev`; registered both real channels
-        (`OrderReserved`/`PaymentSettled` — `PaymentFailedEvent`
-        deliberately excluded, never actually published) against the
-        real local Apicurio instance; CI green on first real run after
-        the `GH_PACKAGES_TOKEN` secret was added. Found and fixed along
-        the way, unrelated to this track: pre-existing scalafmt drift in
-        2 test files (whitespace only)
-  - [x] `notification-service` — done 2026-10-25
-        (`notification-service`'s `schema-registry_20261025` track, 2
-        phases); reused the settled design verbatim; bumped
-        `purekafka`/`sbt-purekafka-docs` pins to `0.3.0`/`0.2.0-dev`;
-        registered its one real channel (`OrderStatusChanged`) against
-        the real local Apicurio instance; CI green on first real run
-        (`GH_PACKAGES_TOKEN` already set ahead of this track). Found and
-        fixed along the way, unrelated to this track: pre-existing
-        scalafmt drift in 5 test files (whitespace only). All 4 services
-        now adopted — this step is done
-- [x] Retrofit `pure-service-generator`'s base template so every future
-      generated service gets this by default, mirroring Rework 3's own
-      generator-retrofit precedent — done 2026-10-25
-      (`pure-service-generator`'s `schema-registry_20261025` track, 1
-      phase); bumped `purekafka`/`sbt-purekafka-docs` pins to
-      `0.3.0`/`0.2.0-dev` in the g8 template, added the same
-      `schemaRegistryUrl`/`schemaRegistryGroupId` settings and
-      `docker run` CI step as the 4 adopted services, updated
-      `docs/examples.md`. Verified via a real scratch-instance
-      generation (`scripts/dev-regenerate.sh`, this repo's own
-      established template-testing convention, not a new service repo):
-      68/68 tests passed; `schemaRegistryCheck` registered the example
-      channel against the real local Apicurio instance. **Rework 5 is
-      now fully complete** — all 4 steps done.
-
-**Stub / fan-out:** none new — the build-time check runs directly
-against a real (local) Apicurio instance, same spirit as the AsyncAPI
-docs generation it reuses.
+- [x] Apicurio Registry deployed in `infra/k8s/local-infra`
+- [x] `schemaRegistryCheck` sbt task (`purerest`/`sbt-purekafka-docs`) —
+      registers on first run, sets a `BACKWARD` compatibility rule,
+      no-ops on a repeat run, fails the build on an incompatible change
+- [x] Adopted in `order-service`, `inventory-service`, `payment-service`,
+      `notification-service` — all real event schemas registered against
+      a shared `"gluon"` registry group (so producer and consumer
+      registrations of the same contract are actually cross-checked); CI
+      runs the check against a throwaway Apicurio container
+- [x] Retrofitted into `pure-service-generator`'s base template so every
+      future generated service gets this by default
 
 **Exit criteria:** a producer/consumer contract mismatch is caught at
-build/CI time via the new sbt task, never silently at runtime in a
-downstream consumer; the registry has no presence on the runtime
-produce/consume path (confirmed: killing the registry doesn't affect a
-running service's ability to publish or consume).
+build/CI time, never silently at runtime; the registry has no presence
+on the runtime produce/consume path. Met.
 
 ---
 

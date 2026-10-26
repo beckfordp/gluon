@@ -153,10 +153,9 @@ here, in this same format, whenever a new one is built.
 
 ## Kafka topics
 One topic per **domain**, not per event type — [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md),
-implemented across all four Kafka-touching services 2026-10-11
-(`kafka-envelope_20261011` in each repo; see "Design proposal to fill gaps"
-below for the six-topic shape this replaced). Every message on every topic
-below is wrapped in the same envelope (see "Envelope" below); a consumer
+implemented across all four Kafka-touching services 2026-10-11, replacing
+an earlier six-topic (one per event type) shape. Every message on every
+topic below is wrapped in the same envelope (see "Envelope" below); a consumer
 reads `eventType` to decide how to decode `payload`, rather than relying on
 topic subscription to filter event types for it.
 
@@ -266,15 +265,9 @@ both; producer: inventory-service, **done**; consumer: order-service,
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Correlation is by `orderItemId`, not `sku` — added 2026-10-02 once it became
-clear sku-only correlation couldn't tell apart two different orders (or two
-line items in the same order) reserving the same sku concurrently; see the
-superseded note in "Open design questions" below for the original gap. (An
-even earlier draft used inventory-service's own internal id; dropped since
-the failure path has no `Inventory` record to pull one from —
-`store.reserve`'s `InsufficientStock` result carries no entity. `orderItemId`
-avoids that problem since order-service mints it before the reserve call,
-not inventory-service.)
+Correlation is by `orderItemId`, not `sku` — sku-only correlation couldn't
+tell apart two different orders (or two line items in the same order)
+reserving the same sku concurrently (see "Open design questions" below).
 
 `StockReservationFailed` is only published for a genuine stock outcome
 (insufficient stock) — not for a caller-input error (unknown sku,
@@ -315,23 +308,15 @@ published for `pending` or `reserved` — `OrderReserved` already covers the
 one transition payment-service needs, and nothing currently needs telling
 about `pending` itself.
 
-**Reliability (decided 2026-10-02, mechanism corrected 2026-10-02):** no
-transactional outbox. Both `order-events` publishes above use a bounded
-retry, then log loudly and drop on exhaustion — originally written as
-"wrapped in `purerest.resilience`'s bounded retry," which turned out not to
-be possible: `purerest.resilience` only wraps an http4s `Client[F]` call,
-not an arbitrary Kafka producer send. Implemented instead as a hand-rolled
-bounded retry via `cats-retry` directly (available transitively through
-`purerestlib`, which uses it internally for its own `Client[F]` middleware)
-— the pattern payment-service's `PaymentEventPublisher` established first,
-mirrored by order-service's `OrderEventPublisher`. Inventory-service's own
-`StockEventPublisher` predates this decision and still has no retry at all
-(single attempt + timeout, log-on-failure) — lower-bar than what's described
-here, not yet revisited. Explicitly *not* crash-safe: if the process dies
-between the DB commit and the retries being exhausted, the event is lost and
-nothing downstream is told. Accepted for the walking skeleton to keep scope
-down (no new outbox table, no poller); revisit if this ever needs to survive
-a mid-retry crash reliably — see Rework 4 (outbox) in `../PLAN.md`.
+**Reliability (decided 2026-10-02):** no transactional outbox. Both
+`order-events` publishes above use a hand-rolled bounded retry via
+`cats-retry` directly (`purerest.resilience` only wraps `Client[F]`, not a
+Kafka producer send) — payment-service's `PaymentEventPublisher` established
+the pattern, order-service's `OrderEventPublisher` mirrors it;
+inventory-service's `StockEventPublisher` predates this and still has no
+retry at all (not yet revisited). Explicitly *not* crash-safe — accepted for
+the walking skeleton; revisit if this ever needs to survive a mid-retry
+crash — see Rework 4 (outbox) in `../PLAN.md`.
 
 **`PaymentSettled`** / **`PaymentFailed`** (same payload shape for both;
 producer: payment-service, **done**; consumer: order-service, **done**):
@@ -343,14 +328,9 @@ producer: payment-service, **done**; consumer: order-service, **done**):
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Published once per consumed `OrderReserved` event: `PaymentSettled` once
-the (currently simulated — no real provider decided yet, see the ADR
-backlog item) charge succeeds, `PaymentFailed` otherwise. Keyed by
-`orderId`, mirroring `OrderReserved`'s own keying. Same reliability stance
-as `OrderReserved`/`OrderStatusChanged` above: no transactional outbox,
-bounded retry (hand-rolled via cats-retry directly — `purerest.resilience`
-is `Client[F]`-only, doesn't apply to a Kafka producer call), log loudly and
-drop on exhaustion.
+Published once per consumed `OrderReserved` event: `PaymentSettled` once the
+(simulated) charge succeeds, `PaymentFailed` otherwise. Keyed by `orderId`.
+Same reliability stance as `OrderReserved`/`OrderStatusChanged` above.
 
 **Being superseded by US-14/19/20 (ADR 0011, not yet built)**: this
 single-step publish is replaced by the authorize/capture split below —
@@ -511,41 +491,20 @@ come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
 - ~~**One Kafka topic per event type → six topics and growing**~~ —
-  **Resolved 2026-10-11** via [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md).
-  Consolidated to one topic per domain (`order-events`/`inventory-events`/
-  `payment-events`) with every message wrapped in a shared envelope
-  carrying `eventType`; implemented across all four Kafka-touching
-  services the same day (`kafka-envelope_20261011` in each repo), verified
-  end-to-end against the real local cluster, old topics deleted. See
-  "Kafka topics" above for the current shape.
+  **Resolved 2026-10-11** via [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md):
+  one topic per domain, shared envelope carrying `eventType`. See "Kafka
+  topics" above for the current shape.
 
 - ~~**`order.reserved` / "order-confirmed" event gap**~~ — **Resolved
-  2026-10-02** via the "Design proposal to fill gaps" below. (Found
-  2026-10-01, while checking order-service's US-3.1 work against this doc —
-  the Services table and payment-service's US-6.1 both assumed order-service
-  publishes `order.reserved`, but nothing produced it, and notification-service's
-  US-7.1 referenced a nonexistent `order-confirmed` topic.) Resolution:
-  1. **Decided** — order-service publishes both `order.reserved` (once
-     `Reserved`) and `order.status-changed` (on `reservation_failed`/
-     `confirmed`/`payment_failed`). See "Payload contracts" above for the
-     pinned shapes.
-  2. **Decided** — "confirmed" = payment-service's `payment.settled`
-     consumed by order-service. `OrderStatus` gains `Confirmed` and
-     `PaymentFailed` cases (new order-service track, not yet built).
-  3. **Decided** — US-7.1 now consumes `order.status-changed`, filtered to
-     the three statuses above, not a nonexistent `order-confirmed` topic.
-     `user-stories.md` updated accordingly.
+  2026-10-02**: order-service publishes both events (now folded into
+  `order-events`, see "Payload contracts" above); "confirmed" = consuming
+  payment-service's settle event; US-7.1 consumes the real topic, not the
+  nonexistent one it originally referenced.
 
 - ~~**No correlation id in stock-reservation events → cross-order
-  misattribution risk**~~ — **Resolved 2026-10-02**, same day it was found:
-  rather than accept the risk, added `orderItemId` to both the
-  `POST /inventorys/reservations` request and the `stock-reserved`/`-failed`
-  event payload (see "REST contracts" and "Payload contracts" above).
-  Requires rework in both repos: inventory-service (reopens archived US-5.1's
-  contract, additive field only) and order-service (US-4.2's `InventoryClient`
-  gains the field; checkout must persist the order *before* calling reserve,
-  so real `order_items.id`s exist to send — previously reserved first, then
-  persisted).
+  misattribution risk**~~ — **Resolved 2026-10-02**: added `orderItemId` to
+  both the reserve request and the stock-reservation event payload (see
+  "REST contracts" and "Payload contracts" above).
 
 ~~**Null Kafka message key/value crashes a consumer stream silently**~~ —
 moved to [`../TECHNICAL_DEBT.md`](../TECHNICAL_DEBT.md) (TD-2.1 fixed,
@@ -610,71 +569,9 @@ it belongs there, not here.
   if/when US-10 is picked up for that narrower scope.
 
 - ~~**Move `pure-service-generator` and `purerest` under `gluon`'s own
-  tree**~~ — **Resolved 2026-10-10**, same day it was raised. Both were
-  sibling repos (`~/dev/personal/pure-service-generator`,
-  `~/dev/personal/purerest`), outside `gluon`'s directory tree, which
-  meant a `gluon`-rooted Claude Code session's working directory got
-  silently reset to `gluon`'s root the moment it `cd`'d outside it
-  (confirmed twice — absolute and relative path both reset) — Conductor
-  work couldn't be driven against either repo from this session. Fixed
-  by relocating both *under* `gluon` — [`tools/pure-service-generator`](../../tools/README.md),
-  [`lib/purerest`](../../lib/README.md) — as their own independent git
-  repos (`mv`, history/remotes/status all preserved), the exact same
-  convention already proven for `services/*`/`frontends/*` (co-located,
-  gitignored from `gluon`'s own repo, versioned independently). Confirmed
-  working immediately after the move: a `cd` into the new
-  `tools/pure-service-generator` path correctly updated the session's
-  working directory, instead of resetting. Updated: `.gitignore` (new
-  `tools/*`/`lib/*` blocks), `bin/generate-service`'s `GENERATOR_DIR`
-  resolution, `README.md`'s Layout tree. No `build.sbt`/
-  `bin/set-github-env` changes needed — neither held a filesystem-path
-  assumption (GitHub Packages/`publishLocal` resolution is
-  location-independent).
-
-
-## Design proposal to fill gaps
-Proposed 2026-10-02, decided the same day (see "Payload contracts" and
-"Open design questions" above for the pinned shapes). Original proposal,
-lightly formatted:
-
-- order-service publishes `order.reserved` once all items on the order are
-  reserved. New task under US-5, order-service.
-- When order-service reaches `reservation_failed`, it publishes
-  `order.status-changed` (**US-5.4**) so notification-service can consume it
-  (US-7.1) and email the customer that their order has failed, showing the
-  order id. The order moving to `reservation_failed` itself is already built
-  (US-4.2/US-5.2) — only the publish and the notification consumer are new.
-- When payment settles, order-service consumes and moves the order to
-  `confirmed`; that in turn triggers a "your order is confirmed (paid for)"
-  email via notification-service. On payment failure, the order moves to
-  `payment_failed`, and notification-service sends an appropriate email for
-  that too. This unblocks US-6.1 and creates new tasks for US-7.
-
-**Decisions made while working through this proposal:**
-- **Topic shape:** one `order.status-changed` topic carrying
-  `reservation_failed`/`confirmed`/`payment_failed`, not three separate
-  topics — simpler, and notification-service just filters on `status`.
-  (Superseded 2026-10-11 by ADR 0009's further consolidation to one topic
-  per *domain* — `order.status-changed` and `order.reserved` both folded
-  into `order-events`, distinguished by `eventType` instead of topic. See
-  "Kafka topics" above for the current shape; the per-status filtering
-  logic this bullet describes is unchanged, just one level further up the
-  dispatch.)
-- **Stock release on failure (gap 07) — out of scope for the walking
-  skeleton.** No automatic compensation. The customer-notification email is
-  the mechanism: reviewing their order and cancelling it is assumed to be a
-  manual step the customer can take. The cancel-order flow itself is
-  deliberately **not** built now — tracked as a future epic in
-  `user-stories.md`, to be refined later (what "cancel" does to already-
-  reserved stock, whether it's allowed post-payment, etc. are all open).
-- **Publish reliability: no outbox, bounded retry instead.** Evaluated
-  against both `gvolpe/pfps-shopping-cart` (no event bus at all — checkout,
-  payment and order creation are in-process calls in one monolith, so the
-  dual-write problem this proposal raises doesn't exist there) and the
-  transactional outbox pattern (fully crash-safe, but a new table + poller
-  in order-service's own database). Chose the simpler of the two real
-  options: wrap each publish in a bounded retry, log loudly on exhaustion,
-  accept the same not-crash-safe risk. (Originally planned as reusing
-  `purerest.resilience`'s existing bounded retry; corrected once that turned
-  out to be `Client[F]`-only — see "Payload contracts" above for the actual
-  mechanism.)
+  tree**~~ — **Resolved 2026-10-10**: both relocated under `gluon` as
+  [`tools/pure-service-generator`](../../tools/README.md) and
+  [`lib/purerest`](../../lib/README.md) (independent git repos, same
+  convention as `services/*`/`frontends/*`) — fixes a Claude Code session's
+  working directory silently resetting when it `cd`'d outside `gluon`'s
+  tree.
