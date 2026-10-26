@@ -459,6 +459,39 @@ exact gap catalog-service and inventory-service each had to close by hand.
 
 ---
 
+## Rework 7 — Bring Kafka messaging in line with the sync-payment-auth design
+
+**Repos:** `payment-service`, `order-service`.
+
+Payment auth went from an async `OrderReserved` consumer to a synchronous
+REST call (decided 2026-10-26 — see `docs/system-design.md`'s "Payment
+auth timing"). This is the Kafka-contract side of that change — case
+classes, `AsyncApiChannels` registrations, and registered schemas — done
+as its own unit of work so Checkout Journey 1's business logic has the
+message shapes to publish/consume against from the start, not bolted on
+after.
+
+- [ ] payment-service: retire `PaymentSettled`; add `PaymentAuthorized`
+      (authorize success only), `PaymentCaptured` (capture),
+      `PaymentAuthorizationExpired` (sweep); `PaymentFailed` stays, now
+      published from two places (authorize-decline is sync/no-event —
+      only capture-decline publishes it)
+- [ ] payment-service: stop consuming `order-events: OrderReserved` —
+      superseded by the sync `POST /payments/authorize` call
+- [ ] order-service: stop consuming `payment-events: PaymentAuthorized`
+      (learned synchronously instead); add `PaymentCaptured`/
+      `PaymentAuthorizationExpired` consumers
+- [ ] `schemaRegistryCheck` run against the updated schemas — new event
+      types register as new artifacts, no `BACKWARD`-compatibility
+      conflict expected (see `system-design.md`'s payload contracts for
+      the pinned shapes)
+
+**Exit criteria:** payment-service/order-service's actual AsyncAPI docs
+and registered schemas match `system-design.md`'s payload contracts
+exactly — no drift between the two.
+
+---
+
 ## Checkout Journey
 
 The walking skeleton's checkout path was always deliberately thin — no
@@ -484,8 +517,8 @@ with **5** startable right after **1**, in parallel with **3**/**4**.
 
 **Repos:** `payment-service`, `order-service`.
 
-**Depends on:** nothing for the authorize half (US-14.1/14.2) — only the
-already-built `OrderReserved` event. The capture half (US-14.3) is
+**Depends on:** Rework 7 (Kafka message/schema layer) above for the event
+shapes this publishes/consumes. The capture half (US-14.3) is
 **unblocked** — see Checkout Journey 4 below, which builds it.
 
 - [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
