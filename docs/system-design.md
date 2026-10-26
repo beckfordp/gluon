@@ -27,9 +27,9 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (today: `PaymentSettled`/`PaymentFailed`; once US-19/20 land, also `PaymentCaptured`/`PaymentAuthorizationExpired` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes stock-reservation events via fs2-kafka, plain JSON, no schema registry). US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes `inventory-events` (`StockReserved`/`StockReservationFailed`), consumed by order-service; consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
-| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (today: `PaymentSettled`/`PaymentFailed`; once US-14/19/20 land: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4/17.5/18.4/19.4/20.5 extend it (not yet built) to cover the new fulfilment-journey statuses/events below | — | — | consumes `order-events` (`OrderStatusChanged`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built), `user-events` (`UserRegistered`, not yet built) |
 | user-service | new 2026-10-26 (US-16, not yet built) — signup/login, issues a token | Postgres (assumed — not yet decided) | — | publishes `user-events` (eventType `UserRegistered`) |
 | fulfilment-service | new 2026-10-26 (US-17/18, not yet built) — pick/pack/dispatch | Postgres (assumed — not yet decided) | — | consumes `payment-events` (`PaymentAuthorized`), `payment-events` (`PaymentAuthorizationExpired`, cancels in-flight pick/pack); publishes `fulfilment-events` (eventType `DispatchConfirmed`/`DispatchFailed`) |
@@ -159,28 +159,28 @@ topic below is wrapped in the same envelope (see "Envelope" below); a consumer
 reads `eventType` to decide how to decode `payload`, rather than relying on
 topic subscription to filter event types for it.
 
-- **`order-events`** — producer: order-service; consumers: payment-service
-  (`OrderReserved` only), notification-service (`OrderStatusChanged` only).
-  Event types: `OrderReserved` (published once an order's stock is fully
-  `Reserved` — not at raw checkout — so payment-service never charges
-  before stock is confirmed), `OrderStatusChanged` (published whenever an
-  order lands in `reservation_failed`/`confirmed`/`payment_failed` — not
-  for `pending`/`reserved`).
+- **`order-events`** — producer: order-service; consumer:
+  notification-service (`OrderStatusChanged` only). Event types:
+  `OrderReserved` (published once an order's stock is fully `Reserved` —
+  not at raw checkout time; no consumer today, payment authorization is the
+  synchronous REST call), `OrderStatusChanged` (published whenever an
+  order lands in `reservation_failed`/`confirmed`/`payment_failed`/
+  `cancelled` — not for `pending`/`reserved`).
 - **`inventory-events`** — producer: inventory-service; consumer:
   order-service. Event types: `StockReserved`, `StockReservationFailed`.
-- **`payment-events`** — producer: payment-service; consumer:
-  order-service. Event types today: `PaymentSettled`, `PaymentFailed`.
-  **Extended by US-14/19/20** (not yet built, ADR 0011): `PaymentAuthorized`
-  (async side effect of the new synchronous `POST /payments/authorize`
+- **`payment-events`** — producer: payment-service. Event types (Rework 7,
+  contracts registered ahead of their producers): `PaymentAuthorized`
+  (async side effect of the synchronous `POST /payments/authorize`
   succeeding — a decline stays purely synchronous, no Kafka event, see
   "Payload contracts"), `PaymentCaptured`/`PaymentFailed` (on
   `fulfilment-events: DispatchConfirmed` — `PaymentFailed` reused,
   distinguished by a `reason` field, not a second event type),
-  `PaymentAuthorizationExpired` (background sweep). order-service no
-  longer consumes this topic for the authorize step (learns it
-  synchronously instead) — fulfilment-service and inventory-service
-  become the new consumers, alongside order-service's own remaining
-  capture/expiry consumption.
+  `PaymentAuthorizationExpired` (background sweep). Consumers:
+  order-service (`PaymentCaptured`/`PaymentAuthorizationExpired`;
+  authorize is learned synchronously), fulfilment-service
+  (`PaymentAuthorized`/`PaymentAuthorizationExpired`, not yet built),
+  and later inventory-service/notification-service. `PaymentSettled` is
+  retired (Rework 7).
 - **`user-events`** (new 2026-10-26, US-16, not yet built) — producer:
   user-service; consumer: notification-service. Event types:
   `UserRegistered`.
@@ -227,7 +227,7 @@ keeps its own identical copy of the case class:
 ```json
 {
   "eventId": "string (UUID) — minted fresh per publish, for log/trace correlation only",
-  "eventType": "string — e.g. OrderReserved, StockReservationFailed, PaymentSettled; what a consumer branches on",
+  "eventType": "string — e.g. OrderReserved, StockReservationFailed, PaymentCaptured; what a consumer branches on",
   "timestamp": "string (ISO-8601 instant)",
   "source": "string — the publishing service's name, e.g. order-service",
   "correlationId": "string — see the per-topic note below; what a consumer filters/correlates on",
@@ -296,17 +296,19 @@ notification-service, **done**):
 {
   "orderId": "string (UUID)",
   "customerId": "string",
-  "status": "string — one of: reservation_failed | confirmed | payment_failed",
+  "status": "string — one of: reservation_failed | confirmed | payment_failed | cancelled",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Published whenever an order lands in one of these three statuses —
+Published whenever an order lands in one of these statuses —
 `reservation_failed` (from either the synchronous checkout failure or the
 async `StockReservationFailed` consumer), `confirmed` (consuming
-`PaymentSettled`), or `payment_failed` (consuming `PaymentFailed`). Not
-published for `pending` or `reserved` — `OrderReserved` already covers the
-one transition payment-service needs, and nothing currently needs telling
-about `pending` itself.
+`PaymentCaptured`), `payment_failed` (capture-failure `PaymentFailed`, the
+synchronous authorize decline, or the checkout reservation failure), or
+`cancelled` (consuming `PaymentAuthorizationExpired`). Not published for
+`pending` or `reserved` — `OrderReserved` covers the one transition
+downstream consumers need, and nothing currently needs telling about
+`pending` itself.
 
 **Reliability (decided 2026-10-02):** no transactional outbox. Both
 `order-events` publishes above use a hand-rolled bounded retry via
@@ -318,25 +320,25 @@ retry at all (not yet revisited). Explicitly *not* crash-safe — accepted for
 the walking skeleton; revisit if this ever needs to survive a mid-retry
 crash — see Rework 4 (outbox) in `../PLAN.md`.
 
-**`PaymentSettled`** / **`PaymentFailed`** (same payload shape for both;
-producer: payment-service, **done**; consumer: order-service, **done**):
+**`PaymentFailed`** (producer: payment-service, capture-decline only;
+consumers: order-service, notification-service):
 ```json
 {
   "orderId": "string (UUID) — order-service's own order id; what its OrderStatusChanged publish needs to correlate back to",
   "paymentId": "string (UUID) — payment-service's own Payment.id, included for cross-service log/trace correlation only",
-  "amountCents": "int — the amount charged (settled) or that failed to charge",
+  "amountCents": "int — the amount that failed to charge",
+  "reason": "string — e.g. capture_failed",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Published once per consumed `OrderReserved` event: `PaymentSettled` once the
-(simulated) charge succeeds, `PaymentFailed` otherwise. Keyed by `orderId`.
-Same reliability stance as `OrderReserved`/`OrderStatusChanged` above.
+Published only when capture fails on `fulfilment-events: DispatchConfirmed`
+(US-19.1), with `reason: capture_failed`. An authorize decline stays purely
+synchronous — nothing is published; order-service handles it in the same
+request and publishes its own `order-events: OrderStatusChanged {status:
+payment_failed}`. Keyed by `orderId`.
 
-**Being superseded by US-14/19/20 (ADR 0011, not yet built)**: this
-single-step publish is replaced by the authorize/capture split below —
-`PaymentSettled` itself goes away; `PaymentFailed` stays, but is now
-published from two different places (authorize-decline and
-capture-decline) distinguished by its `reason` field.
+`PaymentSettled` is **retired** (Rework 7): the single-step create-then-settle
+publish is replaced by the authorize/capture split below.
 
 **`PaymentAuthorized`** (producer: payment-service, US-14.1, not yet
 built; consumer: fulfilment-service, US-17.1, not yet built — **not**
@@ -356,7 +358,7 @@ the outcome synchronously, in the same request that triggered it.
 fulfilment-service is the one real consumer (starts pick/pack) — the same
 "sync response + async side-channel event" shape `POST
 /inventorys/reservations`/`StockReserved` already use. This is the direct
-replacement for today's `PaymentSettled` at this point in the flow: holds
+replacement for the retired `PaymentSettled` at this point in the flow: holds
 funds, does not move money.
 
 **`PaymentAuthorizationFailed` — retired before being built.** A decline
