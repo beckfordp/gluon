@@ -168,8 +168,8 @@ own line. See each repo's own `git log` for full detail either way.
   row for any failed checkout; every failure after reserve releases it
   (`402` declined, `409` every failed line, `400` unknown method, `503`
   inventory/payment unavailable, `500` persist failed). k8s sets
-  `PAYMENT_SERVICE_URL`. Payment retries off until authorize is idempotent
-  (TD-10).
+  `PAYMENT_SERVICE_URL`. Payment retries restored once authorize became
+  idempotent (TD-10.1/10.2).
 - `frontends/gshop`: checkout wired to the real payment/order contracts
   (US-11.2/12.2/13.3/14.4, TD-7.4). `orderClient.create()` reads ADR 0018's
   status codes (201/402/409/400/503/500) instead of a status field, failure
@@ -178,6 +178,14 @@ own line. See each repo's own `git log` for full detail either way.
   model. Live-verified against the local cluster (authorized, declined,
   multi-line stock failure, invalid payment method; failures leave no order
   row) via `scripts/verify-checkout-real.sh`.
+- `payment-service`: **TD-10.1** — `POST /payments/authorize` is idempotent
+  per `orderId` (`UNIQUE(order_id)`): a repeat with the same amount/method
+  replays the stored `authId`/`expiresAt` or `402` decline, a mismatch is
+  `409`, and a concurrent insert race voids the losing hold and replays the
+  winner. A replay publishes no second `PaymentAuthorized`. Closes US-6.2
+  (its Redis-key mechanism was superseded by ADR 0011's sync authorize).
+- `order-service`: **TD-10.2** — restored `payment-client` retries
+  (`max-retries = 3`) now that authorize is idempotent.
 - `inventory-service`: TD-7.5 retired the per-item
   `POST /inventorys/reservations` endpoint and the
   `StockReserved`/`StockReservationFailed` events (their Apicurio artifacts

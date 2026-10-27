@@ -143,6 +143,13 @@ above):
   PaymentAuthorized` as an async side effect (fulfilment-service's
   trigger to start pick/pack) — same "sync response + async side-channel
   event" shape.
+- **Idempotent per `orderId` (TD-10.1, built 2026-10-27):** one payment row
+  per order (`UNIQUE(order_id)`). A repeat with the same amount and payment
+  method replays the stored outcome — `200` with the original
+  `authId`/`expiresAt` (no second hold, no second event), or `402` with the
+  original decline reason. A different amount or payment method, or a
+  non-replayable status (e.g. already captured), is `409` and places no
+  hold.
 - `402`: `{"error": "string", "reason": "string"}` — declined (routed
   through the `simulated` `PaymentGatewayClient[F]` interpreter's
   per-card-token outcome map, see "Payload contracts" below). **Stays
@@ -150,6 +157,9 @@ above):
   Kafka; order-service handles the decline directly in the same request:
   it releases the checkout's reservations and returns `402` to gshop,
   persisting no order and publishing nothing (ADR 0018).
+- `409`: `{"error": "string"}` — the order already has a payment with a
+  different amount or payment method, or it is in a status that cannot be
+  replayed (idempotency, above).
 
 **`POST /orders`** (caller: `gshop`, US-3 checkout, done — see
 `frontends/gshop/conductor/product.md`; callee: order-service, done;

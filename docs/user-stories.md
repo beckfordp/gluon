@@ -68,7 +68,7 @@ fulfilled.
 
 ### Tasks
 - [x] US-6.1: consume order.reserved, charge, publish payment.settled / payment.failed (payment-service)
-- [ ] US-6.2: Redis idempotency keys to avoid double-charging on retry/redelivery (payment-service)
+- [x] US-6.2: avoid double-charging on retry/redelivery (payment-service) — **superseded and done 2026-10-27**: the async charge path this was written for is retired (ADR 0011); the surviving risk is closed by TD-10 (`authorize-idempotency_20261027`) with a per-order unique constraint + replay, not Redis keys.
 - [x] US-6.3: consume payment.settled / payment.failed, update order status to confirmed / payment_failed, publish order.status-changed (order-service)
 
 ## US-7 — Order status notifications

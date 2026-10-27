@@ -1,4 +1,4 @@
-# Technical debt
+-10# Technical debt
 
 Cross-cutting technical gaps found while building — not derived from a
 user story, so they don't belong in `docs/user-stories.md`/`PLAN.md`, and
@@ -371,7 +371,7 @@ payment outage.
       reserving; `503` "Payment service unavailable" without touching
       inventory.
 
-## TD-10 — `POST /payments/authorize` isn't idempotent per order
+## TD-10 — `POST /payments/authorize` isn't idempotent per order — **RESOLVED 2026-10-27**
 
 payment-service inserts a new payment row (fresh id) on every authorize
 call, with no check for an existing one for the same `orderId`. A retried
@@ -381,11 +381,15 @@ places a second hold. order-service's `payment-client` retries are set to
 payment failure is a `503` rather than a retry.
 
 ### Tasks
-- [ ] TD-10.1: payment-service — authorize replays by `orderId` (return the
+- [x] TD-10.1: payment-service — authorize replays by `orderId` (return the
       existing authorization; `409` if the amount or method differs),
-      backed by a unique constraint.
-- [ ] TD-10.2: order-service — restore `payment-client` retries
-      (`max-retries = 3`) once TD-10.1 lands.
+      backed by a unique constraint. — **done 2026-10-27**
+      (`authorize-idempotency_20261027`; a stored decline replays its `402`
+      too; concurrent insert conflicts void the losing hold and replay the
+      winner).
+- [x] TD-10.2: order-service — restore `payment-client` retries
+      (`max-retries = 3`) once TD-10.1 lands. — **done 2026-10-27**
+      (`payment-retries_20261027`).
 
 ## TD-11 — Apicurio can't version draft 2020-12 JSON schemas
 
