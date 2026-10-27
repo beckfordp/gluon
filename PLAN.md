@@ -574,18 +574,21 @@ changes determine real end-to-end verification.
 - [ ] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service)
 
 **gshop UI**
-- [ ] US-11.2 — shipping address section + validation; displayed on
-      confirmation (gshop)
-- [ ] US-12.2 — billing address section with "same as shipping" (gshop)
-- [ ] US-13.3 — card number/expiry section; `paymentClient.createMethod`
-      (gshop)
-- [ ] US-14.4 — checkout submit orchestration, by status code (ADR 0018):
+- [x] US-11.2 — shipping address section + validation; displayed on
+      confirmation (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
+- [x] US-12.2 — billing address section with "same as shipping" (gshop) —
+      done 2026-10-27 (`checkout-real-wiring_20261027`)
+- [x] US-13.3 — card number/expiry section; `paymentClient.createMethod`
+      (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
+- [x] US-14.4 — checkout submit orchestration, by status code (ADR 0018):
       `201` → confirmation; `402` → inline reason/card retry; `409` → every
       failed line + Remove (cart-service) /retry (TD-7.4); `400`/`503`/`500`
-      → error (gshop)
-- [ ] checkout types/gateway + in-browser mock (`VITE_CHECKOUT_MOCK`);
+      → error (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
+- [x] checkout types/gateway + in-browser mock (`VITE_CHECKOUT_MOCK`);
       Cart → Checkout navigation; OrderConfirmation extraction; App state
-      and cart clearing on success (gshop)
+      and cart clearing on success (gshop) — done 2026-10-27
+      (`checkout-real-wiring_20261027`; mock kept dev-only on the same
+      result model)
 
 **Stub / fan-out:** services — synthetic authorize-success/decline tests
 against the `simulated` interpreter (same pattern as Rework 2). gshop UI —

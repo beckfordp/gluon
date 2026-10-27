@@ -329,9 +329,9 @@ and that flow stays valid when bulk lands.
       list to the `POST /orders` `409`, release on later failure; retire
       `StockEventConsumer` and `OrderReserved` (+ registry artifact) —
       **done 2026-10-27** (`checkout-journey1_20261027`). TD-7.5 unblocked.
-- [ ] TD-7.4: gshop — surface every failed line in one pass when the response
+- [x] TD-7.4: gshop — surface every failed line in one pass when the response
       carries multiple failures (UI already supports the remove-and-retry
-      loop).
+      loop) — **done 2026-10-27** (`checkout-real-wiring_20261027`).
 
 ## TD-8 — A crash mid-checkout orphans reservations (ADR 0018)
 

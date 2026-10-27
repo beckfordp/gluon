@@ -137,7 +137,7 @@ delivered to the right place.
 
 ### Tasks
 - [x] US-11.1: capture shipping address on `POST /orders` — request field, persistence, `OrderResponse` echo (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
-- [ ] US-11.2: shipping address section in checkout form, inline validation, displayed on confirmation (gshop)
+- [x] US-11.2: shipping address section in checkout form, inline validation, displayed on confirmation (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
 
 ## US-12 — Billing address
 As a customer, I provide a billing address at checkout, so my payment method
@@ -149,7 +149,7 @@ can be verified against it.
 
 ### Tasks
 - [x] US-12.1: capture billing address alongside the payment method in `POST /payments/methods` (payment-service)
-- [ ] US-12.2: billing address section in checkout form, "same as shipping" checkbox defaulted on (gshop)
+- [x] US-12.2: billing address section in checkout form, "same as shipping" checkbox defaulted on (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
 
 ## US-13 — Payment method
 As a customer, I provide a payment method (card) at checkout, so it can be
@@ -164,7 +164,7 @@ charged for my order.
 ### Tasks
 - [x] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) and simulated tokenizer — PAN never stored (payment-service)
 - [x] US-13.2: `POST /payments/methods` endpoint, 201/400 contract (payment-service)
-- [ ] US-13.3: card number/expiry section in checkout form and `paymentClient.createMethod` (gshop)
+- [x] US-13.3: card number/expiry section in checkout form and `paymentClient.createMethod` (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
 
 ## US-14 — Authorize at checkout, capture at shipment
 As a customer, my payment method is authorized (funds held) once my order is
@@ -189,7 +189,7 @@ for something that might never be fulfilled.
 - [x] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
 - [x] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; persists the order as `authorized` only on success — any failure releases its reservations and returns an error with no order row (ADR 0018) (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
-- [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; `201` → confirmation; `402` → inline `paymentFailure.reason` with card editable and retry; `409` → failed-line Remove (from the cart) / retry; `400`/`503`/`500` → error (gshop)
+- [x] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; `201` → confirmation; `402` → inline `paymentFailure.reason` with card editable and retry; `409` → every failed line with its own Remove (from the cart) / retry; `400`/`503`/`500` → error (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
 
 **Superseded 2026-10-27 (ADR 0018):** the earlier accepted gap (a decline
 left its reservation held until US-9) is gone. A failed checkout now

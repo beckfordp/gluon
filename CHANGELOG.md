@@ -170,6 +170,14 @@ own line. See each repo's own `git log` for full detail either way.
   inventory/payment unavailable, `500` persist failed). k8s sets
   `PAYMENT_SERVICE_URL`. Payment retries off until authorize is idempotent
   (TD-10).
+- `frontends/gshop`: checkout wired to the real payment/order contracts
+  (US-11.2/12.2/13.3/14.4, TD-7.4). `orderClient.create()` reads ADR 0018's
+  status codes (201/402/409/400/503/500) instead of a status field, failure
+  results carry no order, and a `409` lists every failed line with its own
+  Remove action. The in-browser mock is retained dev-only on the same result
+  model. Live-verified against the local cluster (authorized, declined,
+  multi-line stock failure, invalid payment method; failures leave no order
+  row) via `scripts/verify-checkout-real.sh`.
 
 ### Removed
 - `order-service`: `StockEventConsumer` (no longer consumes
