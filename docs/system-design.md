@@ -105,6 +105,7 @@ synchronous, same checkout-path shape as `POST /inventorys/reservations`
 above):
 - Request: `{"orderId": "string (UUID)", "amountCents": "int", "paymentMethodId": "string (UUID) — PaymentMethod.id from POST /payments/methods, US-13"}`. payment-service resolves the stored method's card token internally.
 - `404`: `{"error": "Payment method not found"}` — unknown `paymentMethodId`.
+- `400`: `{"error": "string"}` — blank `orderId` or non-positive `amountCents`.
 - `200`: `{"authId": "string", "expiresAt": "string (ISO-8601 instant)"}` —
   authorized; payment-service also publishes `payment-events:
   PaymentAuthorized` as an async side effect (fulfilment-service's
