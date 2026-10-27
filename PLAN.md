@@ -559,9 +559,9 @@ changes determine real end-to-end verification.
 - [x] TD-7.1/7.2 — bulk all-or-nothing `POST /inventorys/order-reservations`
       + reservation ledger + idempotent `.../{orderId}/release`
       (inventory-service) — done 2026-10-27 (`order-reservations_20261027`)
-- [ ] TD-7.5 — after TD-7.3: remove per-item endpoint, retire
+- [x] TD-7.5 — after TD-7.3: remove per-item endpoint, retire
       `StockReserved`/`StockReservationFailed` and their registry artifacts
-      (inventory-service)
+      (inventory-service) — done 2026-10-27 (`retire-stock-events_20261027`)
 - [x] US-14.2 + TD-7.3 — new `PaymentClient[F]` in order-service (mirrors
       `InventoryClient`, circuit-breaker-wrapped), called synchronously
       right after the bulk reserve succeeds (TD-7.3). Per ADR 0018: order persisted as

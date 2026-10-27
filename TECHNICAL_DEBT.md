@@ -287,7 +287,7 @@ its own design/testing, not a prerequisite for that fix to work.
 
 ---
 
-## TD-7 — Reservation is per-item; no bulk reserve or release-by-order ledger
+## TD-7 — Reservation is per-item; no bulk reserve or release-by-order ledger — **RESOLVED 2026-10-27**
 
 Checkout currently calls inventory-service's `POST /inventorys/reservations`
 once per order item, short-circuiting on the first failure. Only one failed
@@ -320,11 +320,13 @@ and that flow stays valid when bulk lands.
       used by checkout compensation (ADR 0018), auth expiry (US-20.3) and
       dispatch failure (US-18.3) — **done 2026-10-27**
       (`order-reservations_20261027`).
-- [ ] TD-7.5: inventory-service cleanup, after TD-7.3 — remove the per-item
+- [x] TD-7.5: inventory-service cleanup, after TD-7.3 — remove the per-item
       `POST /inventorys/reservations`, retire `StockReserved`/
       `StockReservationFailed` and delete their registry artifacts. Split
       from TD-7.1: order-service's `StockEventConsumer` still depends on
-      them until it switches.
+      them until it switches. — **done 2026-10-27**
+      (`retire-stock-events_20261027`; old route now `405`; both registry
+      artifacts deleted; `inventory-events` receives nothing).
 - [x] TD-7.3: order-service — call bulk reserve once, map the full failure
       list to the `POST /orders` `409`, release on later failure; retire
       `StockEventConsumer` and `OrderReserved` (+ registry artifact) —

@@ -31,7 +31,7 @@ library test fixtures only and are not reused.
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
 | order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (**done 2026-10-27**) adds a required shipping address to `POST /orders`; US-14.2 + TD-7.3 (**done 2026-10-27**, `checkout-journey1_20261027`): whole-order reserve, then a synchronous `PaymentClient[F]` call to `POST /payments/authorize`, resilience-wrapped like `InventoryClient`; **ADR 0018**: the order is persisted as `authorized` only after authorize succeeds — failed checkouts create no row and release their reservations; US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderStatusChanged`; `OrderReserved` retired 2026-10-27) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
-| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes stock-reservation events via fs2-kafka, plain JSON, no schema registry). US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes `inventory-events` (`StockReserved`/`StockReservationFailed` — **retired by TD-7, 2026-10-27**; bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release replace the per-item endpoint); consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique; the per-item endpoint was **removed 2026-10-27, TD-7.5**); US-5.1 done then **retired** with the stock events (TD-7.5). Bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release are the only reservation surface. US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes **nothing** (TD-7.5; `inventory-events` has no event types — the `StockReserved`/`StockReservationFailed` artifacts were deleted); consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): US-13.1/13.2 (**done 2026-10-27**) add a `PaymentMethod` store and the gshop-facing `POST /payments/methods`; `POST /payments/authorize` (**done 2026-10-27**, US-14.1) via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4/17.5/18.4/19.4/20.5 extend it (not yet built) to cover the new fulfilment-journey statuses/events below | — | — | consumes `order-events` (`OrderStatusChanged`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built), `user-events` (`UserRegistered`, not yet built) |
 | user-service | new 2026-10-26 (US-16, not yet built) — signup/login, issues a token | Postgres (assumed — not yet decided) | — | publishes `user-events` (eventType `UserRegistered`) |
@@ -70,20 +70,15 @@ Swagger/OpenAPI docs at `/docs`, which is the authoritative *current* shape
 if this section ever drifts — update this section to match rather than
 trusting it blindly.
 
-**`POST /inventorys/reservations`** — per item, **legacy** (caller:
-order-service, US-4.2, done; callee: inventory-service, US-4.1, done;
-**to be removed** once order-service moves to the bulk endpoint below):
-- Request: `{"sku": "string", "quantity": "int (must be > 0)", "orderItemId": "string (UUID) - order-service's order_items.id for this reservation, echoed verbatim on the async stock-reservation event below so the consumer can correlate without guessing"}`
-- `200`: full inventory record post-reservation —
-  `{"id": "string (UUID)", "sku": "string", "quantityAvailable": "int", "quantityReserved": "int", "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant"}`
-- `404`: `{"error": "Inventory not found"}` — unknown sku
-- `409`: `{"error": "Insufficient stock"}` — not enough `quantityAvailable`
-- `400`: `{"error": "quantity must be positive"}` — non-positive `quantity`
+**`POST /inventorys/reservations`** — per item, **removed (TD-7.5,
+2026-10-27)**: order-service uses the bulk endpoint below. The path now
+falls through to `GET /inventorys/{id}` and returns `405`; the historical
+contract is in git history and archived tracks.
 
 **`POST /inventorys/order-reservations`** — bulk reserve (caller:
 order-service, Checkout Journey 1; callee: inventory-service; TD-7.1,
-**decided 2026-10-27, built 2026-10-27**; replaces the per-item endpoint
-above, which is removed once order-service switches):
+**decided 2026-10-27, built 2026-10-27**; replaces the removed per-item
+endpoint above):
 - Request: `{"orderId": "string (UUID)", "items": [{"orderItemId": "string (UUID)", "sku": "string", "quantity": "int (> 0)"}]}`
 - **All-or-nothing**, one transaction: every line is reserved, or none.
   Stock rows are locked in sku order to avoid deadlocks between concurrent
@@ -225,11 +220,12 @@ topic subscription to filter event types for it.
   `OrderReserved` (**retired**, ADR 0018), `OrderStatusChanged` (published whenever an order lands in
   `confirmed`/`payment_failed` (capture failure)/`cancelled` — checkout
   failures publish nothing under ADR 0018).
-- **`inventory-events`** — producer: inventory-service. **No event types
-  after TD-7 (2026-10-27):** `StockReserved`/`StockReservationFailed` are
-  retired — reservation is synchronous and all-or-nothing, and their only
-  consumer (order-service's `StockEventConsumer`) had nothing left to do
-  under ADR 0018. Topic kept for future inventory events.
+- **`inventory-events`** — producer: inventory-service, but it publishes
+  nothing. `StockReserved`/`StockReservationFailed` were retired 2026-10-27
+  (TD-7.5) and their registry artifacts deleted — reservation is
+  synchronous and all-or-nothing, and their only consumer (order-service's
+  `StockEventConsumer`) had nothing left to do under ADR 0018. Topic kept
+  for future inventory events.
 - **`payment-events`** — producer: payment-service. Event types (Rework 7,
   contracts registered ahead of their producers): `PaymentAuthorized`
   (async side effect of the synchronous `POST /payments/authorize`
@@ -301,11 +297,11 @@ checkout** — a known, accepted gap, not yet fixed. order-service's and
 payment-service's events use `orderId`. inventory-service's events use
 `orderItemId` instead, because inventory-service deliberately doesn't know
 `orderId` (see the `orderItemId`-correlation design below, under "REST
-contracts") — fixing this would mean changing `POST /inventorys/reservations`'s
-own contract, out of scope for the ADR 0009 topic-consolidation cutover.
-**Moot after TD-7 (2026-10-27):** the bulk reserve is keyed by `orderId`
-and inventory-service publishes no checkout events, so the gap closes when
-the inventory-service track lands.
+contracts") — fixing this would have meant changing the former per-item
+endpoint's own contract, out of scope for the ADR 0009 topic-consolidation
+cutover.
+**Moot since TD-7.5 (2026-10-27):** the bulk reserve is keyed by `orderId`
+and inventory-service publishes no events, so the gap is closed.
 A consumer that needs to correlate across all three topics for one order
 today has to do so via each payload's own `orderId`/`orderItemId` field,
 not via `correlationId` uniformly.
@@ -321,13 +317,13 @@ line.
 
 **`StockReserved`** / **`StockReservationFailed`** — **RETIRED (TD-7,
 2026-10-27)**: no longer published once inventory-service's bulk reserve
-lands; registry artifacts `inventory-events-StockReserved` /
-`inventory-events-StockReservationFailed` are deleted in that track.
-Historical shape (same payload for both; producer: inventory-service;
+landed; registry artifacts `inventory-events-StockReserved` /
+`inventory-events-StockReservationFailed` were deleted in TD-7.5
+(2026-10-27). Historical shape (same payload for both; producer: inventory-service;
 consumer: order-service):
 ```json
 {
-  "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the POST /inventorys/reservations request above; opaque to inventory-service",
+  "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the former POST /inventorys/reservations request; opaque to inventory-service",
   "sku": "string",
   "quantity": "int — the amount just reserved (success) or that failed to reserve (failure)",
   "timestamp": "string (ISO-8601 instant)"

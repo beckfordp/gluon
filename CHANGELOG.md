@@ -178,6 +178,15 @@ own line. See each repo's own `git log` for full detail either way.
   model. Live-verified against the local cluster (authorized, declined,
   multi-line stock failure, invalid payment method; failures leave no order
   row) via `scripts/verify-checkout-real.sh`.
+- `inventory-service`: TD-7.5 retired the per-item
+  `POST /inventorys/reservations` endpoint and the
+  `StockReserved`/`StockReservationFailed` events (their Apicurio artifacts
+  deleted); the bulk reserve + release ledger is now the only reservation
+  surface. Build-time AsyncAPI generation is disabled while the channel list
+  is empty (the validator rejects an empty document); the live raw-spec route
+  still serves. Removed the now-unused outbox write path (`EventEnvelope`,
+  `skunk-circe`) and Kafka client dependencies. `order-service`'s README and
+  tech-stack no longer claim a `StockEventConsumer`.
 
 ### Removed
 - `order-service`: `StockEventConsumer` (no longer consumes
