@@ -542,18 +542,18 @@ work can start immediately against `VITE_CHECKOUT_MOCK=true`; the service
 changes determine real end-to-end verification.
 
 **Services**
-- [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
+- [x] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
       `simulated` interpreter, outcome keyed by card token via a
-      PureConfig map (payment-service)
-- [ ] `PaymentStatus` gains `Authorized`; `Settled` renamed `Captured`
-      (ADR 0011 amendment 2026-10-27) (payment-service)
-- [ ] US-13.1 — `PaymentMethod` domain + store + simulated tokenizer
-      (payment-service)
-- [ ] US-13.2 — `POST /payments/methods` + `US-12.1` billing address
-      (payment-service)
-- [ ] US-14.1 — `POST /payments/authorize` (request takes
+      PureConfig map (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
+- [x] `PaymentStatus` gains `Authorized`; `Settled` renamed `Captured`
+      (ADR 0011 amendment 2026-10-27) (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
+- [x] US-13.1 — `PaymentMethod` domain + store + simulated tokenizer
+      (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
+- [x] US-13.2 — `POST /payments/methods` + `US-12.1` billing address
+      (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
+- [x] US-14.1 — `POST /payments/authorize` (request takes
       `paymentMethodId`); publishes `PaymentAuthorized` on success only,
-      decline stays synchronous (payment-service)
+      decline stays synchronous (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
 - [ ] US-11.1 — shipping address on `POST /orders` request/persistence/
       response (order-service)
 - [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors

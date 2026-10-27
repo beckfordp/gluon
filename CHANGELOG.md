@@ -141,3 +141,20 @@ own line. See each repo's own `git log` for full detail either way.
   `NotificationStore` as its worked examples. Broken script deleted
   (superseded by the Phase 2 script); doc flagged inline as pre-strip,
   pending a refresh once US-7.1 lands.
+
+## 2026-10-27
+
+### Added
+- `payment-service`: Checkout Journey 1's payment half (ADR 0011, US-12.1/
+  13.1/13.2/14.1). `PaymentGatewayClient[F]` with a PureConfig-driven
+  `simulated` interpreter (outcome per card token, 7-day hold);
+  `POST /payments/methods` validates (Luhn/brand/expiry, billing address)
+  and tokenizes the card — PAN never stored, logged or returned;
+  synchronous `POST /payments/authorize` records an `Authorized` payment and
+  its `PaymentAuthorized` outbox row in one transaction, or a `Failed`
+  payment on decline (`402`, nothing published). A failed write after
+  approval voids the gateway hold.
+
+### Changed
+- `payment-service`: `PaymentStatus.Settled` renamed `Captured` (V7
+  migration) to match `PaymentCaptured`/`capture` — ADR 0011 amended.

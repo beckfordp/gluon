@@ -148,7 +148,7 @@ can be verified against it.
   it's the payment side of checkout, not the fulfillment side.
 
 ### Tasks
-- [ ] US-12.1: capture billing address alongside the payment method in `POST /payments/methods` (payment-service)
+- [x] US-12.1: capture billing address alongside the payment method in `POST /payments/methods` (payment-service)
 - [ ] US-12.2: billing address section in checkout form, "same as shipping" checkbox defaulted on (gshop)
 
 ## US-13 — Payment method
@@ -162,8 +162,8 @@ charged for my order.
   succeeds (see US-14), same deferred-charge shape US-6 already has.
 
 ### Tasks
-- [ ] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) and simulated tokenizer — PAN never stored (payment-service)
-- [ ] US-13.2: `POST /payments/methods` endpoint, 201/400 contract (payment-service)
+- [x] US-13.1: `PaymentMethod` domain + store (card token, last4, brand, expiry) and simulated tokenizer — PAN never stored (payment-service)
+- [x] US-13.2: `POST /payments/methods` endpoint, 201/400 contract (payment-service)
 - [ ] US-13.3: card number/expiry section in checkout form and `paymentClient.createMethod` (gshop)
 
 ## US-14 — Authorize at checkout, capture at shipment
@@ -186,7 +186,7 @@ for something that might never be fulfilled.
   US-17/US-19's `fulfilment-service`.
 
 ### Tasks
-- [ ] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
+- [x] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
 - [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; maps the response to `authorized`/`payment_failed` (order-service)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
 - [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; authorised → confirmation; declined → inline `paymentFailure.reason` with card editable and retry; reservation failure → failed-line Remove/retry (gshop)
