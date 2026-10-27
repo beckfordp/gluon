@@ -309,10 +309,31 @@ and that flow stays valid when bulk lands.
       keyed by `orderId`/`orderItemId` (active/released).
 - [ ] TD-7.2: inventory-service — add
       `POST /inventorys/reservations/release {orderId}` (idempotent), used by
-      auth expiry (US-20.3) and dispatch failure (US-18.3).
+      auth expiry (US-20.3) and dispatch failure (US-18.3). **Partly pulled
+      forward by ADR 0018 (2026-10-27):** a non-idempotent, item-based
+      `POST /inventorys/reservations/release {items[]}` is built now for
+      checkout compensation; this task makes it ledger-backed and idempotent.
 - [ ] TD-7.3: order-service — call bulk reserve once, map the full failure
       list to the `POST /orders` response, and set `reserved` from the
       synchronous success instead of the async `StockEventConsumer` path.
 - [ ] TD-7.4: gshop — surface every failed line in one pass when the response
       carries multiple failures (UI already supports the remove-and-retry
       loop).
+
+## TD-8 — A crash mid-checkout orphans reservations (ADR 0018)
+
+Under ADR 0018 the order row is written only after reserve and authorize
+both succeed. If an order-service instance dies between the first
+reservation and that write, nothing records the checkout: there is no
+`pending` row to reconcile from and the compensation never runs. The
+authorization lapses on its own via Journey 5's expiry sweep, but the
+reserved stock stays held indefinitely. More likely at busy times, when
+instances scale and restart more often.
+
+**Decided (2026-10-27):** accepted for now, fix later with reservation
+expiry rather than a `pending` row.
+
+### Tasks
+- [ ] TD-8.1: inventory-service — reservations carry a TTL and auto-release
+      unless confirmed; needs TD-7.1's ledger. order-service confirms them
+      in the same step that persists the `authorized` order.

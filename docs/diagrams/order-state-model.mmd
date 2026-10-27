@@ -1,13 +1,14 @@
 stateDiagram-v2
-    [*] --> PENDING: POST /orders
-    PENDING --> RESERVED: reservation succeeds
-    PENDING --> RESERVATION_FAILED: reservation fails (per-item)
-    RESERVATION_FAILED --> [*]: retry creates a new order
+    [*] --> AUTHORIZED: POST /orders 201<br/>(all lines reserved + authorize 200,<br/>persisted in one transaction)
 
-    RESERVED --> PAYMENT_FAILED: authorize 402 (synchronous)
-    PAYMENT_FAILED --> [*]: reservation remains held<br/>(accepted gap — release only via US-9, not built)
+    note left of AUTHORIZED
+        Checkout failures never create an order:
+        400 invalid / unknown payment method
+        402 declined · 409 out of stock · 503 payment down
+        (reserved lines released on every failure)
+        PENDING, RESERVED, RESERVATION_FAILED removed
+    end note
 
-    RESERVED --> AUTHORIZED: authorize 200 (synchronous)
     AUTHORIZED --> DISPATCHING: PaymentAuthorized
     DISPATCHING --> DISPATCHED: DispatchConfirmed
     DISPATCHING --> DISPATCH_FAILED: DispatchFailed
@@ -19,5 +20,6 @@ stateDiagram-v2
     AUTH_EXPIRED --> CANCELLED: release stock, notify
     DISPATCH_FAILED --> CANCELLED: void authorization,<br/>release stock, notify
 
+    PAYMENT_FAILED --> [*]
     CONFIRMED --> [*]
     CANCELLED --> [*]

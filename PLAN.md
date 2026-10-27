@@ -533,7 +533,7 @@ with **5** startable right after **1**, in parallel with **3**/**4**.
 
 ## Checkout Journey 1 — Checkout form, addresses, payment method, authorize (US-11–US-14, ADR 0011)
 
-**Repos:** `payment-service`, `order-service`, `gshop`.
+**Repos:** `payment-service`, `inventory-service`, `order-service`, `gshop`.
 
 **Depends on:** Rework 7 (Kafka message/schema layer) above for the event
 shapes this publishes/consumes. The capture half (US-14.3) is
@@ -556,10 +556,16 @@ changes determine real end-to-end verification.
       decline stays synchronous (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
 - [ ] US-11.1 — shipping address on `POST /orders` request/persistence/
       response (order-service)
+- [ ] Reservation release — `POST /inventorys/reservations/release
+      {items[]}` for checkout compensation (ADR 0018; item-based,
+      non-idempotent until TD-7.2) (inventory-service)
 - [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors
       `InventoryClient`, circuit-breaker-wrapped), called synchronously
-      right after reservation succeeds; maps `authorized`/`payment_failed`
-      and returns `paymentFailure` (order-service)
+      right after reservation succeeds. Per ADR 0018: order persisted as
+      `authorized` only after authorize succeeds; failures release
+      reservations and return `400`/`402`/`409`/`503`/`500` with no order
+      row; fail fast with `503` before reserving if the circuit is open
+      (order-service)
 - [ ] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service)
 
 **gshop UI**
@@ -568,9 +574,9 @@ changes determine real end-to-end verification.
 - [ ] US-12.2 — billing address section with "same as shipping" (gshop)
 - [ ] US-13.3 — card number/expiry section; `paymentClient.createMethod`
       (gshop)
-- [ ] US-14.4 — checkout submit orchestration; authorised →
-      confirmation; declined → inline reason/card retry; reservation failure
-      → named line + Remove/retry (gshop)
+- [ ] US-14.4 — checkout submit orchestration, by status code (ADR 0018):
+      `201` → confirmation; `402` → inline reason/card retry; `409` → named
+      line + Remove (cart-service) /retry; `400`/`503`/`500` → error (gshop)
 - [ ] checkout types/gateway + in-browser mock (`VITE_CHECKOUT_MOCK`);
       Cart → Checkout navigation; OrderConfirmation extraction; App state
       and cart clearing on success (gshop)
@@ -586,7 +592,9 @@ end-to-end for authorised, reservation-failed, and declined cards once the
 service contracts land (US-14.3 stays open, tracked against Checkout
 Journey 4).
 `system-design.md`'s REST and Kafka contracts updated (done 2026-10-26,
-ahead of the code); bulk reservation remains deferred as TD-7.
+ahead of the code; reshaped 2026-10-27 by ADR 0018 — no order row until
+authorized); bulk reservation remains deferred as TD-7; crash-orphaned
+reservations accepted as TD-8.
 
 ---
 

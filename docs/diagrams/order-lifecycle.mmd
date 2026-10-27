@@ -1,15 +1,16 @@
 stateDiagram-v2
-    [*] --> PENDING: POST /orders
-    PENDING --> RESERVATION_FAILED: reservation fails<br/>(sync, per item)
-    RESERVATION_FAILED --> [*]: "item out of stock" email<br/>retry creates a new order
+    [*] --> AUTHORIZED: POST /orders 201<br/>(reserve + authorize both sync,<br/>order persisted only on success)
 
-    PENDING --> RESERVED: all items reserved<br/>(sync)
-    RESERVED --> PAYMENT_FAILED: authorize declined<br/>(sync, 402)
-    PAYMENT_FAILED --> [*]: "payment failed" email<br/>(reservation remains held)
+    note left of AUTHORIZED
+        Failed checkouts return 400/402/409/503,
+        create no order and send no email —
+        the customer sees the reason in-session.
+        ("item out of stock" / "payment failed"
+        checkout emails removed)
+    end note
 
-    RESERVED --> AUTHORIZED: authorize succeeds<br/>(sync, 200)
     AUTHORIZED --> DISPATCHING: PaymentAuthorized event
-    DISPATCHING --> DISPATCHED: DispatchConfirmed
+    DISPATCHING --> DISPATCHED: DispatchConfirmed<br/>("your order shipped" email)
     DISPATCHING --> DISPATCH_FAILED: DispatchFailed
     DISPATCHING --> AUTH_EXPIRED: PaymentAuthorizationExpired<br/>(background sweep)
 
@@ -19,5 +20,6 @@ stateDiagram-v2
     AUTH_EXPIRED --> CANCELLED: release stock, notify
     DISPATCH_FAILED --> CANCELLED: void authorization,<br/>release stock, notify
 
+    PAYMENT_FAILED --> [*]: "payment problem on dispatch" email
     CONFIRMED --> [*]: receipt email
     CANCELLED --> [*]: cancellation email

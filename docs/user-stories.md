@@ -187,16 +187,14 @@ for something that might never be fulfilled.
 
 ### Tasks
 - [x] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
-- [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; maps the response to `authorized`/`payment_failed` (order-service)
+- [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; persists the order as `authorized` only on success — any failure releases its reservations and returns an error with no order row (ADR 0018) (order-service)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
-- [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; authorised → confirmation; declined → inline `paymentFailure.reason` with card editable and retry; reservation failure → failed-line Remove/retry (gshop)
+- [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; `201` → confirmation; `402` → inline `paymentFailure.reason` with card editable and retry; `409` → failed-line Remove (from the cart) / retry; `400`/`503`/`500` → error (gshop)
 
-**Accepted gap (2026-10-26):** an authorize decline leaves the successful
-stock reservation held. Retry creates a new order (and a new reservation);
-there is no automatic release on payment failure until US-9's cancel epic.
-The checkout form states this implicitly by retrying with a new order, and
-the diagrams have been corrected to stop showing a release on
-`payment_failed`.
+**Superseded 2026-10-27 (ADR 0018):** the earlier accepted gap (a decline
+left its reservation held until US-9) is gone. A failed checkout now
+releases its reservations and creates no order, so a retry starts clean.
+What remains is a crash mid-checkout orphaning reservations (TD-8).
 
 ## US-15 — Shipment triggers capture *(refined 2026-10-26 — see US-17/US-19)*
 As the system, when an order ships, the held payment is captured, so the

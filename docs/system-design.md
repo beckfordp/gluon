@@ -10,7 +10,8 @@ Diagrams: [`diagrams/order-fulfillment-topology.svg`](./diagrams/order-fulfillme
 — vector, open in a browser (Chrome is the default `.svg` handler on this
 machine) or Preview to zoom. Regenerate/update if this doc's shape changes
 materially (they'll drift silently otherwise). All checkout diagrams were
-regenerated 2026-10-26 from the Mermaid sources kept beside them
+regenerated 2026-10-27 (ADR 0018: no order row until authorized; cart-service
+added to the sequence flows) from the Mermaid sources kept beside them
 (`*.mmd`): `order-lifecycle.svg` tracks statuses plus their notification
 emails, `order state model.svg` is the compact state machine, and
 `happy path sequence flow.svg`/`alternative paths sequence flow.svg` show
@@ -29,9 +30,9 @@ library test fixtures only and are not reused.
 |---|---|---|---|---|
 | catalog-service | new (generator) | Postgres | read-through cache | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
-| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (not yet built) adds a required shipping address to `POST /orders`; US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
+| order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`pending`/`reserved`/`reservation_failed`) + `order_items` schema/FK done; US-4.2 done (sync reserve call to inventory-service, resilience-wrapped, `orderItemId` correlation); US-5.2 done (consumes stock-reservation events, updates order status); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (not yet built) adds a required shipping address to `POST /orders`; US-14 (not yet built, **decided 2026-10-26**) adds a synchronous `PaymentClient[F]` call to `POST /payments/authorize` right after reservation succeeds, resilience-wrapped like `InventoryClient` (circuit-breaker protects against a slow/overloaded gateway under peak load); **ADR 0018 (2026-10-27)**: the order is persisted only after authorize succeeds — failed checkouts create no row and release their reservations; US-17/18/19/20 extend `OrderStatus` (not yet built) with `Dispatched`/`DispatchFailed`/`Cancelled`, consuming the new events below | Postgres | read-through cache (order history, US-8.1) | consumes `inventory-events` (`StockReserved`/`StockReservationFailed`), `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built); publishes `order-events` (`OrderReserved`/`OrderStatusChanged`) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique); US-5.1 done (publishes stock-reservation events via fs2-kafka, plain JSON, no schema registry). US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes `inventory-events` (`StockReserved`/`StockReservationFailed`), consumed by order-service; consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
-| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): US-13.1/13.2 (not yet built) add a `PaymentMethod` store and the gshop-facing `POST /payments/methods`; `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| payment-service | US-6.1 done 2026-10-02 (consumes `OrderReserved`, creates+settles a `Payment` directly via `PaymentStore`, publishes `PaymentSettled`/`PaymentFailed`; charge simulated — no real provider decided yet). **Being superseded** by US-14/19/20 (ADR 0011, not yet built; **decided 2026-10-26**: authorize is now a synchronous REST call, not a Kafka consumer — see "REST contracts"): US-13.1/13.2 (**done 2026-10-27**) add a `PaymentMethod` store and the gshop-facing `POST /payments/methods`; `POST /payments/authorize` (**done 2026-10-27**, US-14.1) via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); capture stays async on `fulfilment-events: DispatchConfirmed`; a background sweep publishes expired authorizations | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built) — no longer consumes `order-events` for authorization, that's a sync REST call now; publishes `payment-events` (Rework 7 registered the four contracts ahead of their producers: `PaymentAuthorized` on authorize-success only — decline stays purely synchronous, no Kafka event — plus `PaymentCaptured`/`PaymentFailed` on capture, `PaymentAuthorizationExpired` from the sweep) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4/17.5/18.4/19.4/20.5 extend it (not yet built) to cover the new fulfilment-journey statuses/events below | — | — | consumes `order-events` (`OrderStatusChanged`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built), `user-events` (`UserRegistered`, not yet built) |
 | user-service | new 2026-10-26 (US-16, not yet built) — signup/login, issues a token | Postgres (assumed — not yet decided) | — | publishes `user-events` (eventType `UserRegistered`) |
 | fulfilment-service | new 2026-10-26 (US-17/18, not yet built) — pick/pack/dispatch | Postgres (assumed — not yet decided) | — | consumes `payment-events` (`PaymentAuthorized`), `payment-events` (`PaymentAuthorizationExpired`, cancels in-flight pick/pack); publishes `fulfilment-events` (eventType `DispatchConfirmed`/`DispatchFailed`) |
@@ -78,6 +79,20 @@ callee: inventory-service, US-4.1, done):
 - `409`: `{"error": "Insufficient stock"}` — not enough `quantityAvailable`
 - `400`: `{"error": "quantity must be positive"}` — non-positive `quantity`
 
+**`POST /inventorys/reservations/release`** (caller: order-service,
+compensation per ADR 0018; callee: inventory-service; **not yet built**):
+- Request: `{"items": [{"sku": "string", "quantity": "int", "orderItemId": "string (UUID)"}]}`
+  — the lines this checkout already reserved; bulk so one call covers a
+  whole failed checkout. Carries sku/quantity because inventory-service has
+  no reservation ledger yet, only aggregate `quantityReserved` (TD-7).
+- `204` — released. **Not idempotent until TD-7's ledger exists** (a
+  repeated call would decrement twice), so order-service calls it once per
+  failed checkout and does not retry it.
+- Called whenever `POST /orders` fails after at least one reservation
+  succeeded (later reservation fails, authorize declines/404s/errors, or
+  the final persist fails). Best-effort: a failed release is logged, and
+  the reservation stays held — see ADR 0018's crash/known-gap note.
+
 Added `orderItemId` 2026-10-02 (was absent in the original US-4.1/US-4.2
 contract) to fix the correlation gap below — inventory-service treats it as
 an opaque string, no order-domain coupling implied, purely store-and-echo.
@@ -116,58 +131,43 @@ above):
   through the `simulated` `PaymentGatewayClient[F]` interpreter's
   per-card-token outcome map, see "Payload contracts" below). **Stays
   purely synchronous** — unlike the success case, nothing is published to
-  Kafka; order-service handles the decline directly in the same request,
-  publishing its own `order-events: OrderStatusChanged {status:
-  payment_failed}` — exactly mirroring how a reservation failure is
-  already handled above, not a new mechanism.
+  Kafka; order-service handles the decline directly in the same request:
+  it releases the checkout's reservations and returns `402` to gshop,
+  persisting no order and publishing nothing (ADR 0018).
 
 **`POST /orders`** (caller: `gshop`, US-3 checkout, done — see
-`frontends/gshop/conductor/product.md`; callee: order-service, done):
-- Request (`CreateOrderRequest`): `{"customerId": "string", "items": [{"sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int (must be > 0)"}], "shippingAddress": Address, "paymentMethodId": "string (UUID) — from POST /payments/methods"}` — at least one item, a valid shipping address, and a known payment method required.
+`frontends/gshop/conductor/product.md`; callee: order-service, done;
+**reshaped by ADR 0018, 2026-10-27 — not yet built**):
+- Request (`CreateOrderRequest`): `{"customerId": "string", "items": [{"sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int (must be > 0)"}], "shippingAddress": Address, "paymentMethodId": "string (UUID) — from POST /payments/methods"}` — at least one item, a valid shipping address, and a payment method required.
+- **Sequence:** validate → mint `orderId`/`orderItemId`s in memory →
+  reserve each line (`POST /inventorys/reservations`, per item, short-
+  circuits on the first failure — bulk reporting is TD-7) → authorize
+  (`POST /payments/authorize`) → persist the order + items as
+  `authorized` in one transaction. **No order row exists until that last
+  step succeeds.** Any failure after a reservation releases the lines
+  already reserved (`POST /inventorys/reservations/release`). If
+  `PaymentClient`'s circuit breaker is already open, return `503` before
+  reserving anything.
 - `201`: `OrderResponse` —
-  `{"id": "string (UUID)", "customerId": "string", "totalCents": "int", "status": "string (pending|reservation_failed|authorized|payment_failed|dispatched|dispatch_failed|confirmed|cancelled)", "items": [{"id": "string (UUID)", "sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int"}], "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant", "shippingAddress": "Address | null — null only for orders created before US-11", "reservationFailure": "{\"sku\": \"string\", \"reason\": \"string\"} | null", "paymentFailure": "{\"reason\": \"string\"} | null — added 2026-10-26, same ephemeral shape as reservationFailure below, see US-14.2"}`.
-  **Changed 2026-10-26**: `status` now also reflects authorization
-  directly (`"authorized"` or `"payment_failed"`), since that call is
-  synchronous too — `reserved` is no longer a response value, just an
-  internal transient state between the two sync calls. `dispatched`/
-  `dispatch_failed`/`confirmed`/`cancelled` still only arrive later via
-  async Kafka.
-  `reservationFailure` (added 2026-10-09) is non-null only when `status`
-  is `"reservation_failed"` **in this same response** — the synchronous
-  reserve call itself failed. **Ephemeral, sync-response-only, not
-  persisted** — there's no DB column for it, so a later `GET /orders/{id}`
-  for the same order still reports `status: "reservation_failed"` but
-  `reservationFailure: null`. `paymentFailure` (added 2026-10-26) is the
-  same shape/ephemerality for a synchronous authorize decline — a *later*
-  async capture failure (Checkout Journey 4) has no sync response to
-  attach a reason to; that comes via the "payment problem on dispatch"
-  notification (US-19.4) instead.
-  Why ephemeral is actually fine, not just a smaller first increment: the
-  real recovery path is the customer removing the failing SKU from their
-  cart (US-2's cart screen) and retrying checkout — that happens in the
-  same session, right after this response, so nothing ever needs to look
-  up *why* a past order failed after the fact. gshop's Checkout screen
-  reads `reservationFailure`/`paymentFailure` and shows them inline; for a
-  failed reservation it names the item and offers a Remove action before
-  retrying.
-  **Checkout sequence (US-11–US-14):** gshop creates the `PaymentMethod`,
-  then calls `POST /orders`; order-service creates the order, reserves each
-  line synchronously, then authorizes synchronously. A reservation failure
-  returns `status: "reservation_failed"` with the one failing line in
-  `reservationFailure` (today's per-item call short-circuits on the first
-  failure — bulk reporting is tracked as TD-7 in `TECHNICAL_DEBT.md`); the
-  customer removes that line and retries with a new order. An authorize
-  decline returns `status: "payment_failed"` with `paymentFailure`; the
-  customer changes card and retries with a new order. **Accepted gap:** a
-  declined order's successful reservation stays held — no automatic
-  release exists until US-9's cancel epic, so retries accumulate held stock.
+  `{"id": "string (UUID)", "customerId": "string", "totalCents": "int", "status": "string (authorized|dispatched|dispatch_failed|confirmed|payment_failed|cancelled)", "items": [{"id": "string (UUID)", "sku": "string", "productName": "string", "unitPriceCents": "int", "quantity": "int"}], "createdAt": "ISO-8601 instant", "updatedAt": "ISO-8601 instant", "shippingAddress": "Address | null — null only for orders created before US-11"}`.
+  Always `status: "authorized"` from `POST /orders`; later statuses arrive
+  via async Kafka. `payment_failed` now only means capture failed after
+  dispatch (Journey 4).
 - `400`: `{"error": "string"}` — empty `items`, a non-positive `quantity`,
-  an invalid/missing `shippingAddress`, an unknown `paymentMethodId`, or
-  another validation failure.
+  an invalid/missing `shippingAddress`, an unknown `paymentMethodId`
+  (authorize `404`), or another validation failure.
+- `402`: `{"error": "Payment declined", "paymentFailure": {"reason": "string"}}` — authorize declined.
+- `409`: `{"error": "Insufficient stock", "reservationFailure": {"sku": "string", "reason": "string"}}` — the first line that couldn't be reserved (unknown sku also lands here).
+- `503`: `{"error": "Payment service unavailable"}` — circuit open, or the authorize call failed/timed out.
+- `500`: `{"error": "string"}` — the final persist failed after a successful authorize (reservations released; the hold lapses via the expiry sweep until payment-service has a void endpoint).
+- gshop reads the status code: `201` → confirmation; `402` → inline
+  reason with the card editable; `409` → names the failed line with a
+  Remove action (removing it from the cart via cart-service), then retry;
+  `400`/`503`/`500` → generic error. Failed attempts leave nothing in order
+  history and send no email.
 
 **`GET /orders/{id}`** (same caller/callee as above, done):
-- `200`: same `OrderResponse` shape as `POST /orders` — always
-  `reservationFailure: null` and `paymentFailure: null` (see note above).
+- `200`: same `OrderResponse` shape as `POST /orders`.
 - `404`: `{"error": "Order not found"}`.
 
 **`POST /auth/signup`** (caller: `gshop`; callee: user-service, US-16.1,
@@ -197,11 +197,11 @@ topic subscription to filter event types for it.
 
 - **`order-events`** — producer: order-service; consumer:
   notification-service (`OrderStatusChanged` only). Event types:
-  `OrderReserved` (published once an order's stock is fully `Reserved` —
-  not at raw checkout time; no consumer today, payment authorization is the
-  synchronous REST call), `OrderStatusChanged` (published whenever an
-  order lands in `reservation_failed`/`confirmed`/`payment_failed`/
-  `cancelled` — not for `pending`/`reserved`).
+  `OrderReserved` (**no longer produced once ADR 0018 lands** — there is
+  no `pending` order to move to `reserved`; no consumer either, to be
+  retired), `OrderStatusChanged` (published whenever an order lands in
+  `confirmed`/`payment_failed` (capture failure)/`cancelled` — checkout
+  failures publish nothing under ADR 0018).
 - **`inventory-events`** — producer: inventory-service; consumer:
   order-service. Event types: `StockReserved`, `StockReservationFailed`.
 - **`payment-events`** — producer: payment-service. Event types (Rework 7,
@@ -310,8 +310,9 @@ reserving the same sku concurrently (see "Open design questions" below).
 non-positive quantity), which inventory-service rejects synchronously via
 its HTTP response instead.
 
-**`OrderReserved`** (producer: order-service, **done**; consumer:
-payment-service, **done**):
+**`OrderReserved`** (producer: order-service, **done** — **to be retired
+by ADR 0018**: with no `pending` orders the transition that publishes it
+never happens; consumer: none since Rework 7):
 ```json
 {
   "orderId": "string (UUID)",
@@ -332,19 +333,17 @@ notification-service, **done**):
 {
   "orderId": "string (UUID)",
   "customerId": "string",
-  "status": "string — one of: reservation_failed | confirmed | payment_failed | cancelled",
+  "status": "string — one of: confirmed | payment_failed | cancelled (reservation_failed: legacy only, see below)",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
 Published whenever an order lands in one of these statuses —
-`reservation_failed` (from either the synchronous checkout failure or the
-async `StockReservationFailed` consumer), `confirmed` (consuming
-`PaymentCaptured`), `payment_failed` (capture-failure `PaymentFailed`, the
-synchronous authorize decline, or the checkout reservation failure), or
-`cancelled` (consuming `PaymentAuthorizationExpired`). Not published for
-`pending` or `reserved` — `OrderReserved` covers the one transition
-downstream consumers need, and nothing currently needs telling about
-`pending` itself.
+`confirmed` (consuming
+`PaymentCaptured`), `payment_failed` (capture-failure `PaymentFailed` only), or
+`cancelled` (consuming `PaymentAuthorizationExpired`). Under ADR 0018 a
+failed checkout creates no order and publishes nothing, so
+`reservation_failed` (and checkout-time `payment_failed`) stop being
+produced; notification-service keeps handling them until a cleanup.
 
 **Reliability (decided 2026-10-02):** no transactional outbox. Both
 `order-events` publishes above use a hand-rolled bounded retry via
@@ -399,9 +398,8 @@ funds, does not move money.
 
 **`PaymentAuthorizationFailed` — retired before being built.** A decline
 on `POST /payments/authorize` stays purely synchronous: order-service
-handles it directly in the same request and publishes its own
-`order-events: OrderStatusChanged {status: payment_failed}` — exactly
-mirroring how a reservation failure is already handled — nothing
+handles it directly in the same request — releasing the reservations and
+returning `402`, with no order row and no event (ADR 0018) — nothing
 downstream needs to react to a decline asynchronously. If that ever
 changes (something besides order-service/notification-service needs to
 react to a decline), reintroduce this as a real event then, not

@@ -1,29 +1,39 @@
 sequenceDiagram
     actor C as Customer
     participant G as gshop
+    participant K as cart-service
     participant O as order-service
     participant I as inventory-service
     participant P as payment-service
     participant F as fulfilment-service
     participant N as notification-service
 
+    C->>G: "Add to cart" on the catalog
+    opt first item — no cart id in localStorage
+        G->>K: POST /carts
+        K-->>G: 201 {id} (stored in localStorage)
+    end
+    G->>K: POST /carts/{id}/items {sku, quantity}
+    K-->>G: 200 {items}
+    Note over G,K: repeated per add — the Cart screen reads<br/>GET /carts/{id} and +/- calls add / DELETE item
+    C->>G: Checkout (items taken from the cart)
     C->>G: Fill checkout form<br/>(shipping, billing, card)
     G->>P: POST /payments/methods {card, billingAddress}
     P->>P: tokenize PAN (never stored)
     P-->>G: 201 {id, last4, brand, expiry}
     G->>O: POST /orders {items, shippingAddress, paymentMethodId}
-    O->>O: persist order (status = PENDING)
+    O->>O: validate request<br/>mint orderId + orderItemIds in memory<br/>(nothing persisted yet)
     loop for each line item
         O->>I: POST /inventorys/reservations {sku, qty, orderItemId}
         I-->>O: 200 reserved
     end
-    O->>O: status = RESERVED
     O->>P: POST /payments/authorize {orderId, amountCents, paymentMethodId}
     P->>P: authorize via simulated provider
     P-->>O: 200 {authId, expiresAt}
     P--)F: payment-events: PaymentAuthorized {orderId, authId, expiresAt}
+    O->>O: persist order + items (status = AUTHORIZED)<br/>in ONE transaction — first time the order exists
     O-->>G: 201 {status: authorized, shippingAddress, ...}
-    G->>G: clear cart id
+    G->>G: forget cart id (localStorage)<br/>cart expires in Redis by TTL
     F->>F: PENDING → PICKING → PACKED → DISPATCHED
     F--)O: fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}
     F--)P: fulfilment-events: DispatchConfirmed
