@@ -136,7 +136,7 @@ delivered to the right place.
   service.
 
 ### Tasks
-- [ ] US-11.1: capture shipping address on `POST /orders` — request field, persistence, `OrderResponse` echo (order-service)
+- [x] US-11.1: capture shipping address on `POST /orders` — request field, persistence, `OrderResponse` echo (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
 - [ ] US-11.2: shipping address section in checkout form, inline validation, displayed on confirmation (gshop)
 
 ## US-12 — Billing address
@@ -187,7 +187,7 @@ for something that might never be fulfilled.
 
 ### Tasks
 - [x] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
-- [ ] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; persists the order as `authorized` only on success — any failure releases its reservations and returns an error with no order row (ADR 0018) (order-service)
+- [x] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; persists the order as `authorized` only on success — any failure releases its reservations and returns an error with no order row (ADR 0018) (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
 - [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
 - [ ] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; `201` → confirmation; `402` → inline `paymentFailure.reason` with card editable and retry; `409` → failed-line Remove (from the cart) / retry; `400`/`503`/`500` → error (gshop)
 

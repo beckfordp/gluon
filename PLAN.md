@@ -554,22 +554,23 @@ changes determine real end-to-end verification.
 - [x] US-14.1 — `POST /payments/authorize` (request takes
       `paymentMethodId`); publishes `PaymentAuthorized` on success only,
       decline stays synchronous (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
-- [ ] US-11.1 — shipping address on `POST /orders` request/persistence/
-      response (order-service)
+- [x] US-11.1 — shipping address on `POST /orders` request/persistence/
+      response (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
 - [x] TD-7.1/7.2 — bulk all-or-nothing `POST /inventorys/order-reservations`
       + reservation ledger + idempotent `.../{orderId}/release`
       (inventory-service) — done 2026-10-27 (`order-reservations_20261027`)
 - [ ] TD-7.5 — after TD-7.3: remove per-item endpoint, retire
       `StockReserved`/`StockReservationFailed` and their registry artifacts
       (inventory-service)
-- [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors
+- [x] US-14.2 + TD-7.3 — new `PaymentClient[F]` in order-service (mirrors
       `InventoryClient`, circuit-breaker-wrapped), called synchronously
       right after the bulk reserve succeeds (TD-7.3). Per ADR 0018: order persisted as
       `authorized` only after authorize succeeds; failures release
       reservations and return `400`/`402`/`409`/`503`/`500` with no order
-      row; fail fast with `503` before reserving if the circuit is open
-      (order-service). Retire `StockEventConsumer`, `OrderReserved` (+ registry
-      artifact) and the per-item reserve call (order-service)
+      row. Retired `StockEventConsumer`, `OrderReserved` (+ registry
+      artifact) and the per-item reserve call (order-service) — done 2026-10-27 (`checkout-journey1_20261027`).
+      Fail-fast on an open breaker deferred (TD-9); authorize retries off
+      until payment-service dedupes by `orderId` (TD-10)
 - [ ] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service)
 
 **gshop UI**

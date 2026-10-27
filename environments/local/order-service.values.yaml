@@ -17,3 +17,5 @@ env:
     value: redis://order-redis:6379
   - name: INVENTORY_SERVICE_URL
     value: http://inventory-service:8080
+  - name: PAYMENT_SERVICE_URL
+    value: http://payment-service:8080

@@ -325,9 +325,10 @@ and that flow stays valid when bulk lands.
       `StockReservationFailed` and delete their registry artifacts. Split
       from TD-7.1: order-service's `StockEventConsumer` still depends on
       them until it switches.
-- [ ] TD-7.3: order-service — call bulk reserve once, map the full failure
+- [x] TD-7.3: order-service — call bulk reserve once, map the full failure
       list to the `POST /orders` `409`, release on later failure; retire
-      `StockEventConsumer` and `OrderReserved` (+ registry artifact).
+      `StockEventConsumer` and `OrderReserved` (+ registry artifact) —
+      **done 2026-10-27** (`checkout-journey1_20261027`). TD-7.5 unblocked.
 - [ ] TD-7.4: gshop — surface every failed line in one pass when the response
       carries multiple failures (UI already supports the remove-and-retry
       loop).
@@ -349,3 +350,54 @@ expiry rather than a `pending` row.
 - [ ] TD-8.1: inventory-service — reservations carry a TTL and auto-release
       unless confirmed; needs TD-7.1's ledger. order-service confirms them
       in the same step that persists the `authorized` order.
+
+## TD-9 — No fail-fast on an open circuit breaker
+
+ADR 0018's `POST /orders` contract says to return `503` *before reserving*
+when `PaymentClient`'s breaker is already open. purerest's
+`Resilience.middleware` doesn't expose breaker state, so order-service
+can't ask; today an open payment breaker is only discovered after the
+reserve, which then has to be released. Correct, just wasteful under a
+payment outage.
+
+**Decided (2026-10-27):** deferred from Checkout Journey 1.
+
+### Tasks
+- [ ] TD-9.1: purerest — expose breaker state (e.g. `isOpen: F[Boolean]`)
+      from the resilience middleware.
+- [ ] TD-9.2: order-service — check `PaymentClient`'s breaker before
+      reserving; `503` "Payment service unavailable" without touching
+      inventory.
+
+## TD-10 — `POST /payments/authorize` isn't idempotent per order
+
+payment-service inserts a new payment row (fresh id) on every authorize
+call, with no check for an existing one for the same `orderId`. A retried
+call whose first attempt landed (response lost, timeout, 5xx after commit)
+places a second hold. order-service's `payment-client` retries are set to
+`0` until this is fixed (Checkout Journey 1 review), so a transient
+payment failure is a `503` rather than a retry.
+
+### Tasks
+- [ ] TD-10.1: payment-service — authorize replays by `orderId` (return the
+      existing authorization; `409` if the amount or method differs),
+      backed by a unique constraint.
+- [ ] TD-10.2: order-service — restore `payment-client` retries
+      (`max-retries = 3`) once TD-10.1 lands.
+
+## TD-11 — Apicurio can't version draft 2020-12 JSON schemas
+
+`schemaRegistryCheck` registers schemas generated as JSON Schema draft
+2020-12. Apicurio's compatibility checker can't read that draft: any
+*changed* schema for an existing artifact fails with `500 SchemaException:
+#: could not determine version`, so no event contract can evolve in place.
+Found when order-service tried to drop `reservation_failed` from
+`OrderStatusChanged` (that change would also have failed BACKWARD, so the
+value was kept).
+
+### Tasks
+- [ ] TD-11.1: purekafka (sbt-purekafka-docs) — emit a draft Apicurio's
+      checker supports (draft-07) or configure the registry for 2020-12;
+      prove one compatible change registers as version 2.
+- [ ] TD-11.2: every service using `schemaRegistryCheck` — pick up the
+      plugin fix and re-run it.

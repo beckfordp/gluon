@@ -161,6 +161,21 @@ own line. See each repo's own `git log` for full detail either way.
   `POST /inventorys/order-reservations/{orderId}/release` (always `204`).
   No events published. Per-item endpoint and stock events stay until
   order-service switches (TD-7.5).
+- `order-service`: Checkout Journey 1 (US-11.1, US-14.2, TD-7.3, ADR 0018).
+  `POST /orders` takes `shippingAddress` (JSONB) and `paymentMethodId`,
+  reserves the whole order in one call, authorizes via a new
+  `PaymentClient[F]`, and only then persists it as `authorized`. No order
+  row for any failed checkout; every failure after reserve releases it
+  (`402` declined, `409` every failed line, `400` unknown method, `503`
+  inventory/payment unavailable, `500` persist failed). k8s sets
+  `PAYMENT_SERVICE_URL`. Payment retries off until authorize is idempotent
+  (TD-10).
+
+### Removed
+- `order-service`: `StockEventConsumer` (no longer consumes
+  `inventory-events`), the per-item reserve call, and `OrderReserved` —
+  registry artifact `order-events-OrderReserved` deleted. TD-7.5
+  (inventory cleanup) unblocked.
 
 ### Changed
 - `payment-service`: `PaymentStatus.Settled` renamed `Captured` (V7
