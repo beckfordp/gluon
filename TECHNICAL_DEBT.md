@@ -8,15 +8,14 @@ for things we haven't *decided* yet; this file is for things we've already
 decided need fixing but haven't gotten to).
 
 Each item here affects **more than one repo** — that's the bar for living
-here rather than in a single service's own `backlogs/<name>.md`. A
-single-service gap stays in that service's own backlog file; this file
-exists specifically so a cross-cutting item gets written out **once**
-instead of duplicated per affected repo. Each affected repo's own
-`backlogs/<name>.md` keeps only a one-line pointer back here, citing the
-specific `TD-N.M` task below — that pointer is still what gets pasted into
-that repo's own `conductor/tracks.md` and promoted via `/conductor:newTrack`
-when picked up; this file is not a substitute for that per-repo mechanism,
-just where the shared writeup lives.
+here rather than in a single service's own conductor backlog. A
+single-service gap stays in that service's own `conductor/tracks.md`
+backlog; this file exists specifically so a cross-cutting item gets written
+out **once** instead of duplicated per affected repo. Each affected repo's
+`conductor/tracks.md` keeps only a one-line pointer back here, citing the
+specific `TD-N.M` task below — that pointer is promoted via
+`/conductor:newTrack` when picked up; this file is not a substitute for that
+per-repo mechanism, just where the shared writeup lives.
 
 Numbered `TD-N.M` the same way `docs/user-stories.md` numbers `US-N.M` —
 `TD-N` is the gap, `TD-N.M` is a concrete, closeable task against one repo.
@@ -32,9 +31,10 @@ as a cross-origin request (`TypeError: Failed to fetch`) — confirmed
 server-side success, client-side block, for catalog-service, cart-service,
 and order-service (2026-10-08/09, verifying gshop's US-1/US-2/US-3).
 inventory-service, payment-service, notification-service haven't been hit
-yet (gshop never calls them directly — see `backlogs/gshop-frontend.md`'s
-inventoryClient note) but almost certainly carry the identical gap, since
-all six are scaffolded from the same `pure-service-generator` template.
+yet (gshop never calls them directly — see the inventoryClient note in
+`frontends/gshop/conductor/product.md`) but almost certainly carry the
+identical gap, since all six are scaffolded from the same
+`pure-service-generator` template.
 
 **Current workaround (dev-only, doesn't fix a real deployment):** gshop's
 `vite.config.ts` runs a `server.proxy` entry per service, so the browser

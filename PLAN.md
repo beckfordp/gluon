@@ -5,9 +5,9 @@ work. This sits *above* each repo's own `/conductor` backlog — it's the
 sequencing layer that says which repo to generate and work on when, and what
 to stub in each repo's own tests so it doesn't need the other five running.
 
-Source: [`docs/user-stories.md`](./docs/user-stories.md), sliced per repo in
-`gluon/backlogs/*.md` — each backlog line is numbered `US-N.M` there now,
-matching the phase tasks below.
+Source: [`docs/user-stories.md`](./docs/user-stories.md) — each item is
+numbered `US-N.M`, matching the phase tasks below. Per-repo backlog seeds
+live in that repo's own `conductor/tracks.md`, not in this repo.
 
 ## Per-repo setup (do this once, each time you generate a repo)
 
@@ -15,8 +15,8 @@ matching the phase tasks below.
 2. `cd <domain>-service`, then in Claude Code: `/conductor:setup` — this repo
    now has its own `conductor/product.md` (should reference the cross-repo
    `product.md`) and `conductor/tracks.md`.
-3. Paste `gluon/backlogs/<domain>-service.md` into that repo's
-   `conductor/tracks.md` `## Backlog` section.
+3. Seed that repo's `conductor/tracks.md` `## Backlog` with its title-only
+   `US-N.M`/`TD-N.M` items from `docs/user-stories.md`/`TECHNICAL_DEBT.md`.
 4. Add the phase this repo belongs to (below) as a note in its
    `conductor/product.md`, so `/conductor:newTrack` there has the sequencing
    context when you promote a backlog item into a track.

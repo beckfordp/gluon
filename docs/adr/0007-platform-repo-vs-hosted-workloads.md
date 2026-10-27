@@ -23,7 +23,8 @@ get populated for real.
 ## Decision
 `gluon` is the **platform repo only**:
 - Cross-cutting docs (`docs/`), ADRs (`docs/adr/`), codegen tooling
-  (`bin/`, `specs/`), per-repo backlog seeds (`backlogs/`).
+  (`bin/`, `specs/`), per-repo backlog seeds (`backlogs/`, since removed —
+  each repo's own conductor now owns its backlog).
 - **One generic, shared Helm chart** in `infra/k8s/` — a parameterized
   Deployment + Service + ConfigMap shape, reused by every workload via its
   own small values fragment (image, port, env vars, resource hints) rather

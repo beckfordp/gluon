@@ -32,8 +32,7 @@ gluon/
 │   ├── k8s/            Helm chart(s), parameterized per environment
 │   └── terraform/       EKS/VPC/ECR provisioning (empty until there's an ADR for it)
 ├── environments/    local/dev/staging/prod config — no secrets committed
-├── specs/           codegen field-specs
-└── backlogs/        sliced, numbered (US-N.M) per-repo backlog
+└── specs/           codegen field-specs
 ```
 
 ## Services
@@ -59,8 +58,9 @@ Vite, the standard toolchain for every one of them).
    `GITHUB_TOKEN`/`GITHUB_ACTOR` set (see `pure-service-generator`'s own
    README — needed to resolve `purerestlib` from GitHub Packages).
 2. Inside the new service directory, in Claude Code: run `/conductor:setup`.
-3. Paste `backlogs/<name>.md`'s items into the `## Backlog` section of the
-   resulting `conductor/tracks.md`.
+3. Seed the `## Backlog` section of the resulting `conductor/tracks.md`
+   with this service's title-only `US-N.M`/`TD-N.M` items from
+   `docs/user-stories.md`/`TECHNICAL_DEBT.md` (see `PLAN.md`).
 4. When ready to push: `gh repo create beckfordp/<name> --public
    --source=. --remote=origin --push` (plain personal-account repo — no
    dedicated GitHub org). This initializes the service's own independent git
@@ -124,6 +124,6 @@ with a real constraint when it references a row in the *same* database.
 3. When ready to push: `gh repo create beckfordp/<name> --public
    --source=. --remote=origin --push`.
 4. Inside the new directory, in Claude Code: run `/conductor:setup` and
-   paste `backlogs/<name>.md`'s items into `conductor/tracks.md`'s
-   `## Backlog` — same pattern as a service, once there's real feature
-   work to track beyond the initial scaffold.
+   seed `conductor/tracks.md`'s `## Backlog` from `docs/user-stories.md` —
+   same pattern as a service, once there's real feature work to track
+   beyond the initial scaffold.

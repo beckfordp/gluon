@@ -111,7 +111,8 @@ cat <<EOF
 Next steps (manual, not done by this script):
   1. cd $OUT_DIR
   2. In Claude Code: run /conductor:setup
-  3. Paste $GLUON_DIR/backlogs/$OUT_NAME.md into the new conductor/tracks.md's Backlog section
+  3. Seed the new conductor/tracks.md's Backlog section with this service's
+     US-N.M/TD-N.M items from $GLUON_DIR/docs/user-stories.md and TECHNICAL_DEBT.md
   4. When ready to push:
      gh repo create beckfordp/$OUT_NAME --public --source=. --remote=origin --push
      (this initializes its own independent git repo here, under services/ —
