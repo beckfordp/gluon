@@ -8,32 +8,30 @@ sequenceDiagram
     participant F as fulfilment-service
     participant N as notification-service
 
-    Note over G,N: Scenario A — reservation fails (per-item — bulk is TD-7)
+    Note over G,N: Scenario A — reservation fails (bulk, all-or-nothing)
     G->>O: POST /orders {items, shippingAddress, paymentMethodId}
-    O->>I: POST /inventorys/reservations {sku: A, qty, orderItemId}
-    I-->>O: 200 reserved
-    O->>I: POST /inventorys/reservations {sku: B, qty, orderItemId}
-    I-->>O: 409 {error: "Insufficient stock"}
-    O->>I: release already-reserved lines (sku A)<br/>NEW endpoint — compensation
-    O-->>G: 409 {error, reservationFailure {sku: B, reason}}
+    O->>I: POST /inventorys/order-reservations {orderId, items[A, B, C]}
+    I-->>O: 409 {failures: [B insufficient_stock, C unknown_sku]}
+    Note over O,I: Nothing was reserved — no release needed
+    O-->>G: 409 {error, reservationFailures [B, C]}
     Note over O,N: No order row, no OrderStatusChanged, no email
-    G->>G: show failed line + Remove action
-    C->>G: Remove
-    G->>K: DELETE /carts/{id}/items/{sku: B}
+    G->>G: show every failed line + Remove action
+    C->>G: Remove B and C
+    G->>K: DELETE /carts/{id}/items/{sku} (per removed line)
     K-->>G: 200 {items}
     G->>O: retry POST /orders (remaining items)
 
     Note over G,N: Scenario B — authorization declined (synchronous)
     O->>P: POST /payments/authorize {orderId, amountCents, paymentMethodId}
     P-->>O: 402 {error, reason}
-    O->>I: release all reserved lines (compensation)
+    O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 402 {error, paymentFailure {reason}}
     Note over O,N: No order row, no email — customer fixes card<br/>and retries in-session (cart unchanged).<br/>Replaces the old "reservation stays held" gap.
 
     Note over G,N: Scenario B2 — unknown paymentMethodId
     O->>P: POST /payments/authorize {..., paymentMethodId}
     P-->>O: 404 {error: "Payment method not found"}
-    O->>I: release all reserved lines (compensation)
+    O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 400 {error: "Payment method not found"}
 
     Note over G,N: Scenario B3 — payment-service unavailable
@@ -43,13 +41,13 @@ sequenceDiagram
     Note over O,I: Fail fast BEFORE reserving — no inventory calls,<br/>so a payment outage doesn't double inventory load
     Note over G,N: Scenario B3b — authorize call fails mid-request (timeout / 5xx)
     O-xP: POST /payments/authorize
-    O->>I: release all reserved lines (compensation)
+    O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 503 {error: "Payment service unavailable"}
     Note over O,P: If the authorize actually succeeded behind a timeout,<br/>the orphan hold lapses via Scenario C's sweep<br/>(order-service ignores the unknown orderId)
 
     Note over G,N: Scenario B4 — persisting the order fails after a 200 authorize
     O->>O: persist order (transaction fails)
-    O->>I: release all reserved lines (compensation)
+    O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O->>P: void authorization — no endpoint yet,<br/>until then the hold lapses via the sweep
     O-->>G: 500 {error}
 

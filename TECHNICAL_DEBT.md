@@ -297,25 +297,31 @@ release "every reservation for this order" when an authorization expires
 (US-20.3) or a dispatch fails (US-18.3) — the inventory row only tracks
 aggregate `quantityReserved`.
 
-**Decided (2026-10-26):** leave this to the end — it's a performance and
-clean-up improvement, not required for the checkout flow. The gshop checkout
+**Re-decided (2026-10-27): do it now, with Checkout Journey 1** — ADR 0018's
+compensation needs a safe release, and a bulk all-or-nothing reserve
+removes compensation from the stock-failure path entirely. TD-7.1/7.2 →
+inventory-service track; TD-7.3 → order-service Journey 1 track; TD-7.4 →
+gshop track. Contracts: `system-design.md` (`POST
+/inventorys/order-reservations`, `.../{orderId}/release`).
+
+~~**Decided (2026-10-26):** leave this to the end — it's a performance and
+clean-up improvement, not required for the checkout flow.~~ The gshop checkout
 form already handles one failed line at a time with a remove-and-retry loop,
 and that flow stays valid when bulk lands.
 
 ### Tasks
 - [ ] TD-7.1: inventory-service — replace per-item reserve with one bulk,
-      atomic `POST /inventorys/reservations` (`{orderId, items[]}`,
+      atomic `POST /inventorys/order-reservations` (`{orderId, items[]}`,
       all-or-nothing, `409` with all failed lines); add a reservation ledger
-      keyed by `orderId`/`orderItemId` (active/released).
+      keyed by `orderId`/`orderItemId` (active/released). Retire
+      `StockReserved`/`StockReservationFailed` (+ registry artifacts).
 - [ ] TD-7.2: inventory-service — add
-      `POST /inventorys/reservations/release {orderId}` (idempotent), used by
-      auth expiry (US-20.3) and dispatch failure (US-18.3). **Partly pulled
-      forward by ADR 0018 (2026-10-27):** a non-idempotent, item-based
-      `POST /inventorys/reservations/release {items[]}` is built now for
-      checkout compensation; this task makes it ledger-backed and idempotent.
+      `POST /inventorys/order-reservations/{orderId}/release` (idempotent),
+      used by checkout compensation (ADR 0018), auth expiry (US-20.3) and
+      dispatch failure (US-18.3).
 - [ ] TD-7.3: order-service — call bulk reserve once, map the full failure
-      list to the `POST /orders` response, and set `reserved` from the
-      synchronous success instead of the async `StockEventConsumer` path.
+      list to the `POST /orders` `409`, release on later failure; retire
+      `StockEventConsumer` and `OrderReserved` (+ registry artifact).
 - [ ] TD-7.4: gshop — surface every failed line in one pass when the response
       carries multiple failures (UI already supports the remove-and-retry
       loop).

@@ -23,10 +23,9 @@ sequenceDiagram
     P-->>G: 201 {id, last4, brand, expiry}
     G->>O: POST /orders {items, shippingAddress, paymentMethodId}
     O->>O: validate request<br/>mint orderId + orderItemIds in memory<br/>(nothing persisted yet)
-    loop for each line item
-        O->>I: POST /inventorys/reservations {sku, qty, orderItemId}
-        I-->>O: 200 reserved
-    end
+    O->>I: POST /inventorys/order-reservations {orderId, items[]}
+    I->>I: reserve ALL lines or none (one transaction)<br/>write reservation ledger
+    I-->>O: 201 {orderId, items}
     O->>P: POST /payments/authorize {orderId, amountCents, paymentMethodId}
     P->>P: authorize via simulated provider
     P-->>O: 200 {authId, expiresAt}

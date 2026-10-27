@@ -3,6 +3,13 @@
 ## Status
 Accepted (2026-10-27)
 
+> **Same-day refinement 2026-10-27:** TD-7 is brought forward alongside this
+> ADR. Reservation becomes one all-or-nothing bulk call with a reservation
+> ledger, so a stock failure reserves nothing and needs no compensation,
+> and release is by `orderId` and idempotent. `StockReserved`/
+> `StockReservationFailed` and `OrderReserved` are retired. Decisions 1–3
+> below are worded for that shape.
+
 ## Context
 The 2026-10-26 checkout design (`system-design.md`, Checkout Journeys 1–5)
 had order-service persist the order as `PENDING` on `POST /orders`, then
@@ -29,19 +36,23 @@ the problems with that shape:
 ## Decision
 1. **An order exists only once it is authorized.** order-service validates
    the request and mints `orderId`/`orderItemId`s in memory. It reserves
-   every line, then authorizes, and only then persists the order and its
+   every line in one all-or-nothing call
+   (`POST /inventorys/order-reservations`), then authorizes, and only then persists the order and its
    items as `AUTHORIZED`, plus any outbox rows, in one transaction. `PENDING`,
    `RESERVED` and `RESERVATION_FAILED` stop being order states. `PAYMENT_FAILED`
    remains, but only for capture failure after dispatch (Journey 4).
 2. **Failed checkouts return an error and create nothing**: `400` for an
    invalid request or unknown payment method, `402` + `paymentFailure` for
-   a decline, `409` + `reservationFailure` for insufficient stock, `503`
+   a decline, `409` + `reservationFailures` (every failed line) for
+   insufficient stock or unknown skus, `503`
    when payment-service is unavailable, and `500` if the final persist
    fails. No order row, no `OrderStatusChanged`, no email.
-3. **Compensate on every failure after a reservation**: order-service
-   releases the lines it already reserved. This needs a new
-   inventory-service reservation-release endpoint (the release Scenario D
-   already assumed, brought forward). If the final persist fails after a
+3. **Compensate on every failure after the reserve succeeded**:
+   order-service releases the order's reservations with
+   `POST /inventorys/order-reservations/{orderId}/release` — ledger-backed
+   and idempotent, so it is safe to retry (TD-7.2, the release Scenario D
+   already assumed, brought forward). A stock failure reserved nothing and
+   needs no release. If the final persist fails after a
    `200` authorize, order-service should also void the authorization;
    payment-service has no void endpoint yet, so until it does the hold
    lapses via Journey 5's expiry sweep.
@@ -56,7 +67,8 @@ the problems with that shape:
   orders, and checkout-failure emails go away.
 - Throughput at peak: no phantom holds, so sellable stock stays accurate.
   One write transaction per order instead of two. Failure paths cost extra
-  release calls, mitigated by decision 4 and a bulk release endpoint.
+  a release call, mitigated by decision 4. One bulk reserve round trip per
+  checkout instead of one per line.
 - **Known gap: crash between reserve and persist.** With no `PENDING` row
   there is nothing to reconcile from if an order-service instance dies
   mid-request. The authorization lapses via the expiry sweep, but the
@@ -71,8 +83,10 @@ the problems with that shape:
   `payment_failed`), all four checkout diagrams, and US-11/US-14 text.
   gshop maps status codes instead of reading failure fields off a `201`;
   its signed-off prototype UX is unchanged.
-- New work: an inventory-service release endpoint, the order-service track
-  (Journey 1), and a gshop track. notification-service keeps its
+- New work: an inventory-service track (bulk reserve + ledger + release,
+  TD-7.1/7.2, retiring the stock events), the order-service track
+  (Journey 1, including TD-7.3 and retiring `OrderReserved`/
+  `StockEventConsumer`), and a gshop track (including TD-7.4). notification-service keeps its
   `reservation_failed`/`payment_failed` handlers until a cleanup, since
   `payment_failed` still arrives from capture failure.
 - Supersedes the parts of ADR 0011's 2026-10-26 amendment and of
