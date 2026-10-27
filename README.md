@@ -33,8 +33,7 @@ gluon/
 │   └── terraform/       EKS/VPC/ECR provisioning (empty until there's an ADR for it)
 ├── environments/    local/dev/staging/prod config — no secrets committed
 ├── specs/           codegen field-specs
-├── backlogs/        sliced, numbered (US-N.M) per-repo backlog
-└── prototype/       the React UI prototype
+└── backlogs/        sliced, numbered (US-N.M) per-repo backlog
 ```
 
 ## Services
@@ -128,9 +127,3 @@ with a real constraint when it references a row in the *same* database.
    paste `backlogs/<name>.md`'s items into `conductor/tracks.md`'s
    `## Backlog` — same pattern as a service, once there's real feature
    work to track beyond the initial scaffold.
-
-## Prototype
-
-`prototype/storefront.html` — a clickable React prototype (mock data) walking
-all eight user stories, published as the "Gluon Storefront" Claude Artifact.
-Not wired to any real service yet.

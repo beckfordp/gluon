@@ -193,6 +193,9 @@ own line. See each repo's own `git log` for full detail either way.
   `inventory-events`), the per-item reserve call, and `OrderReserved` —
   registry artifact `order-events-OrderReserved` deleted. TD-7.5
   (inventory cleanup) unblocked.
+- `prototype/storefront.html`: the mock-only storefront design reference.
+  gshop is the working client, so `docs/system-design.md`'s "UI prototype"
+  section and every live reference were removed as well.
 
 ### Changed
 - `payment-service`: `PaymentStatus.Settled` renamed `Captured` (V7

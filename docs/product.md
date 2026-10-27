@@ -141,6 +141,6 @@ one is an account-level decision, deliberately out of scope for now).
 - [`system-design.md`](./system-design.md)
 - [`adr/`](./adr/) — architecture decisions
 - [`../README.md`](../README.md) — the generated-services working directory
-  (specs, generate script, per-repo backlogs, UI prototype)
+  (specs, generate script, per-repo backlogs)
 - [`../PLAN.md`](../PLAN.md) — the phased, cross-repo execution order
   (walking skeleton)
