@@ -556,10 +556,12 @@ changes determine real end-to-end verification.
       decline stays synchronous (payment-service) — done 2026-10-27 (`checkout-authorize_20261027`)
 - [ ] US-11.1 — shipping address on `POST /orders` request/persistence/
       response (order-service)
-- [ ] TD-7.1/7.2 — bulk all-or-nothing `POST /inventorys/order-reservations`
-      + reservation ledger + idempotent `.../{orderId}/release`; retire
-      `StockReserved`/`StockReservationFailed` and their registry artifacts;
-      per-item endpoint kept until order-service switches (inventory-service)
+- [x] TD-7.1/7.2 — bulk all-or-nothing `POST /inventorys/order-reservations`
+      + reservation ledger + idempotent `.../{orderId}/release`
+      (inventory-service) — done 2026-10-27 (`order-reservations_20261027`)
+- [ ] TD-7.5 — after TD-7.3: remove per-item endpoint, retire
+      `StockReserved`/`StockReservationFailed` and their registry artifacts
+      (inventory-service)
 - [ ] US-14.2 — new `PaymentClient[F]` in order-service (mirrors
       `InventoryClient`, circuit-breaker-wrapped), called synchronously
       right after the bulk reserve succeeds (TD-7.3). Per ADR 0018: order persisted as

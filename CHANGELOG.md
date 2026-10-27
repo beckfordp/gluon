@@ -154,6 +154,13 @@ own line. See each repo's own `git log` for full detail either way.
   its `PaymentAuthorized` outbox row in one transaction, or a `Failed`
   payment on decline (`402`, nothing published). A failed write after
   approval voids the gateway hold.
+- `inventory-service`: bulk order reservations (TD-7.1/7.2, ADR 0018).
+  `POST /inventorys/order-reservations` reserves every line or none in one
+  transaction (skus locked in sorted order), `409` lists every failed line,
+  idempotent per `orderId`; an `order_reservations` ledger backs
+  `POST /inventorys/order-reservations/{orderId}/release` (always `204`).
+  No events published. Per-item endpoint and stock events stay until
+  order-service switches (TD-7.5).
 
 ### Changed
 - `payment-service`: `PaymentStatus.Settled` renamed `Captured` (V7

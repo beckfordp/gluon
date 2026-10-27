@@ -310,15 +310,21 @@ form already handles one failed line at a time with a remove-and-retry loop,
 and that flow stays valid when bulk lands.
 
 ### Tasks
-- [ ] TD-7.1: inventory-service — replace per-item reserve with one bulk,
-      atomic `POST /inventorys/order-reservations` (`{orderId, items[]}`,
-      all-or-nothing, `409` with all failed lines); add a reservation ledger
-      keyed by `orderId`/`orderItemId` (active/released). Retire
-      `StockReserved`/`StockReservationFailed` (+ registry artifacts).
-- [ ] TD-7.2: inventory-service — add
+- [x] TD-7.1: inventory-service — bulk, atomic
+      `POST /inventorys/order-reservations` (`{orderId, items[]}`,
+      all-or-nothing, `409` with all failed lines) + `order_reservations`
+      ledger (active/released) — **done 2026-10-27**
+      (`order-reservations_20261027`).
+- [x] TD-7.2: inventory-service —
       `POST /inventorys/order-reservations/{orderId}/release` (idempotent),
       used by checkout compensation (ADR 0018), auth expiry (US-20.3) and
-      dispatch failure (US-18.3).
+      dispatch failure (US-18.3) — **done 2026-10-27**
+      (`order-reservations_20261027`).
+- [ ] TD-7.5: inventory-service cleanup, after TD-7.3 — remove the per-item
+      `POST /inventorys/reservations`, retire `StockReserved`/
+      `StockReservationFailed` and delete their registry artifacts. Split
+      from TD-7.1: order-service's `StockEventConsumer` still depends on
+      them until it switches.
 - [ ] TD-7.3: order-service — call bulk reserve once, map the full failure
       list to the `POST /orders` `409`, release on later failure; retire
       `StockEventConsumer` and `OrderReserved` (+ registry artifact).

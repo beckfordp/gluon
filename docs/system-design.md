@@ -82,7 +82,7 @@ order-service, US-4.2, done; callee: inventory-service, US-4.1, done;
 
 **`POST /inventorys/order-reservations`** — bulk reserve (caller:
 order-service, Checkout Journey 1; callee: inventory-service; TD-7.1,
-**decided 2026-10-27, not yet built**; replaces the per-item endpoint
+**decided 2026-10-27, built 2026-10-27**; replaces the per-item endpoint
 above, which is removed once order-service switches):
 - Request: `{"orderId": "string (UUID)", "items": [{"orderItemId": "string (UUID)", "sku": "string", "quantity": "int (> 0)"}]}`
 - **All-or-nothing**, one transaction: every line is reserved, or none.
@@ -94,6 +94,10 @@ above, which is removed once order-service switches):
   reservations returns them unchanged, so a retried request can't double-reserve.
 - `409`: `{"error": "Insufficient stock", "failures": [{"orderItemId": "string", "sku": "string", "reason": "insufficient_stock | unknown_sku"}]}`
   — **every** failing line, not just the first; nothing reserved.
+- `409`: `{"error": "Order reservation already released"}` — the `orderId`'s
+  reservation was already released; a late retry must not be told stock is
+  held. order-service mints a fresh `orderId` per attempt, so it only sees
+  this on a retry racing its own compensation.
 - `400`: `{"error": "string"}` — empty `items`, non-positive `quantity`,
   duplicate `orderItemId`.
 - Publishes nothing — the `inventory-events` stock-reservation events are
@@ -101,8 +105,8 @@ above, which is removed once order-service switches):
 
 **`POST /inventorys/order-reservations/{orderId}/release`** (caller:
 order-service — checkout compensation per ADR 0018, later dispatch failure
-US-18.3; inventory-service itself on auth expiry US-20.3; TD-7.2, **not
-yet built**):
+US-18.3; inventory-service itself on auth expiry US-20.3; TD-7.2, **built
+2026-10-27**):
 - Releases every active ledger line for `orderId` (returns its quantity to
   `quantityAvailable`) and marks the lines `released`, in one transaction.
 - `204` — always, including an unknown or already-released `orderId`:
