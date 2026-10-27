@@ -545,8 +545,8 @@ changes determine real end-to-end verification.
 - [ ] `PaymentGatewayClient[F]` algebra (`authorize`/`capture`/`void`) +
       `simulated` interpreter, outcome keyed by card token via a
       PureConfig map (payment-service)
-- [ ] `PaymentStatus` gains `Authorized`; `Settled` redefined to mean
-      *captured* (payment-service)
+- [ ] `PaymentStatus` gains `Authorized`; `Settled` renamed `Captured`
+      (ADR 0011 amendment 2026-10-27) (payment-service)
 - [ ] US-13.1 — `PaymentMethod` domain + store + simulated tokenizer
       (payment-service)
 - [ ] US-13.2 — `POST /payments/methods` + `US-12.1` billing address

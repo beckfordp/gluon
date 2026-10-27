@@ -178,8 +178,8 @@ for something that might never be fulfilled.
   semantics. See "Payment auth timing" in `system-design.md` (decided
   2026-10-26: authorization is synchronous, not event-driven).
 - `PaymentStatus` gains `Authorized`, sitting between `Pending` and
-  `Settled`; `Settled` now specifically means *captured*, not just
-  "charge simulated."
+  `Captured` (renamed from `Settled` 2026-10-27, ADR 0011 amendment) —
+  money actually moved, not just "charge simulated."
 - The *authorize* half (US-14.1/14.2) depends only on stock reservation
   succeeding and can land on its own. The *capture* half was blocked on
   US-15 below ("there's nothing to trigger it on yet") — now unblocked by

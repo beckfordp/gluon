@@ -12,6 +12,15 @@ Proposed
 > Authoritative contracts: `system-design.md`'s "REST contracts" and
 > "Sync vs. async boundaries".
 
+> **Amendment 2026-10-27:** Decision 2's "`Settled` is redefined to mean
+> *captured*" is replaced by renaming the status: `Settled` → `Captured`
+> (`"captured"`). Redefining kept a word that no longer matched the
+> `PaymentCaptured` event or the gateway's `capture` operation, and that in
+> card processing means something later still (funds transferred, after
+> capture). No producer set `Settled` after Rework 7, so the rename cost one
+> migration (payment-service `V7__rename_settled_to_captured.sql`, track
+> `checkout-authorize_20261027`).
+
 ## Context
 `payment-service`'s `OrderReservedConsumer` (US-6.1, done 2026-10-02) treats
 authorization and capture as the same instant: on `OrderReserved` it does
@@ -71,8 +80,8 @@ simulation" open design question):
    `PaymentAuthorized`/`PaymentAuthorizationFailed` event types on
    `payment-events`, same envelope per ADR 0009), and **capture**, triggered
    separately. `PaymentStatus` gains `Authorized`, sitting between `Pending`
-   and `Settled`; `Settled` is redefined to mean *captured*, not merely
-   "charge simulated."
+   and `Captured` (formerly `Settled` — renamed, see amendment 2026-10-27),
+   which means money actually moved, not merely "charge simulated."
 3. **Build only the authorize half now.** US-14.1/US-14.2 (authorize on
    `OrderReserved`, order-service consumes the outcome) depend only on the
    existing `OrderReserved` event and are buildable today. Capture
