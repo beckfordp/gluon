@@ -188,7 +188,7 @@ for something that might never be fulfilled.
 ### Tasks
 - [x] US-14.1: `POST /payments/authorize` — authorize (not settle) via `PaymentGatewayClient[F]`, publish `PaymentAuthorized` on success only; decline stays synchronous, nothing published (payment-service)
 - [x] US-14.2: order-service's checkout handler calls `/payments/authorize` synchronously (new `PaymentClient[F]`, circuit-breaker-wrapped, mirrors `InventoryClient`) right after reservation succeeds; persists the order as `authorized` only on success — any failure releases its reservations and returns an error with no order row (ADR 0018) (order-service) — done 2026-10-27 (`checkout-journey1_20261027`)
-- [ ] US-14.3: capture on shipment — **unblocked**, see US-19 (payment-service)
+- [x] US-14.3: capture on shipment — see US-19 (payment-service) — done 2026-10-28 (`capture-on-dispatch_20261028`)
 - [x] US-14.4: checkout submit orchestration — create payment method → `POST /orders`; `201` → confirmation; `402` → inline `paymentFailure.reason` with card editable and retry; `409` → every failed line with its own Remove (from the cart) / retry; `400`/`503`/`500` → error (gshop) — done 2026-10-27 (`checkout-real-wiring_20261027`)
 
 **Superseded 2026-10-27 (ADR 0018):** the earlier accepted gap (a decline

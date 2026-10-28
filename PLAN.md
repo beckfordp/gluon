@@ -571,7 +571,7 @@ changes determine real end-to-end verification.
       artifact) and the per-item reserve call (order-service) — done 2026-10-27 (`checkout-journey1_20261027`).
       Fail-fast on an open breaker deferred (TD-9); authorize retries off
       until payment-service dedupes by `orderId` (TD-10)
-- [ ] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service)
+- [x] US-14.3 — capture on shipment — see Checkout Journey 4 (payment-service) — done 2026-10-28 (`capture-on-dispatch_20261028`)
 
 **gshop UI**
 - [x] US-11.2 — shipping address section + validation; displayed on
@@ -598,8 +598,8 @@ error; prototype implemented and usability-signed-off 2026-10-26.
 **Exit criteria:** prototype UX signed off in mock mode; US-11.1/12.1/
 13.1/13.2/14.1/14.2 done and unit-tested; real-path checkout verified
 end-to-end for authorised, reservation-failed, and declined cards once the
-service contracts land (US-14.3 stays open, tracked against Checkout
-Journey 4).
+service contracts land (US-14.3 closed by Checkout Journey 4,
+2026-10-28).
 `system-design.md`'s REST and Kafka contracts updated (done 2026-10-26,
 ahead of the code; reshaped 2026-10-27 by ADR 0018 — no order row until
 authorized); TD-7 (bulk reserve + ledger) brought forward into this
