@@ -657,8 +657,10 @@ Browser click-through of the real auth UI remains available at
 `notification-service`, `gshop`.
 
 **Depends on:** Checkout Journey 1's `PaymentAuthorized` event.
-- [ ] Prototype order processing UI (gshop)
-- [ ] Manually review and approve prototype.
+- [x] Prototype order processing UI (gshop) — done 2026-10-28
+      (`fulfilment-prototype_20261028`: mock queue, full state machine,
+      Order History preview)
+- [x] Manually review and approve prototype. — approved 2026-10-28
 - [ ] Generate `fulfilment-service` via `pure-service-generator`
 - [ ] US-17.1 — consume `PaymentAuthorized`, create pick/pack task
       (fulfilment-service)
