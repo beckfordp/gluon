@@ -615,6 +615,8 @@ journey; crash-orphaned reservations accepted as TD-8.
 **Depends on:** nothing — fully independent of Journeys 1/3/4/5, can be
 built in parallel with any of them.
 
+- [ ] Prototype UI (gshop) changes for manual review
+- [ ] Manually review and verify UI changes
 - [ ] Generate `user-service` via `pure-service-generator`
 - [ ] US-16.1 — `POST /auth/signup` — create user, issue token
       (user-service)
