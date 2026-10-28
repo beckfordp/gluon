@@ -248,6 +248,7 @@ dispatched, so it's actually shipped to me.
 - [x] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service) — done 2026-10-28 (`dispatch-confirmed_20261028`)
 - [x] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service) — done 2026-10-28 (`fulfilment-emails_20261028`)
 - [x] US-17.6: Order History displays the `Dispatched` status (gshop) — done 2026-10-28 (`fulfilment-history_20261028`)
+- [x] US-17.7: Admin order-processing queue reads/drives the real fulfilment-service operator API (gshop) — done 2026-10-28 (`fulfilment-queue_20261028`)
 
 ## US-18 — Dispatch failure
 As a customer, if my order can't actually be dispatched (a warehouse
