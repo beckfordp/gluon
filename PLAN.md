@@ -725,9 +725,10 @@ which Order History renders); the mock Order History preview was removed.
       status `PaymentFailed`, flagged for manual reconciliation, not
       automatic inventory release (order-service) — done 2026-10-28
       (`capture-outcome_20261028`; `order_reconciliation` table, no release)
-- [ ] US-19.4 — notification-service sends receipt email on
+- [x] US-19.4 — notification-service sends receipt email on
       `PaymentCaptured`, "payment problem on dispatch" email on capture
-      failure (notification-service)
+      failure (notification-service) — done 2026-10-28
+      (`payment-emails_20261028`)
 - [ ] US-19.5 — Order History displays `Confirmed` and capture-failure
       `Payment failed` (gshop)
 

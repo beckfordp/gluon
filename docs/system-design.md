@@ -33,7 +33,7 @@ library test fixtures only and are not reused.
 | order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`authorized`/`confirmed`/`payment_failed`/`cancelled`/`dispatched`/`dispatch_failed`) + `order_items` schema/FK done; US-4.2 done, superseded by TD-7.3's bulk reserve; US-5.2 done, then retired under ADR 0018 (`StockEventConsumer` removed 2026-10-27); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (**done 2026-10-27**) adds a required shipping address to `POST /orders`; US-14.2 + TD-7.3 (**done 2026-10-27**, `checkout-journey1_20261027`): whole-order reserve, then a synchronous `PaymentClient[F]` call to `POST /payments/authorize`, resilience-wrapped like `InventoryClient`; **ADR 0018**: the order is persisted as `authorized` only after authorize succeeds — failed checkouts create no row and release their reservations; US-17/18 extend `OrderStatus` with `Dispatched`/`DispatchFailed` (**done 2026-10-28**); US-19 capture outcomes (**done 2026-10-28**, `capture-outcome_20261028`) move `authorized`/`dispatched` → `confirmed`/`payment_failed`, the failure path writing an `order_reconciliation` row and deliberately not releasing inventory; US-20 adds `Cancelled` handling (not yet built) | Postgres | read-through cache (order history, US-8.1) | consumes `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed` and `DispatchFailed` — **built 2026-10-28**, US-17.4/18.3; authorized→dispatched/dispatch_failed only); publishes `order-events` (`OrderStatusChanged`; `OrderReserved` retired 2026-10-27) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique; the per-item endpoint was **removed 2026-10-27, TD-7.5**); US-5.1 done then **retired** with the stock events (TD-7.5). Bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release are the only reservation surface. US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes **nothing** (TD-7.5; `inventory-events` has no event types — the `StockReserved`/`StockReservationFailed` artifacts were deleted); consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | payment-service | US-6.1 done 2026-10-02 (consumed `OrderReserved`, created+settled a `Payment` via `PaymentStore`, published `PaymentSettled`/`PaymentFailed`) — **superseded 2026-10-27** by US-14/19/20 (ADR 0011): authorization is a synchronous REST call. US-18.2 (**done 2026-10-28**, `void-authorization_20261028`) consumes `fulfilment-events: DispatchFailed` and voids the held authorization (`Voided` status). US-13.1/13.2 + US-14.1 (**done 2026-10-27**, `checkout-authorize_20261027`) add a `PaymentMethod` store, the gshop-facing `POST /payments/methods`, and `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); the `OrderReserved` consumer and `PaymentSettled` are retired (Rework 7). Capture is async on `fulfilment-events: DispatchConfirmed` (**done 2026-10-28**, `capture-on-dispatch_20261028`: US-19.1), and a background sweep publishes expired authorizations (not yet built) | Postgres | idempotency via `UNIQUE(order_id)` + the conditional `authorized → captured\|failed` update (US-19.1, done 2026-10-28); no Redis keys | consumes `fulfilment-events` (`DispatchConfirmed` built 2026-10-28 — US-19.1; `DispatchFailed` built 2026-10-28 — US-18.2); publishes `payment-events` (`PaymentAuthorized` on authorize-success — built 2026-10-27; `PaymentCaptured`/`PaymentFailed` on capture — built 2026-10-28, US-19.1; `PaymentAuthorizationExpired` from the sweep — contract registered ahead of its producer, Rework 7) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
-| notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4 (**done 2026-10-28**, `welcome-email_20261028`) consumes `UserRegistered`; US-17.5/18.4 (**done 2026-10-28**, `fulfilment-emails_20261028`) consume `DispatchConfirmed`/`DispatchFailed` and send the shipped / dispatch-failed emails (stub recipient = orderId); US-19.4/20.5 extend it (not yet built) | — | — | consumes `order-events` (`OrderStatusChanged`), `user-events` (`UserRegistered`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built) |
+| notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4 (**done 2026-10-28**, `welcome-email_20261028`) consumes `UserRegistered`; US-17.5/18.4 (**done 2026-10-28**, `fulfilment-emails_20261028`) consume `DispatchConfirmed`/`DispatchFailed` and send the shipped / dispatch-failed emails (stub recipient = orderId); US-19.4 (**done 2026-10-28**, `payment-emails_20261028`) consumes `PaymentCaptured`/`PaymentFailed` and sends the receipt / payment-problem emails (same stub recipient); US-20.5 extends it (not yet built) | — | — | consumes `order-events` (`OrderStatusChanged`), `user-events` (`UserRegistered`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`), `payment-events` (`PaymentCaptured`/`PaymentFailed` — **built 2026-10-28**) |
 | user-service | US-16.1–16.3 (**done 2026-10-28**, `signup-login_20261028`) — `POST /auth/signup`, `POST /auth/login`; PBKDF2 password hashes, opaque 1h access / 30d refresh tokens stored hashed | Postgres (`user`) | — | publishes `user-events` (`UserRegistered`, outbox + Debezium); consumes none |
 | fulfilment-service | US-17.1–17.3 + US-18.1 (**done 2026-10-28**, `fulfilment-core_20261028`) — consumes `PaymentAuthorized`, snapshots the order via `GET /orders/{id}`, tracks `PENDING → PICKING → PACKED → DISPATCHED`/`DISPATCH_FAILED`; internal operator REST + config-gated `simulate-next` | Postgres (`fulfilment`) | — | consumes `payment-events` (`PaymentAuthorized`; `PaymentAuthorizationExpired` later in US-20.4); publishes `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, outbox + Debezium) |
 
@@ -263,13 +263,15 @@ topic subscription to filter event types for it.
   synchronous, no Kafka event, see "Payload contracts"),
   `PaymentCaptured`/`PaymentFailed` (on `fulfilment-events:
   DispatchConfirmed` — `PaymentFailed` reused, distinguished by a `reason`
-  field, not a second event type) and `PaymentAuthorizationExpired`
-  (background sweep) — the last two registered ahead of their producers
-  (Rework 7), not yet built. Consumers:
+  field, not a second event type; **built 2026-10-28**, US-19.1) and
+  `PaymentAuthorizationExpired` (background sweep — contract registered
+  ahead of its producer, Rework 7, not yet built). Consumers:
   order-service (`PaymentCaptured`/`PaymentAuthorizationExpired`;
-  authorize is learned synchronously), fulfilment-service
+  authorize is learned synchronously), notification-service
+  (`PaymentCaptured`/`PaymentFailed` — receipt / payment-problem emails,
+  **built 2026-10-28**, US-19.4), fulfilment-service
   (`PaymentAuthorized`/`PaymentAuthorizationExpired`, not yet built),
-  and later inventory-service/notification-service. `PaymentSettled` is
+  and later inventory-service. `PaymentSettled` is
   retired (Rework 7).
 - **`user-events`** — producer: user-service (built 2026-10-28, outbox +
   Debezium); consumer: notification-service (built 2026-10-28). Event
@@ -416,7 +418,8 @@ no longer writes outbox rows at all (TD-7.5, publishes nothing); its table
 and connector remain inert.
 
 **`PaymentFailed`** (producer: payment-service, capture-decline only;
-consumers: order-service, notification-service):
+consumers: order-service; notification-service **built 2026-10-28**,
+US-19.4):
 ```json
 {
   "orderId": "string (UUID) — order-service's own order id; what its OrderStatusChanged publish needs to correlate back to",
@@ -465,7 +468,8 @@ react to a decline), reintroduce this as a real event then, not
 speculatively now.
 
 **`PaymentCaptured`** (producer: payment-service, US-19.1, **built
-2026-10-28**; consumer: order-service, US-19.2, **built 2026-10-28**):
+2026-10-28**; consumers: order-service, US-19.2, **built 2026-10-28**;
+notification-service, US-19.4, **built 2026-10-28**):
 ```json
 {
   "orderId": "string (UUID)",

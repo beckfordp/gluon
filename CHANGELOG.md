@@ -275,6 +275,11 @@ own line. See each repo's own `git log` for full detail either way.
   an `order_reconciliation` row (V12) for manual reconciliation and
   deliberately does not release inventory. Live-verified: capture, duplicate
   redelivery, decline + reconciliation flag + unchanged reservations.
+- `notification-service`: US-19.4 (`payment-emails_20261028`) — consumes
+  `payment-events` `PaymentCaptured`/`PaymentFailed` and sends the receipt /
+  payment-problem emails (stub recipient = orderId); fourth supervised
+  consumer, AsyncAPI + registry updated. Live-verified with synthetic events
+  and a real dispatched order.
 
 ### Changed
 - `frontends/gshop`: Order History now shows the real order-service
