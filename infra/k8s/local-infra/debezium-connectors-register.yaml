@@ -77,6 +77,28 @@ data:
       "transforms.outbox.table.expand.json.payload": "false",
       "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
     }
+  user-outbox-connector.json: |
+    {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "user-postgres",
+      "database.port": "5432",
+      "database.user": "user",
+      "database.password": "user",
+      "database.dbname": "user",
+      "topic.prefix": "user-outbox",
+      "plugin.name": "pgoutput",
+      "slot.name": "debezium_user",
+      "publication.autocreate.mode": "filtered",
+      "table.include.list": "public.outbox_events",
+      "transforms": "outbox",
+      "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+      "transforms.outbox.route.by.field": "aggregate_id",
+      "transforms.outbox.route.topic.replacement": "user-events",
+      "transforms.outbox.table.field.event.key": "aggregate_id",
+      "transforms.outbox.table.field.event.payload": "payload",
+      "transforms.outbox.table.expand.json.payload": "false",
+      "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
+    }
 ---
 apiVersion: batch/v1
 kind: Job

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-postgres
+  namespace: gluon-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-postgres
+  template:
+    metadata:
+      labels:
+        app: user-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          args: ["-c", "wal_level=logical"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: "user"
+            - name: POSTGRES_USER
+              value: "user"
+            - name: POSTGRES_PASSWORD
+              value: "user"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "user"]
+            initialDelaySeconds: 2
+            periodSeconds: 2
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-postgres
+  namespace: gluon-local
+spec:
+  selector:
+    app: user-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

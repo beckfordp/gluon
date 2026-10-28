@@ -1,0 +1,13 @@
+image:
+  repository: user-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: user-postgres
+  - name: POSTGRES_DB
+    value: user
+  - name: POSTGRES_USER
+    value: user
+  - name: POSTGRES_PASSWORD
+    value: user

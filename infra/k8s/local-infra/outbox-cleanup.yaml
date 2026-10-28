@@ -88,3 +88,32 @@ spec:
                 - payment
                 - -c
                 - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: user-outbox-cleanup
+  namespace: gluon-local
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  value: "user"
+              command:
+                - psql
+                - -h
+                - user-postgres
+                - -U
+                - user
+                - -d
+                - user
+                - -c
+                - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"

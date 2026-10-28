@@ -34,7 +34,7 @@ library test fixtures only and are not reused.
 | inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique; the per-item endpoint was **removed 2026-10-27, TD-7.5**); US-5.1 done then **retired** with the stock events (TD-7.5). Bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release are the only reservation surface. US-20.3 (not yet built) adds a `payment-events` consumer to release reservations on auth expiry | Postgres | — | publishes **nothing** (TD-7.5; `inventory-events` has no event types — the `StockReserved`/`StockReservationFailed` artifacts were deleted); consumes `payment-events` (`PaymentAuthorizationExpired`, not yet built) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | payment-service | US-6.1 done 2026-10-02 (consumed `OrderReserved`, created+settled a `Payment` via `PaymentStore`, published `PaymentSettled`/`PaymentFailed`) — **superseded 2026-10-27** by US-14/19/20 (ADR 0011): authorization is a synchronous REST call. US-13.1/13.2 + US-14.1 (**done 2026-10-27**, `checkout-authorize_20261027`) add a `PaymentMethod` store, the gshop-facing `POST /payments/methods`, and `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); the `OrderReserved` consumer and `PaymentSettled` are retired (Rework 7). Capture stays async on `fulfilment-events: DispatchConfirmed`, and a background sweep publishes expired authorizations (both not yet built) | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built); publishes `payment-events` (`PaymentAuthorized` on authorize-success — built 2026-10-27; `PaymentCaptured`/`PaymentFailed` on capture and `PaymentAuthorizationExpired` from the sweep — contracts registered ahead of their producers, Rework 7) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4/17.5/18.4/19.4/20.5 extend it (not yet built) to cover the new fulfilment-journey statuses/events below | — | — | consumes `order-events` (`OrderStatusChanged`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built), `user-events` (`UserRegistered`, not yet built) |
-| user-service | new 2026-10-26 (US-16, not yet built) — signup/login, issues a token | Postgres (assumed — not yet decided) | — | publishes `user-events` (eventType `UserRegistered`) |
+| user-service | US-16.1–16.3 (**done 2026-10-28**, `signup-login_20261028`) — `POST /auth/signup`, `POST /auth/login`; PBKDF2 password hashes, opaque 1h access / 30d refresh tokens stored hashed | Postgres (`user`) | — | publishes `user-events` (`UserRegistered`, outbox + Debezium); consumes none |
 | fulfilment-service | new 2026-10-26 (US-17/18, not yet built) — pick/pack/dispatch | Postgres (assumed — not yet decided) | — | consumes `payment-events` (`PaymentAuthorized`), `payment-events` (`PaymentAuthorizationExpired`, cancels in-flight pick/pack); publishes `fulfilment-events` (eventType `DispatchConfirmed`/`DispatchFailed`) |
 
 ## Sync vs. async boundaries
@@ -201,18 +201,26 @@ above):
 - `404`: `{"error": "Order not found"}`.
 
 **`POST /auth/signup`** (caller: `gshop`; callee: user-service, US-16.1,
-not yet built):
-- Request: `{"email": "string", "password": "string"}` — exact shape TBD
-  when built.
-- `201`: `{"userId": "string (UUID)", "token": "string"}`.
+**built 2026-10-28**):
+- Request: `{"email": "string", "password": "string"}` — email normalized
+  (trimmed, lower-cased); password at least 8 characters.
+- `201`: `{"userId": "string (UUID)", "token": "string"}` — the token is an
+  opaque 1-hour access token, returned once (only its SHA-256 hash is
+  stored).
+- `400`: `{"error": "string"}` — invalid email or password too short.
+- `409`: `{"error": "An account with this email already exists"}`.
 - Publishes `user-events: UserRegistered` (see "Payload contracts" below)
-  on success.
+  in the same transaction as the account insert.
 
 **`POST /auth/login`** (caller: `gshop`; callee: user-service, US-16.2,
-not yet built):
+**built 2026-10-28**):
 - Request: `{"email": "string", "password": "string"}`.
-- `200`: `{"token": "string", "refreshToken": "string"}`.
-- `401`: invalid credentials — exact error shape TBD when built.
+- `200`: `{"token": "string", "refreshToken": "string"}` — opaque access
+  (1h) and refresh (30d) tokens, returned once and stored hashed. No refresh
+  endpoint exists yet, so the refresh token cannot be exchanged.
+- `400`: `{"error": "string"}` — malformed email or blank password.
+- `401`: `{"error": "Email or password is incorrect"}` — the same response
+  for an unknown email and a wrong password. Publishes nothing.
 
 No contract documented yet for any other cross-service REST call — add one
 here, in this same format, whenever a new one is built.
@@ -250,8 +258,8 @@ topic subscription to filter event types for it.
   (`PaymentAuthorized`/`PaymentAuthorizationExpired`, not yet built),
   and later inventory-service/notification-service. `PaymentSettled` is
   retired (Rework 7).
-- **`user-events`** (new 2026-10-26, US-16, not yet built) — producer:
-  user-service; consumer: notification-service. Event types:
+- **`user-events`** — producer: user-service (built 2026-10-28, outbox +
+  Debezium); consumer: notification-service (not yet built). Event types:
   `UserRegistered`.
 - **`fulfilment-events`** (new 2026-10-26, US-17/18, not yet built) —
   producer: fulfilment-service; consumers: order-service, payment-service,
@@ -496,7 +504,7 @@ authorization (the first real use of `PaymentGatewayClient[F]`'s `void`
 operation, ADR 0011); order-service consumes it to set `DispatchFailed`
 status and release inventory reservations.
 
-**`UserRegistered`** (producer: user-service, US-16.3, not yet built;
+**`UserRegistered`** (producer: user-service, US-16.3, **built 2026-10-28**;
 consumer: notification-service, US-16.4, not yet built):
 ```json
 {
