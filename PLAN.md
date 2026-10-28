@@ -619,14 +619,16 @@ built in parallel with any of them.
       (`auth-prototype_20261028`: banner + modal auth, identity badges, saved
       addresses; mock-backed)
 - [x] Manually review and verify UI changes — approved by the user 2026-10-28
-- [ ] Generate `user-service` via `pure-service-generator` — scaffold
-      generated 2026-10-28; onboarding (git init, conductor, push) in progress
-- [ ] US-16.1 — `POST /auth/signup` — create user, issue token
-      (user-service)
-- [ ] US-16.2 — `POST /auth/login` — authenticate, issue token +
-      refreshToken (user-service)
-- [ ] US-16.3 — publish `user-events: UserRegistered` on signup
-      (user-service)
+- [x] Generate `user-service` via `pure-service-generator` — scaffold
+      generated and onboarded 2026-10-28 (`beckfordp/user-service`)
+- [x] US-16.1 — `POST /auth/signup` — create user, issue token
+      (user-service) — done 2026-10-28 (`signup-login_20261028`)
+- [x] US-16.2 — `POST /auth/login` — authenticate, issue token +
+      refreshToken (user-service) — done 2026-10-28
+      (`signup-login_20261028`)
+- [x] US-16.3 — publish `user-events: UserRegistered` on signup
+      (user-service) — done 2026-10-28 (`signup-login_20261028`);
+      outbox + Debezium, live-verified
 - [ ] US-16.4 — consume `UserRegistered`, send welcome email
       (notification-service)
 - [ ] US-16.5 — signup/login forms in checkout UI (gshop)

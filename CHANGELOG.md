@@ -212,6 +212,12 @@ own line. See each repo's own `git log` for full detail either way.
 ## 2026-10-28
 
 ### Added
+- `user-service`: generated scaffold onboarded, then reworked to the identity
+  API (US-16.1–16.3): `POST /auth/signup` (201, 409 duplicate, 400 invalid)
+  and `POST /auth/login` (200 access+refresh, generic 401), PBKDF2 password
+  hashes, opaque SHA-256-hashed tokens (1h/30d), and a `UserRegistered`
+  outbox event on `user-events` via Debezium. Local Postgres + connector and
+  `user-service` deploy values added; live-verified end to end.
 - `frontends/gshop`: Checkout Journey 2 auth prototype (US-16.5) —
   mock-backed signup/login in a modal opened from a prominent Checkout
   banner, large User/Anonymous identity badges and a signed-in header on

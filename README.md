@@ -38,7 +38,7 @@ gluon/
 ## Services
 
 order-service · inventory-service · payment-service · notification-service ·
-catalog-service · cart-service
+catalog-service · cart-service · user-service
 
 ## Frontend applications
 
