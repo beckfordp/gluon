@@ -430,3 +430,16 @@ generator is the platform baseline, not the CRUD.
 - [ ] TD-12.2: Adopt the profile for future non-CRUD services only (no
       forced regeneration of existing repos); note the profile in
       `gluon/PLAN.md`'s per-repo setup.
+
+## TD-13 — Order History has no tracking number/carrier
+
+`OrderResponse` exposes only `status`, so gshop's Order History can show
+`Dispatched` but not the tracking number or carrier the customer gets in the
+shipped email. order-service already persists `tracking_no` from
+`DispatchConfirmed`, but the REST contract doesn't return it. US-17.6 asked
+for status only, so this was left out of `fulfilment-history_20261028`.
+
+### Tasks
+- [ ] TD-13.1: add `trackingNo`/`carrier` to `OrderResponse` (nullable),
+      update `system-design.md`'s `GET /orders` contract and order-service
+      tests, then show them on gshop's Dispatched cards.

@@ -650,7 +650,7 @@ Browser click-through of the real auth UI remains available at
 
 ---
 
-## Checkout Journey 3 — Fulfilment: pick, pack, dispatch (US-17/18)
+## Checkout Journey 3 — Fulfilment: pick, pack, dispatch (US-17/18) — DONE 2026-10-28
 
 **Repos:** `fulfilment-service` (new — generate via
 `pure-service-generator`), `order-service`, `payment-service`,
@@ -689,15 +689,20 @@ Browser click-through of the real auth UI remains available at
 - [x] US-18.4 — notification-service consumes `DispatchFailed`, sends
       "dispatch failed" email (notification-service) — done 2026-10-28
       (`fulfilment-emails_20261028`)
-- [ ] US-17.6 — Order History displays `Dispatched` (gshop)
-- [ ] US-18.5 — Order History displays `Dispatch failed` (gshop)
+- [x] US-17.6 — Order History displays `Dispatched` (gshop) — done
+      2026-10-28 (`fulfilment-history_20261028`)
+- [x] US-18.5 — Order History displays `Dispatch failed` (gshop) — done
+      2026-10-28 (`fulfilment-history_20261028`)
 
 **Stub / fan-out:** synthetic `PaymentAuthorized` events exercise both the
 dispatch-success and dispatch-failure paths; no real warehouse/carrier
 integration (out of scope — see US-17/18's own notes in `user-stories.md`).
 
-**Exit criteria:** both paths verified end-to-end against the real local
-cluster — `system-design.md`'s `fulfilment-events` topic and
+**Exit criteria:** met 2026-10-28 — both paths verified end-to-end against the
+real local cluster (`scripts/verify-fulfilment-history.sh` drives checkout →
+fulfilment `simulate-next` → order-service `dispatched`/`dispatch_failed`,
+which Order History renders); the mock Order History preview was removed.
+`system-design.md`'s `fulfilment-events` topic and
 `DispatchConfirmed`/`DispatchFailed` payload contracts updated (done
 2026-10-26, ahead of the code).
 

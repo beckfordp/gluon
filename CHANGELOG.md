@@ -261,3 +261,9 @@ own line. See each repo's own `git log` for full detail either way.
   emails (stub recipient = orderId); third supervised consumer, AsyncAPI +
   registry updated. Live-verified with synthetic events and a real dispatched
   order.
+
+### Changed
+- `frontends/gshop`: Order History now shows the real order-service
+  `Dispatched` / `Dispatch failed` statuses (US-17.6/18.5) and the mock
+  fulfilment preview was removed; the operator Fulfilment screen stays
+  mock-backed (its REST wiring is still pending).
