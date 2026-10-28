@@ -407,3 +407,26 @@ value was kept).
       prove one compatible change registers as version 2.
 - [ ] TD-11.2: every service using `schemaRegistryCheck` — pick up the
       plugin fix and re-run it.
+
+## TD-12 — Generator has no way to skip the placeholder CRUD surface
+
+Services that are not flat-CRUD resources are born with a `/users`-style CRUD
+endpoint (and its tests, docs, example AsyncAPI channel and migration
+placeholders) that has to be deleted immediately: user-service removed ~2k
+lines of generated CRUD for the auth domain; cart-service reworked its
+scaffold to Redis; notification-service still carries example suites/
+channels it replaced. Field-spec-driven domain generation doesn't fit these
+services anyway (invariants, derived/secret fields, nested collections,
+multi-table transactions aren't expressible), so the useful part of the
+generator is the platform baseline, not the CRUD.
+
+### Tasks
+- [ ] TD-12.1: `pure-service-generator` + `bin/generate-service` — add a
+      `--profile` (`service` | `consumer` | `bare`) or `--no-crud` switch
+      that omits the CRUD routes/store/migration placeholders, their tests,
+      and the example AsyncAPI channel, while keeping the platform baseline
+      (build, CORS, health, docs, telemetry, outbox table, Docker, CI).
+      Document the profiles in the generator README/template.
+- [ ] TD-12.2: Adopt the profile for future non-CRUD services only (no
+      forced regeneration of existing repos); note the profile in
+      `gluon/PLAN.md`'s per-repo setup.
