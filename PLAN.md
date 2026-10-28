@@ -615,9 +615,12 @@ journey; crash-orphaned reservations accepted as TD-8.
 **Depends on:** nothing — fully independent of Journeys 1/3/4/5, can be
 built in parallel with any of them.
 
-- [ ] Prototype UI (gshop) changes for manual review
-- [ ] Manually review and verify UI changes
-- [ ] Generate `user-service` via `pure-service-generator`
+- [x] Prototype UI (gshop) changes for manual review — done 2026-10-28
+      (`auth-prototype_20261028`: banner + modal auth, identity badges, saved
+      addresses; mock-backed)
+- [x] Manually review and verify UI changes — approved by the user 2026-10-28
+- [ ] Generate `user-service` via `pure-service-generator` — scaffold
+      generated 2026-10-28; onboarding (git init, conductor, push) in progress
 - [ ] US-16.1 — `POST /auth/signup` — create user, issue token
       (user-service)
 - [ ] US-16.2 — `POST /auth/login` — authenticate, issue token +

@@ -208,3 +208,14 @@ own line. See each repo's own `git log` for full detail either way.
 ### Changed
 - `payment-service`: `PaymentStatus.Settled` renamed `Captured` (V7
   migration) to match `PaymentCaptured`/`capture` — ADR 0011 amended.
+
+## 2026-10-28
+
+### Added
+- `frontends/gshop`: Checkout Journey 2 auth prototype (US-16.5) —
+  mock-backed signup/login in a modal opened from a prominent Checkout
+  banner, large User/Anonymous identity badges and a signed-in header on
+  Order History, and per-user saved shipping/billing addresses prefilled on
+  the next checkout. Mock only (localStorage, SHA-256-hashed password);
+  replaced when user-service lands. Admin-wide order listing deferred to an
+  order-service endpoint.
