@@ -607,7 +607,7 @@ journey; crash-orphaned reservations accepted as TD-8.
 
 ---
 
-## Checkout Journey 2 — User registration and login (US-16)
+## Checkout Journey 2 — User registration and login (US-16) — DONE 2026-10-28
 
 **Repos:** `user-service` (new — generate via `pure-service-generator`),
 `notification-service`, `gshop`.
@@ -632,16 +632,21 @@ built in parallel with any of them.
 - [x] US-16.4 — consume `UserRegistered`, send welcome email
       (notification-service) — done 2026-10-28 (`welcome-email_20261028`);
       synthetic + real-signup live-verified
-- [ ] US-16.5 — signup/login forms in checkout UI (gshop)
+- [x] US-16.5 — signup/login forms in checkout UI (gshop) — prototype
+      approved 2026-10-28 (`auth-prototype_20261028`), real-wired
+      2026-10-28 (`auth-real-wiring_20261028`); signup→login with real
+      `userId`, signup triggers the welcome email
 
 **Stub / fan-out:** notification-service's consumer tested against a
 synthetic `UserRegistered` event, same pattern as every other per-repo
 Kafka consumer test in this codebase.
 
-**Exit criteria:** signup → login → welcome-email path verified end-to-end
-against the real local cluster; `system-design.md`'s `POST /auth/signup`/
-`POST /auth/login` REST contracts and `UserRegistered` payload contract
-updated (done 2026-10-26, ahead of the code).
+**Exit criteria:** met 2026-10-28 — signup → welcome email and login verified
+against the real cluster (`scripts/verify-auth.sh`,
+`scripts/verify-user-registered-email.sh`, `scripts/verify-auth-real.sh`);
+`system-design.md`'s contracts updated, including login's `userId`.
+Browser click-through of the real auth UI remains available at
+`http://localhost:5173`.
 
 ---
 
