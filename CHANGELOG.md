@@ -261,6 +261,13 @@ own line. See each repo's own `git log` for full detail either way.
   emails (stub recipient = orderId); third supervised consumer, AsyncAPI +
   registry updated. Live-verified with synthetic events and a real dispatched
   order.
+- `payment-service`: US-19.1 (`capture-on-dispatch_20261028`) — consumes
+  `fulfilment-events: DispatchConfirmed` and captures the held authorization;
+  a conditional `authorized → captured|failed` update plus its outbox row
+  publishes `PaymentCaptured` or `PaymentFailed {reason: capture_failed}`.
+  Idempotent via `UNIQUE(order_id)` and the conditional update; the simulated
+  gateway gained per-card-token capture outcomes. Live-verified: dispatch
+  capture, duplicate redelivery, and a capture decline.
 
 ### Changed
 - `frontends/gshop`: Order History now shows the real order-service

@@ -715,9 +715,9 @@ which Order History renders); the mock Order History preview was removed.
 
 **Depends on:** Checkout Journey 3's `DispatchConfirmed` event.
 
-- [ ] US-19.1 — consume `DispatchConfirmed`, idempotency check, capture,
+- [x] US-19.1 — consume `DispatchConfirmed`, idempotency check, capture,
       publish `PaymentCaptured`/`PaymentFailed {reason: capture_failed}`
-      (payment-service)
+      (payment-service) — done 2026-10-28 (`capture-on-dispatch_20261028`)
 - [ ] US-19.2 — order-service consumes `PaymentCaptured` -> status
       `Confirmed` (order-service)
 - [ ] US-19.3 — order-service consumes the capture-failure outcome ->
