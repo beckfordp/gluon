@@ -33,6 +33,23 @@ spec textually unchanged and **won't** restart the already-running pod on
 its own — the explicit rollout restart is what actually makes the new
 image take effect.
 
+**New publishing service caveat:** the Debezium registration Job runs
+during `k8s-local-up`, before the service's own Flyway migrations have created
+`outbox_events`. For a brand-new service the connector can therefore fail with
+`No table filters found for filtered publication dbz_publication`. Once the
+service is up, re-register it (a plain task restart may not recover):
+
+```
+kubectl get configmap debezium-outbox-connectors -n gluon-local \
+  -o jsonpath='{.data.user-outbox-connector\.json}' > /tmp/connector.json
+curl -X DELETE http://localhost:8083/connectors/user-outbox-connector
+curl -X PUT -H 'Content-Type: application/json' --data @/tmp/connector.json \
+  http://localhost:8083/connectors/user-outbox-connector/config
+```
+
+(port-forward `svc/kafka-connect 8083:8083` first). Replace `user` with the
+service's own name.
+
 Prerequisites: OrbStack running with Kubernetes enabled
 (`orbctl config set k8s.enable true`, then `orbctl stop` + reopen — see
 [ADR 0002](../../docs/adr/0002-local-k8s-orbstack-over-minikube.md)),
