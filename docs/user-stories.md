@@ -242,9 +242,9 @@ dispatched, so it's actually shipped to me.
   existing.
 
 ### Tasks
-- [ ] US-17.1: consume `PaymentAuthorized`, create pick/pack task (fulfilment-service)
-- [ ] US-17.2: internal state machine `PENDING -> PICKING -> PACKED -> DISPATCHED {trackingNo, carrier}` (fulfilment-service)
-- [ ] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service)
+- [x] US-17.1: consume `PaymentAuthorized`, create pick/pack task (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
+- [x] US-17.2: internal state machine `PENDING -> PICKING -> PACKED -> DISPATCHED {trackingNo, carrier}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
+- [x] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [ ] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service)
 - [ ] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service)
 - [ ] US-17.6: Order History displays the `Dispatched` status (gshop)
@@ -261,7 +261,7 @@ left holding a reservation and a payment hold for an order that won't ship.
   case, not present in today's model), releases inventory reservations.
 
 ### Tasks
-- [ ] US-18.1: publish `fulfilment-events: DispatchFailed {orderId, reason}` on a pick/pack exception (fulfilment-service)
+- [x] US-18.1: publish `fulfilment-events: DispatchFailed {orderId, reason}` on a pick/pack exception (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [ ] US-18.2: consume `DispatchFailed`, void the authorization (payment-service)
 - [ ] US-18.3: `OrderStatus` gains `DispatchFailed`; order-service consumes `DispatchFailed`, updates status, releases inventory reservations (order-service)
 - [ ] US-18.4: notification-service consumes `DispatchFailed`, sends "dispatch failed" email (notification-service)

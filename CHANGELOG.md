@@ -218,6 +218,13 @@ own line. See each repo's own `git log` for full detail either way.
   hashes, opaque SHA-256-hashed tokens (1h/30d), and a `UserRegistered`
   outbox event on `user-events` via Debezium. Local Postgres + connector and
   `user-service` deploy values added; live-verified end to end.
+- `fulfilment-service`: new service, US-17.1–17.3 + US-18.1
+  (`fulfilment-core_20261028`) — consumes `PaymentAuthorized`, snapshots the
+  order via order-service, runs `PENDING → PICKING → PACKED → DISPATCHED` /
+  `DISPATCH_FAILED` with an internal operator REST API and a config-gated
+  `simulate-next`, and publishes `DispatchConfirmed` (full item snapshot) /
+  `DispatchFailed` through the outbox + Debezium. Postgres + connector and
+  deploy values added; live-verified end to end.
 - `notification-service`: US-16.4 — consumes `UserRegistered` on
   `user-events` and sends the welcome email to the event's address. Second
   supervised consumer, merged with the order-status one; AsyncAPI + registry

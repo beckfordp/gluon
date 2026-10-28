@@ -662,18 +662,21 @@ Browser click-through of the real auth UI remains available at
       Order History preview)
 - [x] Manually review and approve prototype. — approved 2026-10-28
 - [ ] Generate `fulfilment-service` via `pure-service-generator`
-- [ ] US-17.1 — consume `PaymentAuthorized`, create pick/pack task
-      (fulfilment-service)
-- [ ] US-17.2 — internal state machine `PENDING -> PICKING -> PACKED ->
-      DISPATCHED {trackingNo, carrier}` (fulfilment-service)
-- [ ] US-17.3 — publish `fulfilment-events: DispatchConfirmed {orderId,
-      trackingNo, items}` (fulfilment-service)
+- [x] US-17.1 — consume `PaymentAuthorized`, create pick/pack task
+      (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
+- [x] US-17.2 — internal state machine `PENDING -> PICKING -> PACKED ->
+      DISPATCHED {trackingNo, carrier}` (fulfilment-service) — done
+      2026-10-28 (`fulfilment-core_20261028`)
+- [x] US-17.3 — publish `fulfilment-events: DispatchConfirmed {orderId,
+      trackingNo, items}` (fulfilment-service) — done 2026-10-28
+      (`fulfilment-core_20261028`; full item snapshot)
 - [ ] US-17.4 — order-service consumes `DispatchConfirmed`, status ->
       `Dispatched` (order-service)
 - [ ] US-17.5 — notification-service consumes `DispatchConfirmed`, sends
       "your order shipped" email (notification-service)
-- [ ] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,
-      reason}` on a pick/pack exception (fulfilment-service)
+- [x] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,
+      reason}` on a pick/pack exception (fulfilment-service) — done
+      2026-10-28 (`fulfilment-core_20261028`)
 - [ ] US-18.2 — consume `DispatchFailed`, void the authorization
       (payment-service)
 - [ ] US-18.3 — `OrderStatus` gains `DispatchFailed`; order-service
@@ -760,6 +763,7 @@ sweep's query/publish logic without waiting out a real expiry window.
 (done 2026-10-26, ahead of the code). Reconciling this system-initiated
 `Cancelled` with US-9's customer-initiated cancel epic is explicitly
 deferred, not this journey's job.
+
 
 ---
 
