@@ -289,3 +289,9 @@ own line. See each repo's own `git log` for full detail either way.
 - `frontends/gshop`: Order History also shows the real `Confirmed` /
   `Payment failed` capture statuses (US-19.5), live-verified through dispatch
   → capture and a capture decline.
+- `frontends/gshop`: the Admin order-processing queue now reads and drives the
+  real fulfilment-service operator API (US-17.7, `fulfilment-queue_20261028`) —
+  list/start-picking/pack/dispatch/fail via `fulfilmentClient`, ship-to address
+  in place of the prototype's customer line, manual Refresh; the localStorage
+  mock store and `VITE_FULFILMENT_MOCK` flag are gone. Live-verified end-to-end
+  by `scripts/verify-fulfilment-queue.sh`.
