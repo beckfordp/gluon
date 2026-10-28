@@ -674,8 +674,9 @@ Browser click-through of the real auth UI remains available at
 - [x] US-17.4 — order-service consumes `DispatchConfirmed`, status ->
       `Dispatched` (order-service) — done 2026-10-28
       (`dispatch-confirmed_20261028`)
-- [ ] US-17.5 — notification-service consumes `DispatchConfirmed`, sends
-      "your order shipped" email (notification-service)
+- [x] US-17.5 — notification-service consumes `DispatchConfirmed`, sends
+      "your order shipped" email (notification-service) — done 2026-10-28
+      (`fulfilment-emails_20261028`)
 - [x] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,
       reason}` on a pick/pack exception (fulfilment-service) — done
       2026-10-28 (`fulfilment-core_20261028`)
@@ -685,8 +686,9 @@ Browser click-through of the real auth UI remains available at
       consumes `DispatchFailed`, updates status, releases inventory
       reservations (order-service) — done 2026-10-28
       (`dispatch-failed_20261028`)
-- [ ] US-18.4 — notification-service consumes `DispatchFailed`, sends
-      "dispatch failed" email (notification-service)
+- [x] US-18.4 — notification-service consumes `DispatchFailed`, sends
+      "dispatch failed" email (notification-service) — done 2026-10-28
+      (`fulfilment-emails_20261028`)
 - [ ] US-17.6 — Order History displays `Dispatched` (gshop)
 - [ ] US-18.5 — Order History displays `Dispatch failed` (gshop)
 

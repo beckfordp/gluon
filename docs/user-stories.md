@@ -246,7 +246,7 @@ dispatched, so it's actually shipped to me.
 - [x] US-17.2: internal state machine `PENDING -> PICKING -> PACKED -> DISPATCHED {trackingNo, carrier}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service) — done 2026-10-28 (`dispatch-confirmed_20261028`)
-- [ ] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service)
+- [x] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service) — done 2026-10-28 (`fulfilment-emails_20261028`)
 - [ ] US-17.6: Order History displays the `Dispatched` status (gshop)
 
 ## US-18 — Dispatch failure
@@ -264,7 +264,7 @@ left holding a reservation and a payment hold for an order that won't ship.
 - [x] US-18.1: publish `fulfilment-events: DispatchFailed {orderId, reason}` on a pick/pack exception (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-18.2: consume `DispatchFailed`, void the authorization (payment-service) — done 2026-10-28 (`void-authorization_20261028`)
 - [x] US-18.3: `OrderStatus` gains `DispatchFailed`; order-service consumes `DispatchFailed`, updates status, releases inventory reservations (order-service) — done 2026-10-28 (`dispatch-failed_20261028`)
-- [ ] US-18.4: notification-service consumes `DispatchFailed`, sends "dispatch failed" email (notification-service)
+- [x] US-18.4: notification-service consumes `DispatchFailed`, sends "dispatch failed" email (notification-service) — done 2026-10-28 (`fulfilment-emails_20261028`)
 - [ ] US-18.5: Order History displays the `Dispatch failed` status (gshop)
 
 ## US-19 — Capture on dispatch *(resolves US-15)*

@@ -256,3 +256,8 @@ own line. See each repo's own `git log` for full detail either way.
   the next checkout. Mock only (localStorage, SHA-256-hashed password);
   replaced when user-service lands. Admin-wide order listing deferred to an
   order-service endpoint.
+- `notification-service`: US-17.5/18.4 — consumes `fulfilment-events`
+  `DispatchConfirmed`/`DispatchFailed` and sends the shipped / dispatch-failed
+  emails (stub recipient = orderId); third supervised consumer, AsyncAPI +
+  registry updated. Live-verified with synthetic events and a real dispatched
+  order.
