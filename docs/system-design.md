@@ -35,7 +35,7 @@ library test fixtures only and are not reused.
 | payment-service | US-6.1 done 2026-10-02 (consumed `OrderReserved`, created+settled a `Payment` via `PaymentStore`, published `PaymentSettled`/`PaymentFailed`) — **superseded 2026-10-27** by US-14/19/20 (ADR 0011): authorization is a synchronous REST call. US-13.1/13.2 + US-14.1 (**done 2026-10-27**, `checkout-authorize_20261027`) add a `PaymentMethod` store, the gshop-facing `POST /payments/methods`, and `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); the `OrderReserved` consumer and `PaymentSettled` are retired (Rework 7). Capture stays async on `fulfilment-events: DispatchConfirmed`, and a background sweep publishes expired authorizations (both not yet built) | Postgres | idempotency keys (US-6.2/19.1, not yet built) | consumes `fulfilment-events` (`DispatchConfirmed`, not yet built); publishes `payment-events` (`PaymentAuthorized` on authorize-success — built 2026-10-27; `PaymentCaptured`/`PaymentFailed` on capture and `PaymentAuthorizationExpired` from the sweep — contracts registered ahead of their producers, Rework 7) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderStatusChanged`, sends the matching email); US-16.4 (**done 2026-10-28**, `welcome-email_20261028`) consumes `UserRegistered`, sends the welcome email to the event's address; US-17.5/18.4/19.4/20.5 extend it (not yet built) for the fulfilment-journey events | — | — | consumes `order-events` (`OrderStatusChanged`), `user-events` (`UserRegistered`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, not yet built), `payment-events` (`PaymentCaptured`/`PaymentFailed`, not yet built) |
 | user-service | US-16.1–16.3 (**done 2026-10-28**, `signup-login_20261028`) — `POST /auth/signup`, `POST /auth/login`; PBKDF2 password hashes, opaque 1h access / 30d refresh tokens stored hashed | Postgres (`user`) | — | publishes `user-events` (`UserRegistered`, outbox + Debezium); consumes none |
-| fulfilment-service | new 2026-10-26 (US-17/18, not yet built) — pick/pack/dispatch | Postgres (assumed — not yet decided) | — | consumes `payment-events` (`PaymentAuthorized`), `payment-events` (`PaymentAuthorizationExpired`, cancels in-flight pick/pack); publishes `fulfilment-events` (eventType `DispatchConfirmed`/`DispatchFailed`) |
+| fulfilment-service | US-17.1–17.3 + US-18.1 (**done 2026-10-28**, `fulfilment-core_20261028`) — consumes `PaymentAuthorized`, snapshots the order via `GET /orders/{id}`, tracks `PENDING → PICKING → PACKED → DISPATCHED`/`DISPATCH_FAILED`; internal operator REST + config-gated `simulate-next` | Postgres (`fulfilment`) | — | consumes `payment-events` (`PaymentAuthorized`; `PaymentAuthorizationExpired` later in US-20.4); publishes `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`, outbox + Debezium) |
 
 ## Sync vs. async boundaries
 - **Sync (HTTP, resilience middleware):** checkout → order-service → reserve
@@ -196,6 +196,18 @@ above):
   `400`/`503`/`500` → generic error. Failed attempts leave nothing in order
   history and send no email.
 
+**`/fulfilment-tasks...`** (internal operator API, fulfilment-service, US-17/18
+— built 2026-10-28; used by gshop's admin fulfilment screen):
+- `GET /fulfilment-tasks?state=...` → `[{orderId, state, items,
+  shippingAddress, trackingNo?, carrier?, failureReason?, createdAt,
+  updatedAt}]`
+- `POST /fulfilment-tasks/{orderId}/start-picking` | `/pack` |
+  `/dispatch {trackingNo,carrier}` | `/fail {reason}` → the updated task;
+  `404` unknown, `409` invalid transition, `400` blank required fields.
+- `POST /fulfilment-tasks/{orderId}/simulate-next {forceFailure?,reason?}` —
+  registered only when `fulfilment.simulation.enabled` (local dev); advances
+  one legal step with generated tracking, or forces `DispatchFailed`.
+
 **`GET /orders/{id}`** (same caller/callee as above, done):
 - `200`: same `OrderResponse` shape as `POST /orders`.
 - `404`: `{"error": "Order not found"}`.
@@ -262,9 +274,9 @@ topic subscription to filter event types for it.
 - **`user-events`** — producer: user-service (built 2026-10-28, outbox +
   Debezium); consumer: notification-service (built 2026-10-28). Event
   types: `UserRegistered`.
-- **`fulfilment-events`** (new 2026-10-26, US-17/18, not yet built) —
-  producer: fulfilment-service; consumers: order-service, payment-service,
-  notification-service. Event types: `DispatchConfirmed`, `DispatchFailed`.
+- **`fulfilment-events`** — producer: fulfilment-service (built 2026-10-28);
+  consumers: order-service, payment-service, notification-service (not yet
+  wired). Event types: `DispatchConfirmed`, `DispatchFailed`.
 
 Partition key: each domain's natural entity id — `orderItemId` for
 `inventory-events` (see "Envelope" below for why this differs from the
@@ -477,21 +489,21 @@ now}` — not consumer-triggered like every other event on this topic.
 Mechanism (CronJob vs. in-process scheduler) not yet decided, same shape
 as the `TECHNICAL_DEBT.md` TD-3 outbox-cleanup CronJob precedent.
 
-**`DispatchConfirmed`** (producer: fulfilment-service, US-17.3, not yet
-built; consumers: order-service US-17.4, payment-service US-19.1,
-notification-service US-17.5, all not yet built):
+**`DispatchConfirmed`** (producer: fulfilment-service, US-17.3, **built
+2026-10-28**; consumers: order-service US-17.4, payment-service US-19.1,
+notification-service US-17.5, not yet built):
 ```json
 {
   "orderId": "string (UUID)",
   "trackingNo": "string",
-  "items": "array — not yet decided whether this duplicates order-service's own order_items or just references them by id"
+  "items": "array — full snapshot [{sku, productName, quantity, unitPriceCents}], so consumers need no order lookup"
 }
 ```
 Published once pick/pack/dispatch succeeds for an order. Three
 consumers — same fan-out shape as `PaymentAuthorized` above.
 
-**`DispatchFailed`** (producer: fulfilment-service, US-18.1, not yet
-built; consumers: order-service US-18.3, payment-service US-18.2, both not
+**`DispatchFailed`** (producer: fulfilment-service, US-18.1, **built
+2026-10-28**; consumers: order-service US-18.3, payment-service US-18.2, not
 yet built):
 ```json
 {

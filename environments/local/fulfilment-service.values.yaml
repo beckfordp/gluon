@@ -1,0 +1,19 @@
+image:
+  repository: fulfilment-service
+  tag: latest
+
+env:
+  - name: POSTGRES_HOST
+    value: fulfilment-postgres
+  - name: POSTGRES_DB
+    value: fulfilment
+  - name: POSTGRES_USER
+    value: fulfilment
+  - name: POSTGRES_PASSWORD
+    value: fulfilment
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  - name: ORDER_SERVICE_URL
+    value: http://order-service:8080
+  - name: FULFILMENT_SIMULATION_ENABLED
+    value: "true"

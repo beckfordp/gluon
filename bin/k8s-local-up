@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 NAMESPACE="gluon-local"
 
-ALL_SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service user-service)
+ALL_SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service user-service fulfilment-service)
 if [ "$#" -gt 0 ]; then
   SERVICES=("$@")
 else
