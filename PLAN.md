@@ -661,7 +661,8 @@ Browser click-through of the real auth UI remains available at
       (`fulfilment-prototype_20261028`: mock queue, full state machine,
       Order History preview)
 - [x] Manually review and approve prototype. — approved 2026-10-28
-- [ ] Generate `fulfilment-service` via `pure-service-generator`
+- [x] Generate `fulfilment-service` via `pure-service-generator` —
+      generated and onboarded 2026-10-28 (`beckfordp/fulfilment-service`)
 - [x] US-17.1 — consume `PaymentAuthorized`, create pick/pack task
       (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-17.2 — internal state machine `PENDING -> PICKING -> PACKED ->
