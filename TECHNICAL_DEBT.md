@@ -399,7 +399,10 @@ payment failure is a `503` rather than a retry.
 #: could not determine version`, so no event contract can evolve in place.
 Found when order-service tried to drop `reservation_failed` from
 `OrderStatusChanged` (that change would also have failed BACKWARD, so the
-value was kept).
+value was kept). Recurred 2026-10-28 during `capture-outcome_20261028`:
+adding `cancelled` (already in the code since 2026-10-26) to the shared
+artifact 500s the same way; the artifact currently holds notification-service's
+3-value consumer mirror — see TD-14.
 
 ### Tasks
 - [ ] TD-11.1: purekafka (sbt-purekafka-docs) — emit a draft Apicurio's
@@ -443,3 +446,22 @@ for status only, so this was left out of `fulfilment-history_20261028`.
 - [ ] TD-13.1: add `trackingNo`/`carrier` to `OrderResponse` (nullable),
       update `system-design.md`'s `GET /orders` contract and order-service
       tests, then show them on gshop's Dispatched cards.
+
+## TD-14 — Consumer Kafka-contract mirrors drift from the producer's schema
+
+Each service keeps its own local copy of a shared event payload (by design —
+no shared library) and `schemaRegistryCheck` registers it under the same
+shared `gluon/<topic>-<eventType>` artifact. Whichever service runs the check
+last wins the registry content. notification-service's `OrderStatusChangedEvent`
+mirror documents a 3-value enum (no `cancelled`) while order-service's producer
+schema has 4, which surfaced as a hard `schemaRegistryCheck` failure for
+order-service on 2026-10-28 during `capture-outcome_20261028`.
+
+### Tasks
+- [ ] TD-14.1: notification-service — add `Cancelled` to its
+      `OrderStatusChangedEvent` mirror enum and email mapping, then re-run
+      `schemaRegistryCheck`.
+- [ ] TD-14.2: record the governance rule in `system-design.md`: the producer
+      schema is authoritative, and a consumer's mirror must be updated in the
+      same change as the producer's; note the shared-artifact/last-writer
+      caveat (depends on TD-11 for changed schemas to register at all).

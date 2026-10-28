@@ -268,6 +268,13 @@ own line. See each repo's own `git log` for full detail either way.
   Idempotent via `UNIQUE(order_id)` and the conditional update; the simulated
   gateway gained per-card-token capture outcomes. Live-verified: dispatch
   capture, duplicate redelivery, and a capture decline.
+- `order-service`: US-19.2/19.3 (`capture-outcome_20261028`) — consumes
+  `PaymentCaptured`/`PaymentFailed` and moves an `authorized` or `dispatched`
+  order to `confirmed` / `payment_failed` (two accepted source states cover
+  the race with its own `DispatchConfirmed` consumer). Capture failure writes
+  an `order_reconciliation` row (V12) for manual reconciliation and
+  deliberately does not release inventory. Live-verified: capture, duplicate
+  redelivery, decline + reconciliation flag + unchanged reservations.
 
 ### Changed
 - `frontends/gshop`: Order History now shows the real order-service

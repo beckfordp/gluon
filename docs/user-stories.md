@@ -285,8 +285,8 @@ shipping.
 
 ### Tasks
 - [x] US-19.1: consume `DispatchConfirmed`, idempotency check, capture, publish `PaymentCaptured`/`PaymentFailed {reason: capture_failed}` (payment-service) — done 2026-10-28 (`capture-on-dispatch_20261028`)
-- [ ] US-19.2: order-service consumes `PaymentCaptured` -> status `Confirmed` (order-service)
-- [ ] US-19.3: order-service consumes the capture-failure outcome -> status `PaymentFailed`, flagged for manual reconciliation, not automatic inventory release (order-service)
+- [x] US-19.2: order-service consumes `PaymentCaptured` -> status `Confirmed` (order-service) — done 2026-10-28 (`capture-outcome_20261028`)
+- [x] US-19.3: order-service consumes the capture-failure outcome -> status `PaymentFailed`, flagged for manual reconciliation, not automatic inventory release (order-service) — done 2026-10-28 (`capture-outcome_20261028`)
 - [ ] US-19.4: notification-service sends receipt email on `PaymentCaptured`, "payment problem on dispatch" email on capture failure (notification-service)
 - [ ] US-19.5: Order History displays `Confirmed` (captured) and capture-failure `Payment failed` statuses (gshop)
 
