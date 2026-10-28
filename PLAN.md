@@ -729,8 +729,9 @@ which Order History renders); the mock Order History preview was removed.
       `PaymentCaptured`, "payment problem on dispatch" email on capture
       failure (notification-service) — done 2026-10-28
       (`payment-emails_20261028`)
-- [ ] US-19.5 — Order History displays `Confirmed` and capture-failure
-      `Payment failed` (gshop)
+- [x] US-19.5 — Order History displays `Confirmed` and capture-failure
+      `Payment failed` (gshop) — done 2026-10-28
+      (`capture-history_20261028`)
 
 **Stub / fan-out:** synthetic `DispatchConfirmed` events exercise both the
 capture-success and capture-failure paths against the `simulated`
