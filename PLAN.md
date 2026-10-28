@@ -679,8 +679,8 @@ Browser click-through of the real auth UI remains available at
 - [x] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,
       reason}` on a pick/pack exception (fulfilment-service) — done
       2026-10-28 (`fulfilment-core_20261028`)
-- [ ] US-18.2 — consume `DispatchFailed`, void the authorization
-      (payment-service)
+- [x] US-18.2 — consume `DispatchFailed`, void the authorization
+      (payment-service) — done 2026-10-28 (`void-authorization_20261028`)
 - [x] US-18.3 — `OrderStatus` gains `DispatchFailed`; order-service
       consumes `DispatchFailed`, updates status, releases inventory
       reservations (order-service) — done 2026-10-28

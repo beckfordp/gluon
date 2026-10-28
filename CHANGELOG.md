@@ -218,6 +218,10 @@ own line. See each repo's own `git log` for full detail either way.
   hashes, opaque SHA-256-hashed tokens (1h/30d), and a `UserRegistered`
   outbox event on `user-events` via Debezium. Local Postgres + connector and
   `user-service` deploy values added; live-verified end to end.
+- `payment-service`: US-18.2 — consumes `fulfilment-events: DispatchFailed`
+  and voids the authorized payment via the simulated gateway, recording a new
+  `Voided` status (migration V9). Duplicates no-op; gateway failures retry via
+  the DLQ. Live-verified.
 - `order-service`: US-18.3 — consumes `fulfilment-events: DispatchFailed`,
   moves an authorized order to `dispatch_failed`, and releases its inventory
   reservations (best-effort, idempotent; failures logged). `OrderStatus` +
