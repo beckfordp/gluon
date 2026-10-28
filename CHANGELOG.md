@@ -218,6 +218,10 @@ own line. See each repo's own `git log` for full detail either way.
   hashes, opaque SHA-256-hashed tokens (1h/30d), and a `UserRegistered`
   outbox event on `user-events` via Debezium. Local Postgres + connector and
   `user-service` deploy values added; live-verified end to end.
+- `order-service`: US-17.4 — consumes `fulfilment-events: DispatchConfirmed`
+  and moves an `authorized` order to `dispatched` (conditional update; unknown
+  or non-authorized orders skipped). `OrderStatus` + migration V10 gained
+  `dispatched`; consumer supervised alongside the payment one. Live-verified.
 - `fulfilment-service`: new service, US-17.1–17.3 + US-18.1
   (`fulfilment-core_20261028`) — consumes `PaymentAuthorized`, snapshots the
   order via order-service, runs `PENDING → PICKING → PACKED → DISPATCHED` /

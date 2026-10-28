@@ -671,8 +671,9 @@ Browser click-through of the real auth UI remains available at
 - [x] US-17.3 — publish `fulfilment-events: DispatchConfirmed {orderId,
       trackingNo, items}` (fulfilment-service) — done 2026-10-28
       (`fulfilment-core_20261028`; full item snapshot)
-- [ ] US-17.4 — order-service consumes `DispatchConfirmed`, status ->
-      `Dispatched` (order-service)
+- [x] US-17.4 — order-service consumes `DispatchConfirmed`, status ->
+      `Dispatched` (order-service) — done 2026-10-28
+      (`dispatch-confirmed_20261028`)
 - [ ] US-17.5 — notification-service consumes `DispatchConfirmed`, sends
       "your order shipped" email (notification-service)
 - [x] US-18.1 — publish `fulfilment-events: DispatchFailed {orderId,

@@ -245,7 +245,7 @@ dispatched, so it's actually shipped to me.
 - [x] US-17.1: consume `PaymentAuthorized`, create pick/pack task (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-17.2: internal state machine `PENDING -> PICKING -> PACKED -> DISPATCHED {trackingNo, carrier}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
 - [x] US-17.3: publish `fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}` (fulfilment-service) — done 2026-10-28 (`fulfilment-core_20261028`)
-- [ ] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service)
+- [x] US-17.4: order-service consumes `DispatchConfirmed`, status -> `Dispatched` (order-service) — done 2026-10-28 (`dispatch-confirmed_20261028`)
 - [ ] US-17.5: notification-service consumes `DispatchConfirmed`, sends "your order shipped" email {trackingNo} (notification-service)
 - [ ] US-17.6: Order History displays the `Dispatched` status (gshop)
 
