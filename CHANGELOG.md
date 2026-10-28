@@ -286,3 +286,6 @@ own line. See each repo's own `git log` for full detail either way.
   `Dispatched` / `Dispatch failed` statuses (US-17.6/18.5) and the mock
   fulfilment preview was removed; the operator Fulfilment screen stays
   mock-backed (its REST wiring is still pending).
+- `frontends/gshop`: Order History also shows the real `Confirmed` /
+  `Payment failed` capture statuses (US-19.5), live-verified through dispatch
+  → capture and a capture decline.
