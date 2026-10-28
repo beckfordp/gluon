@@ -681,9 +681,10 @@ Browser click-through of the real auth UI remains available at
       2026-10-28 (`fulfilment-core_20261028`)
 - [ ] US-18.2 — consume `DispatchFailed`, void the authorization
       (payment-service)
-- [ ] US-18.3 — `OrderStatus` gains `DispatchFailed`; order-service
+- [x] US-18.3 — `OrderStatus` gains `DispatchFailed`; order-service
       consumes `DispatchFailed`, updates status, releases inventory
-      reservations (order-service)
+      reservations (order-service) — done 2026-10-28
+      (`dispatch-failed_20261028`)
 - [ ] US-18.4 — notification-service consumes `DispatchFailed`, sends
       "dispatch failed" email (notification-service)
 - [ ] US-17.6 — Order History displays `Dispatched` (gshop)
