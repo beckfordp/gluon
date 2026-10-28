@@ -629,8 +629,9 @@ built in parallel with any of them.
 - [x] US-16.3 — publish `user-events: UserRegistered` on signup
       (user-service) — done 2026-10-28 (`signup-login_20261028`);
       outbox + Debezium, live-verified
-- [ ] US-16.4 — consume `UserRegistered`, send welcome email
-      (notification-service)
+- [x] US-16.4 — consume `UserRegistered`, send welcome email
+      (notification-service) — done 2026-10-28 (`welcome-email_20261028`);
+      synthetic + real-signup live-verified
 - [ ] US-16.5 — signup/login forms in checkout UI (gshop)
 
 **Stub / fan-out:** notification-service's consumer tested against a

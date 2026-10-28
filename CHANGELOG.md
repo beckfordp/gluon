@@ -218,6 +218,10 @@ own line. See each repo's own `git log` for full detail either way.
   hashes, opaque SHA-256-hashed tokens (1h/30d), and a `UserRegistered`
   outbox event on `user-events` via Debezium. Local Postgres + connector and
   `user-service` deploy values added; live-verified end to end.
+- `notification-service`: US-16.4 — consumes `UserRegistered` on
+  `user-events` and sends the welcome email to the event's address. Second
+  supervised consumer, merged with the order-status one; AsyncAPI + registry
+  updated. Live-verified with a synthetic event and a real signup.
 - `frontends/gshop`: Checkout Journey 2 auth prototype (US-16.5) —
   mock-backed signup/login in a modal opened from a prominent Checkout
   banner, large User/Anonymous identity badges and a signed-in header on

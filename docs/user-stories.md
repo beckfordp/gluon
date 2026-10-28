@@ -223,7 +223,7 @@ I check out.
 - [x] US-16.1: `POST /auth/signup` — create user, issue token (user-service) — done 2026-10-28 (`signup-login_20261028`)
 - [x] US-16.2: `POST /auth/login` — authenticate, issue token + refreshToken (user-service) — done 2026-10-28 (`signup-login_20261028`)
 - [x] US-16.3: publish `user-events: UserRegistered` on signup (user-service) — done 2026-10-28 (`signup-login_20261028`)
-- [ ] US-16.4: consume `UserRegistered`, send welcome email (notification-service)
+- [x] US-16.4: consume `UserRegistered`, send welcome email (notification-service) — done 2026-10-28 (`welcome-email_20261028`)
 - [ ] US-16.5: signup/login forms in checkout UI (gshop)
 
 ## US-17 — Fulfilment: pick, pack, dispatch
