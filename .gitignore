@@ -15,6 +15,10 @@ tools/*
 lib/*
 !lib/README.md
 
+# Cross-service test harnesses are their own independent git repos.
+tests/*
+!tests/README.md
+
 # macOS
 .DS_Store
 

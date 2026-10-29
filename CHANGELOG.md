@@ -304,6 +304,9 @@ own line. See each repo's own `git log` for full detail either way.
   core/effectful shell, state machines, narrowest capability,
   parse-don't-validate) with a review checklist, now `/conductor:review` "Law";
   canonical copy lives in pure-service-generator.
+- `PLAN.md` "Performance" (Gatling harness, ADR 0019) and "Acceptance
+  Testing" (Playwright suite through gshop, ADR 0020) plans; harnesses will
+  live in their own repos under `tests/`.
 
 ### Changed
 - Cross-repo TD-15 hardening across all 8 services: `OrderStatusChanged` split

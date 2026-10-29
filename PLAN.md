@@ -851,4 +851,223 @@ is covered by Checkout Journey 1/ADR 0011.
 
 ---
 
+## Performance
 
+Nothing in Gluon measures throughput or latency today — the bash
+`verify-*.sh` scripts prove behavior, not capacity. This section builds a
+Gatling performance harness ([ADR 0019](./docs/adr/0019-gatling-performance-harness.md))
+in its own repo, `tests/performance` (`beckfordp/gluon-performance`), then
+grows simulations path by path. Numbers come from the local OrbStack
+cluster, so they are **relative regression baselines, not production
+capacity claims** (ADR 0015). Numbered `Performance N` like the sections
+above; each unit is promoted into a track in that repo's own
+`conductor/tracks.md` (newTrack → implement → review → archive).
+
+**Order:** 1 → 2 first (scaffold, then in-cluster runs so every later
+number is trustworthy); 3/4/5 in any order after 2; 6 last.
+
+## Performance 1 — Harness scaffold
+
+**Repos:** `tests/performance` (new).
+
+- [ ] PERF-1.1 — create repo: sbt + `gatling-sbt` plugin, `/conductor:setup`
+      with the standard `workflow.md` + `scala-fp.md`, GitHub remote, CI
+      (compile + `scalafmtCheck`)
+- [ ] PERF-1.2 — env-driven config (base URLs per service, profile
+      selection), one shared `HttpProtocol`
+- [ ] PERF-1.3 — smoke simulation: `GET /health/ready` on every service,
+      1 user, assertion `failedRequests.count == 0`
+
+**Exit criteria:** smoke simulation green against the local cluster via
+port-forwards, HTML report produced.
+
+---
+
+## Performance 2 — Run in-cluster
+
+**Repos:** `tests/performance`, `gluon` (`bin/`).
+
+**Depends on:** Performance 1.
+
+- [ ] PERF-2.1 — container image + k8s Job running a named simulation
+      inside `gluon-local` (port-forwards would bottleneck results)
+- [ ] PERF-2.2 — `bin/run-perf <simulation> [profile]`: launch Job, wait,
+      copy the report out, delete the Job
+
+**Exit criteria:** smoke simulation run in-cluster, report on local disk.
+
+---
+
+## Performance 3 — Read path
+
+**Repos:** `tests/performance`.
+
+**Depends on:** Performance 2.
+
+- [ ] PERF-3.1 — catalog browse (US-1): cache-hit vs cache-miss scenarios
+      against catalog-service's Redis read-through cache
+- [ ] PERF-3.2 — order history (US-8)
+- [ ] PERF-3.3 — cart add/remove (US-2)
+- [ ] PERF-3.4 — `smoke` and `load` injection profiles shared by all sims
+
+**Exit criteria:** each sim runs under both profiles; first baselines
+recorded.
+
+---
+
+## Performance 4 — Checkout write path
+
+**Repos:** `tests/performance`.
+
+**Depends on:** Performance 2.
+
+- [ ] PERF-4.1 — feeders: unique throwaway customers, stocked skus
+- [ ] PERF-4.2 — journey: register/login → cart → payment method →
+      `POST /orders` (reserve + authorize)
+- [ ] PERF-4.3 — cleanup: release reservations + delete created orders,
+      as `gshop/scripts/verify-checkout-real.sh` does, so demo inventory and
+      history stay clean
+
+**Exit criteria:** load run completes with demo data unchanged afterwards.
+
+---
+
+## Performance 5 — Async latency
+
+**Repos:** `tests/performance`.
+
+**Depends on:** Performance 4.
+
+- [ ] PERF-5.1 — measure order `Authorized` → dispatch → `Confirmed` by
+      polling order status (outbox → Debezium → Kafka → consumer lag, end
+      to end)
+- [ ] PERF-5.2 — report the latency as a custom Gatling group so it shows
+      in the HTML report
+
+**Exit criteria:** end-to-end event latency baseline recorded under load.
+
+---
+
+## Performance 6 — SLOs and observability
+
+**Repos:** `tests/performance`, possibly `infra/`.
+
+**Depends on:** Performance 3–5.
+
+- [ ] PERF-6.1 — p95/p99/error-rate assertions per simulation; a run fails
+      when a baseline regresses
+- [ ] PERF-6.2 — commit baseline results + a short `BASELINES.md`
+- [ ] PERF-6.3 — correlate runs with service metrics: the Prometheus/
+      Grafana stack ADR 0016 assumes is **not yet in `infra/`** — stand it up
+      or explicitly defer
+
+**Exit criteria:** all sims have assertions; baselines documented.
+
+---
+
+## Acceptance Testing
+
+US-1 to US-20 have no automated acceptance tests. Each track proved its own
+slice with `verify-*.sh`, but nothing re-checks the user journeys
+together, or traces them back to `user-stories.md`. This section builds a
+Playwright suite ([ADR 0020](./docs/adr/0020-playwright-acceptance-tests.md))
+that drives gshop against the real local cluster, in its own repo,
+`tests/acceptance` (`beckfordp/gluon-acceptance`). Each test is tagged with
+the `US-N.M` it accepts. The `verify-*.sh` scripts stay as track-level live
+checks; they are not replaced. Numbered `Acceptance N`, promoted into
+tracks in that repo's own `conductor/tracks.md`.
+
+**Order:** 1 → 2 first; 3/4 in any order after 2; 5 after 4; 6 last.
+
+## Acceptance 1 — Suite scaffold
+
+**Repos:** `tests/acceptance` (new).
+
+- [ ] ACC-1.1 — create repo: Playwright (TypeScript), `/conductor:setup`
+      with the standard `workflow.md` (no `scala-fp.md`), GitHub remote, CI
+      (lint + typecheck only; no cluster in CI)
+- [ ] ACC-1.2 — decide and wire how gshop is served for tests (vite dev
+      with real-wiring env vs a deployed build): the first track's spec
+      question
+- [ ] ACC-1.3 — one smoke test: gshop loads, catalog renders from the real
+      catalog-service
+
+**Exit criteria:** smoke test green against the local cluster.
+
+---
+
+## Acceptance 2 — Fixtures and test data
+
+**Repos:** `tests/acceptance`.
+
+**Depends on:** Acceptance 1.
+
+- [ ] ACC-2.1 — API helpers: throwaway user, stocked-sku lookup, payment
+      method setup
+- [ ] ACC-2.2 — cleanup fixtures: release reservations, delete orders
+- [ ] ACC-2.3 — precheck: services ready, Debezium connectors registered
+      (lost on OrbStack restart), fail fast with a clear message
+
+**Exit criteria:** fixtures leave demo inventory/history unchanged.
+
+---
+
+## Acceptance 3 — Browse and cart (US-1, US-2)
+
+**Repos:** `tests/acceptance`.
+
+**Depends on:** Acceptance 2.
+
+- [ ] ACC-3.1 — US-1: browse catalog, product detail
+- [ ] ACC-3.2 — US-2: add/remove/update cart items
+
+**Exit criteria:** US-1/US-2 acceptance tests green.
+
+---
+
+## Acceptance 4 — Account and checkout (US-16, US-11–14)
+
+**Repos:** `tests/acceptance`.
+
+**Depends on:** Acceptance 2.
+
+- [ ] ACC-4.1 — US-16: register, login, logout
+- [ ] ACC-4.2 — US-11–14 happy path: addresses, payment method, authorize,
+      order appears in history as `Authorized`
+- [ ] ACC-4.3 — failure paths: decline (`402`), out of stock (`409`,
+      remove-and-retry), validation (`400`)
+
+**Exit criteria:** happy and failure checkout paths green.
+
+---
+
+## Acceptance 5 — Fulfilment and capture (US-17–19)
+
+**Repos:** `tests/acceptance`.
+
+**Depends on:** Acceptance 4.
+
+- [ ] ACC-5.1 — US-17: pick/pack/dispatch via gshop's fulfilment screen
+- [ ] ACC-5.2 — US-18: dispatch failure path
+- [ ] ACC-5.3 — US-19: capture → `Confirmed`; capture failure →
+      `Payment failed`, as shown in order history
+- [ ] ACC-5.4 — async waits via polling assertions (`expect.poll`), never
+      fixed sleeps
+
+**Exit criteria:** full order lifecycle accepted through the UI.
+
+---
+
+## Acceptance 6 — Traceability and runner
+
+**Repos:** `tests/acceptance`, `gluon` (`bin/`).
+
+**Depends on:** Acceptance 3–5.
+
+- [ ] ACC-6.1 — `US-N.M` tags → coverage matrix against `user-stories.md`
+      (which stories have tests, which don't)
+- [ ] ACC-6.2 — `bin/run-acceptance`: prechecks, run suite, open report
+- [ ] ACC-6.3 — add US-20 scenarios when Checkout Journey 5 lands
+
+**Exit criteria:** every done US-N story is either covered or explicitly
+marked out of scope in the matrix.
