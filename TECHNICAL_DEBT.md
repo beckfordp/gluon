@@ -562,3 +562,44 @@ apply.
 Each per-repo task is executed as its own Conductor track (pointer in that
 repo's `conductor/tracks.md`), reviewed and archived before the task is
 ticked here.
+
+---
+
+## TD-16 — Per-service full code reviews (post TD-15)
+
+TD-15 hardened the cross-repo patterns; the per-service full reviews it was
+meant to unblock are only partly done. order-service (all 15 findings,
+`order-review-fixes_20261029`) and payment-service (all 11 findings,
+`payment-review-fixes_20261029`, 194 tests, 91.1%/90.6% coverage) are
+reviewed and fixed. The cross-repo live E2E suite (gshop
+`verify-checkout-real.sh`/`verify-capture-history.sh`/
+`verify-fulfilment-history.sh`; order-service `verify-capture-outcome.sh`/
+`verify-dispatched.sh`/`verify-dispatch-failed.sh`) was green again on
+2026-10-29 after payment-service's redeploy.
+
+Each remaining service gets a full review against its
+`conductor/code_styleguides/scala-fp.md` checklist, then its fixes as one
+Conductor track per repo (payment-review-fixes is the template:
+newTrack → implement → review → archive), ticked here once archived.
+
+### Tasks
+- [ ] TD-16.1: payment-service — apply the `payment-review-fixes_20261029`
+      track's own review findings (not yet applied): High — narrow
+      `FulfilmentEventConsumer.handle` from `Async` to `MonadThrow`+`Clock`;
+      define the "capture needs a live authorization" rule once in the pure
+      core (currently in the consumer pre-check, authorize replay, in-memory
+      store and SQL parameter); return `PaymentAlreadyExists` as an `Either`
+      from `PaymentStore.create` instead of raising; replace `case _` over
+      `Outcome` in `AuthorizeRoutes`. Medium — move `PaymentStatus` +
+      `transition` into `domain/`; close the cancellation window between
+      `gateway.authorize` returning and `guaranteeCase` installing
+      (`uncancelable` + `poll`). Low — dead-letter null-value
+      fulfilment-events records.
+- [ ] TD-16.2: inventory-service — full review + fixes.
+- [ ] TD-16.3: fulfilment-service — full review + fixes.
+- [ ] TD-16.4: catalog-service — full review + fixes.
+- [ ] TD-16.5: cart-service — full review + fixes.
+- [ ] TD-16.6: notification-service — full review + fixes.
+- [ ] TD-16.7: user-service — full review + fixes.
+- [ ] TD-16.8: re-run the cross-repo live E2E suite (list above) after the
+      sweep; re-create the Debezium register Job first if OrbStack restarted.
