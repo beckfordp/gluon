@@ -546,6 +546,12 @@ apply.
       updated for capture-on-dispatch, which moves `dispatched` on to
       `confirmed`).
 
+- [x] TD-15.10: generator — backport the proven template baseline: opaque
+      entity id + `Either` parse (`domain/` package), `asyncApiHtmlDir` config,
+      ScalaCheck dependency + id property, and narrowed effect bounds. —
+      **done 2026-10-29** (`td15-generator-backport_20261029`, archived; a
+      freshly generated scratch service passes all 88 tests).
+
 Each per-repo task is executed as its own Conductor track (pointer in that
 repo's `conductor/tracks.md`), reviewed and archived before the task is
 ticked here.

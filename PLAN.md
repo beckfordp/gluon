@@ -548,6 +548,9 @@ One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
 - [x] TD-15.9 gluon — payload contracts/catalogue, registry cleanup, cross-repo
       end-to-end verification record — done 2026-10-29 (all 8 services
       redeployed; registry + live E2E green)
+- [x] TD-15.10 generator — backport the typed-id/config/ScalaCheck/narrowing
+      baseline to the template — done 2026-10-29
+      (`td15-generator-backport_20261029`, archived; scratch service 88/88)
 
 **Stub / fan-out:** each repo's own test suite stubs everything outside it
 (Testcontainers, synthetic events). The contract shape is fixed in
