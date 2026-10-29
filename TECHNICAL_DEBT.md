@@ -86,14 +86,17 @@ healthy throughout.
       and the failed fiber was never observed or logged. Fixed via
       fs2-kafka's null-safe `Deserializer.option` (`Option[String]`
       instead of `String`) for both key and value.
-- [ ] TD-2.2: order-service's `StockEventConsumer` — same
+- [x] TD-2.2: order-service's `StockEventConsumer` — same
       `ConsumerSettings[F, String, String]` pattern as TD-2.1 before its
       fix, likely carries the identical null-key/value crash risk. Not
       yet fixed. (inventory-service's `StockEventPublisher` is
       producer-side only — the null-deserializer failure mode doesn't
       apply the same way, but publish-side resilience to a broker blip
-      hasn't been specifically verified either.)
-- [ ] TD-2.3: notification-service's `OrderStatusChangedConsumer` — found
+      hasn't been specifically verified either.) — **closed by Rework 3**
+      (TD-2.2/2.3/2.4, ADR 0010): the consumer was retired with ADR 0018,
+      and every remaining consumer uses null-safe `Option[String]`
+      deserializers plus `purekafka` supervision/DLQ.
+- [x] TD-2.3: notification-service's `OrderStatusChangedConsumer` — found
       2026-10-09 restarting OrbStack: broader than TD-2.1/2.2 (any stream
       error, not just a null value). Its `onFinalizeCase`'s
       `ExitCase.Errored` branch permanently flips its `readyRef` to
@@ -101,14 +104,18 @@ healthy throughout.
       Every other service's background consumer/publisher recovered on
       its own once Kafka came back up after the restart; this one didn't
       — `/health/ready` stayed `503` until the whole pod was manually
-      restarted (`kubectl rollout restart`).
-- [ ] TD-2.4: dead-letter routing — after retry/resubscribe (TD-2.2/2.3)
+      restarted (`kubectl rollout restart`). — **closed by Rework 3**
+      (ADR 0010): `StreamSupervisor` restarts the consumer stream with
+      backoff; the consumer is now `OrderEventsConsumer`.
+- [x] TD-2.4: dead-letter routing — after retry/resubscribe (TD-2.2/2.3)
       is in place, a message that still can't be processed after N
       retries (truly malformed, not just a transient broker blip) should
       go to a `<topic>-dlq` topic instead of either crashing the fiber
       again or blocking that partition indefinitely. Complements the
       retry fix rather than replacing it — retry handles transient
       errors, the DLQ handles the poison-message case retry alone can't.
+      — **closed by Rework 3** (ADR 0010): `purekafka.consumer.DeadLetter`
+      is adopted by every consumer.
 
 **Fix, TD-2.2/TD-2.3/TD-2.4, decided via
 [ADR 0010](./docs/adr/0010-purekafka-module-for-kafka-resilience-observability.md),
@@ -458,12 +465,12 @@ schema has 4, which surfaced as a hard `schemaRegistryCheck` failure for
 order-service on 2026-10-28 during `capture-outcome_20261028`.
 
 ### Tasks
-- [ ] TD-14.1: notification-service — add `Cancelled` to its
+- [x] TD-14.1: notification-service — add `Cancelled` to its
       `OrderStatusChangedEvent` mirror enum and email mapping, then re-run
       `schemaRegistryCheck`. **Superseded by TD-15.2** — `OrderStatusChanged`
       is retired rather than fixed; the replacement events register as fresh
       artifacts.
-- [ ] TD-14.2: record the governance rule in `system-design.md`: the producer
+- [x] TD-14.2: record the governance rule in `system-design.md`: the producer
       schema is authoritative, and a consumer's mirror must be updated in the
       same change as the producer's; note the shared-artifact/last-writer
       caveat (depends on TD-11 for changed schemas to register at all).

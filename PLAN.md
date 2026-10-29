@@ -117,8 +117,11 @@ repo's own side is independently testable, same split as Phase 3.
 
 - [x] **US-6.1** (payment-service) — consume `order.reserved`, charge,
       publish `payment.settled` / `payment.failed`
-- [ ] **US-6.2** (payment-service) — Redis idempotency keys, avoid
-      double-charging on retry/redelivery
+- [x] **US-6.2** (payment-service) — Redis idempotency keys, avoid
+      double-charging on retry/redelivery — **superseded/done 2026-10-27**:
+      the async charge path this targeted is retired (ADR 0011); double-charge
+      protection is now TD-10's per-order unique constraint + replay
+      (`authorize-idempotency_20261027`), not Redis keys
 - [x] **US-6.3** (order-service) — consume `payment.settled` /
       `payment.failed`, update order status to `confirmed` / `payment_failed`,
       publish `order.status-changed`

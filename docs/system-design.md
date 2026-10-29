@@ -302,6 +302,15 @@ though, with none of this section's narrative (publish timing,
 [`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio)
 for how to browse the live registered schemas.
 
+**Contract governance (TD-14.2):** the producer's registered schema is
+authoritative. A consumer's local mirror must be updated in the same change as
+the producer's, not in a later cleanup. Producers and consumers of the same
+contract share one `gluon/<topic>-<eventType>` artifact, so whichever side runs
+`schemaRegistryCheck` last wins the registry content — a consumer whose mirror
+lags can therefore mask a producer change. Until TD-11 is fixed, schema
+mutations cannot register as a new version; contract changes that alter a
+schema use the retirement/new-artifact route demonstrated by TD-15.
+
 Each service with Kafka contracts serves its own AsyncAPI docs (ADR 0010) — raw
 spec at `/docs/asyncapi.json`, rendered static HTML at
 `/docs/asyncapi/index.html` — the Kafka-side counterpart to the REST
