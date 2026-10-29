@@ -530,15 +530,21 @@ One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
 - [x] TD-15.2 notification-service — consume the 3 new order events, retire
       the old mirror/artifact; same logging/testing/purity fixes — done
       2026-10-29 (`td15-notification-hardening_20261029`, archived)
-- [ ] TD-15.3 payment-service — typed ids, unknown-event logging, raw-log
-      redaction, ScalaCheck, narrowed constraints
-- [ ] TD-15.4 inventory-service — typed ids, ScalaCheck, narrowed constraints
-- [ ] TD-15.5 fulfilment-service — typed ids, `Uri` config, raw-log redaction,
-      ScalaCheck, narrowed constraints
-- [ ] TD-15.6 catalog-service — typed `CatalogId`, ScalaCheck, narrowed
-      constraints
-- [ ] TD-15.7 user-service — typed ids, ScalaCheck, narrowed constraints
-- [ ] TD-15.8 cart-service — typed `CartId`, ScalaCheck, narrowed constraints
+- [x] TD-15.3 payment-service — typed ids, unknown-event logging, raw-log
+      redaction, ScalaCheck, narrowed constraints — done 2026-10-29
+      (`td15-payment-hardening_20261029`, archived)
+- [x] TD-15.4 inventory-service — typed ids, ScalaCheck, narrowed constraints
+      — done 2026-10-29 (`td15-inventory-hardening_20261029`, archived)
+- [x] TD-15.5 fulfilment-service — typed ids, `Uri` config, raw-log redaction,
+      ScalaCheck, narrowed constraints — done 2026-10-29
+      (`td15-fulfilment-hardening_20261029`, archived)
+- [x] TD-15.6 catalog-service — typed `CatalogId`, ScalaCheck, narrowed
+      constraints — done 2026-10-29 (`td15-catalog-hardening_20261029`,
+      archived)
+- [x] TD-15.7 user-service — typed ids, ScalaCheck, narrowed constraints —
+      done 2026-10-29 (`td15-user-hardening_20261029`, archived)
+- [x] TD-15.8 cart-service — typed `CartId`, ScalaCheck, narrowed constraints —
+      done 2026-10-29 (`td15-cart-hardening_20261029`, archived)
 - [ ] TD-15.9 gluon — payload contracts/catalogue, registry cleanup, cross-repo
       end-to-end verification record
 

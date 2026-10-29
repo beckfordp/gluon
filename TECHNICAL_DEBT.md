@@ -511,18 +511,29 @@ apply.
       (`td15-notification-hardening_20261029`, archived; 37 tests green;
       overall coverage 42.9% due to the pre-existing ignored Kafka suites,
       changed files 100%; both live verification scripts green).
-- [ ] TD-15.3: payment-service — typed `PaymentId`/`PaymentMethodId`;
+- [x] TD-15.3: payment-service — typed `PaymentId`/`PaymentMethodId`;
       unknown-event logging; raw-log redaction; ScalaCheck; narrow
-      constraints.
-- [ ] TD-15.4: inventory-service — typed ids in `InventoryStore` and the
-      reservation routes; ScalaCheck; narrow constraints.
-- [ ] TD-15.5: fulfilment-service — typed ids; `Uri` config in `OrderClient`;
-      raw-log redaction; ScalaCheck (state machine); narrow constraints.
-- [ ] TD-15.6: catalog-service — typed `CatalogId`; ScalaCheck; narrow
-      constraints.
-- [ ] TD-15.7: user-service — typed account/user/token ids; ScalaCheck; narrow
-      constraints.
-- [ ] TD-15.8: cart-service — typed `CartId`; ScalaCheck; narrow constraints.
+      constraints. — **done 2026-10-29** (`td15-payment-hardening_20261029`,
+      archived; 176 tests, 87.5% statement / 85.7% branch coverage;
+      `schemaRegistryCheck` + live AsyncAPI script green).
+- [x] TD-15.4: inventory-service — typed ids in `InventoryStore` and the
+      reservation routes; ScalaCheck; narrow constraints. — **done 2026-10-29**
+      (`td15-inventory-hardening_20261029`, archived; 123 tests, 91.0%/93.7%
+      coverage; both live scripts green).
+- [x] TD-15.5: fulfilment-service — typed ids; `Uri` config in `OrderClient`;
+      raw-log redaction; ScalaCheck (state machine); narrow constraints. —
+      **done 2026-10-29** (`td15-fulfilment-hardening_20261029`, archived;
+      50 tests, 73.0% coverage; live check deferred to the cross-repo E2E
+      rebuild because the deployed k8s images are stale).
+- [x] TD-15.6: catalog-service — typed `CatalogId`; ScalaCheck; narrow
+      constraints. — **done 2026-10-29** (`td15-catalog-hardening_20261029`,
+      archived; 78 tests, 91.4%/90.7% coverage).
+- [x] TD-15.7: user-service — typed account/user/token ids; ScalaCheck; narrow
+      constraints. — **done 2026-10-29** (`td15-user-hardening_20261029`,
+      archived; 51 tests, 90.8%/86.0% coverage).
+- [x] TD-15.8: cart-service — typed `CartId`; ScalaCheck; narrow constraints. —
+      **done 2026-10-29** (`td15-cart-hardening_20261029`, archived; 73 tests,
+      90.7%/91.2% coverage).
 - [ ] TD-15.9: gluon — `system-design.md` contracts/catalogue; local registry
       cleanup; cross-repo end-to-end verification record.
 
