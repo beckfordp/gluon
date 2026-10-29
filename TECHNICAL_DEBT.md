@@ -460,8 +460,67 @@ order-service on 2026-10-28 during `capture-outcome_20261028`.
 ### Tasks
 - [ ] TD-14.1: notification-service — add `Cancelled` to its
       `OrderStatusChangedEvent` mirror enum and email mapping, then re-run
-      `schemaRegistryCheck`.
+      `schemaRegistryCheck`. **Superseded by TD-15.2** — `OrderStatusChanged`
+      is retired rather than fixed; the replacement events register as fresh
+      artifacts.
 - [ ] TD-14.2: record the governance rule in `system-design.md`: the producer
       schema is authoritative, and a consumer's mirror must be updated in the
       same change as the producer's; note the shared-artifact/last-writer
       caveat (depends on TD-11 for changed schemas to register at all).
+
+---
+
+## TD-15 — Cross-repo consistency and pure-FP boundary hardening
+
+Found by the order-service full-codebase review (2026-10-29). The same
+patterns repeat across the generated services: raw `String` ids parsed with
+`Try(UUID.fromString).toOption` (collapsing malformed input into not-found or
+`false`), `Uri.unsafeFromString` for client base URLs, `sys.env` for the
+AsyncAPI docs directory, silent `case _ => unit` on unknown Kafka event types,
+full raw payloads logged at error level, no property-based tests, and `Async`
+constraints where narrower type classes suffice. Fixing these independently
+during each service's own review would produce eight divergent variants, so
+they are one TD with per-repo tasks, executed before the per-service reviews.
+
+This TD also carries the order-event contract split: `OrderStatusChanged`
+conflates lifecycle outcomes and its consumer mirror has drifted (TD-14).
+Replace it with per-outcome events matching payment/fulfilment's design.
+
+**Affects:** all eight service repos, plus gluon's `docs/system-design.md`.
+
+**Contract decisions:** `OrderConfirmed {orderId, customerId, timestamp}`,
+`OrderPaymentFailed {orderId, customerId, reason, timestamp}`,
+`OrderCancelled {orderId, customerId, timestamp}`; `OrderStatusChanged`
+retired. Dispatch outcomes stay authoritative on `fulfilment-events`
+(`DispatchConfirmed`/`DispatchFailed`) — no mirrored order events. New
+artifacts register fresh, so TD-11's draft-2020-12 mutation blocker does not
+apply.
+
+### Tasks
+- [ ] TD-15.1: order-service — order-event split producer (3 events, outbox
+      writes, AsyncAPI channels, retire the old artifact); typed `OrderId` at
+      routes/store; `Uri` config for both clients; `asyncApiHtmlDir` config;
+      log unknown event types; redact raw payload logs; `munit-scalacheck` +
+      properties; narrow effect constraints.
+- [ ] TD-15.2: notification-service — consume the 3 new order events; retire
+      the `OrderStatusChanged` mirror/consumer; register 3 mirrors, delete the
+      old artifact; unknown-event logging; raw-log redaction; ScalaCheck;
+      narrow constraints.
+- [ ] TD-15.3: payment-service — typed `PaymentId`/`PaymentMethodId`;
+      unknown-event logging; raw-log redaction; ScalaCheck; narrow
+      constraints.
+- [ ] TD-15.4: inventory-service — typed ids in `InventoryStore` and the
+      reservation routes; ScalaCheck; narrow constraints.
+- [ ] TD-15.5: fulfilment-service — typed ids; `Uri` config in `OrderClient`;
+      raw-log redaction; ScalaCheck (state machine); narrow constraints.
+- [ ] TD-15.6: catalog-service — typed `CatalogId`; ScalaCheck; narrow
+      constraints.
+- [ ] TD-15.7: user-service — typed account/user/token ids; ScalaCheck; narrow
+      constraints.
+- [ ] TD-15.8: cart-service — typed `CartId`; ScalaCheck; narrow constraints.
+- [ ] TD-15.9: gluon — `system-design.md` contracts/catalogue; local registry
+      cleanup; cross-repo end-to-end verification record.
+
+Each per-repo task is executed as its own Conductor track (pointer in that
+repo's `conductor/tracks.md`), reviewed and archived before the task is
+ticked here.

@@ -247,10 +247,10 @@ reads `eventType` to decide how to decode `payload`, rather than relying on
 topic subscription to filter event types for it.
 
 - **`order-events`** — producer: order-service; consumer:
-  notification-service (`OrderStatusChanged` only). Event types:
-  `OrderReserved` (**retired**, ADR 0018), `OrderStatusChanged` (published whenever an order lands in
-  `confirmed`/`payment_failed` (capture failure)/`cancelled` — checkout
-  failures publish nothing under ADR 0018).
+  notification-service. Event types: `OrderReserved` (**retired**, ADR 0018),
+  `OrderConfirmed`/`OrderPaymentFailed`/`OrderCancelled` (per-outcome split,
+  TD-15; checkout failures publish nothing under ADR 0018).
+  `OrderStatusChanged` is **retired** (TD-15).
 - **`inventory-events`** — producer: inventory-service, but it publishes
   nothing. `StockReserved`/`StockReservationFailed` were retired 2026-10-27
   (TD-7.5) and their registry artifacts deleted — reservation is
@@ -383,30 +383,53 @@ has had no consumer since Rework 7. Registry artifact
 ```
 Published exactly once per order, at the moment `StockEventConsumer`
 successfully transitions that order from `pending` to `reserved`. Not
-published for `reservation_failed` (see `OrderStatusChanged` below
-instead), and not published at raw checkout time — payment-service should
-never see an order it might still need to reject for lack of stock.
+published for `reservation_failed` (the per-outcome order events below
+cover that instead), and not published at raw checkout time — payment-service
+should never see an order it might still need to reject for lack of stock.
 
-**`OrderStatusChanged`** (producer: order-service, **done**; consumer:
-notification-service, **done**):
+**Order lifecycle events** (producer: order-service; consumer:
+notification-service) — split by outcome, TD-15, replacing
+`OrderStatusChanged`:
+
+**`OrderConfirmed`**:
 ```json
 {
   "orderId": "string (UUID)",
   "customerId": "string",
-  "status": "string — one of: confirmed | payment_failed | cancelled (reservation_failed: legacy only, see below)",
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
-Published whenever an order lands in one of these statuses —
-`confirmed` (consuming
-`PaymentCaptured`), `payment_failed` (capture-failure `PaymentFailed` only), or
-`cancelled` (consuming `PaymentAuthorizationExpired`). Under ADR 0018 a
-failed checkout creates no order and publishes nothing, so
-`reservation_failed` (and checkout-time `payment_failed`) stop being
-produced; notification-service keeps handling them until a cleanup. The
-schema's `status` enum keeps `reservation_failed`: removing it fails the
-registry's BACKWARD rule (old events still on the topic), and Apicurio
-can't version this draft-2020-12 schema anyway (TD-11).
+Published when order-service consumes `PaymentCaptured` and moves the order to
+`confirmed`.
+
+**`OrderPaymentFailed`**:
+```json
+{
+  "orderId": "string (UUID)",
+  "customerId": "string",
+  "reason": "string — capture failure reason (e.g. capture_failed)",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+Published when order-service consumes the capture-failure `PaymentFailed`
+and moves the order to `payment_failed`. Checkout-time declines are
+synchronous and publish nothing (ADR 0018).
+
+**`OrderCancelled`**:
+```json
+{
+  "orderId": "string (UUID)",
+  "customerId": "string",
+  "timestamp": "string (ISO-8601 instant)"
+}
+```
+Published when order-service consumes `PaymentAuthorizationExpired` and moves
+the order to `cancelled`.
+
+Dispatch outcomes stay authoritative on `fulfilment-events`
+(`DispatchConfirmed`/`DispatchFailed`); order-service does not mirror them
+into `order-events`. New per-outcome artifacts register fresh, so the
+draft-2020-12 mutation blocker (TD-11) does not apply.
 
 **Reliability (decided 2026-10-02, implemented 2026-10-15): transactional
 outbox via Debezium CDC** — [ADR 0008](./adr/0008-outbox-pattern-via-debezium-cdc.md),
@@ -680,3 +703,12 @@ it belongs there, not here.
   convention as `services/*`/`frontends/*`) — fixes a Claude Code session's
   working directory silently resetting when it `cd`'d outside `gluon`'s
   tree.
+
+- **Server-side price authority at checkout** (raised 2026-10-29).
+  `POST /orders` trusts the `unitPriceCents` supplied by gshop/cart-service;
+  order-service sums them and payment-service authorizes that total, with no
+  verification against catalog-service. Bounded for the demo (single-tenant,
+  no adversary), but a real deployment needs server-side repricing from
+  catalog-service and a `Long` cents contract end-to-end (order, payment and
+  notification currently all use `Int`). The local overflow/`Long` hardening
+  is in the order-service review track; the authority decision is unresolved.

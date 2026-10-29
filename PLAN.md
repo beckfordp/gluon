@@ -507,6 +507,50 @@ exactly — no drift between the two.
 
 ---
 
+## Rework 8 — Cross-repo consistency hardening (TD-15)
+
+**Repos:** `order-service`, `notification-service`, `payment-service`,
+`inventory-service`, `fulfilment-service`, `catalog-service`, `user-service`,
+`cart-service`, plus `gluon`'s `docs/system-design.md`.
+
+**Depends on:** nothing. Runs before the full order-service review (the
+order-service review's remaining findings build on the event and boundary
+shapes fixed here) and before the per-service review sweep.
+
+The order-service full-codebase review (2026-10-29) found boundary and
+consistency patterns repeated across the services, plus an order-event
+contract that no longer matches payment/fulfilment's per-outcome event style.
+One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
+
+- [ ] TD-15.1 order-service — order-event split (`OrderConfirmed`,
+      `OrderPaymentFailed`, `OrderCancelled`; retire `OrderStatusChanged`);
+      typed `OrderId`; `Uri`/`asyncApiHtmlDir` config; unknown-event logging;
+      raw-log redaction; ScalaCheck; narrowed effect constraints
+- [ ] TD-15.2 notification-service — consume the 3 new order events, retire
+      the old mirror/artifact; same logging/testing/purity fixes
+- [ ] TD-15.3 payment-service — typed ids, unknown-event logging, raw-log
+      redaction, ScalaCheck, narrowed constraints
+- [ ] TD-15.4 inventory-service — typed ids, ScalaCheck, narrowed constraints
+- [ ] TD-15.5 fulfilment-service — typed ids, `Uri` config, raw-log redaction,
+      ScalaCheck, narrowed constraints
+- [ ] TD-15.6 catalog-service — typed `CatalogId`, ScalaCheck, narrowed
+      constraints
+- [ ] TD-15.7 user-service — typed ids, ScalaCheck, narrowed constraints
+- [ ] TD-15.8 cart-service — typed `CartId`, ScalaCheck, narrowed constraints
+- [ ] TD-15.9 gluon — payload contracts/catalogue, registry cleanup, cross-repo
+      end-to-end verification record
+
+**Stub / fan-out:** each repo's own test suite stubs everything outside it
+(Testcontainers, synthetic events). The contract shape is fixed in
+`system-design.md` first; per-repo tracks run independently.
+
+**Exit criteria:** every repo's suite + scalafmt + registry check green; the
+cross-repo end-to-end run (real local cluster: checkout → dispatch → capture →
+history, plus failure paths) passes; no producer, consumer, or registry
+artifact still references `OrderStatusChanged`.
+
+---
+
 ## Checkout Journey
 
 The walking skeleton's checkout path was always deliberately thin — no
