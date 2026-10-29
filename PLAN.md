@@ -545,8 +545,9 @@ One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
       done 2026-10-29 (`td15-user-hardening_20261029`, archived)
 - [x] TD-15.8 cart-service — typed `CartId`, ScalaCheck, narrowed constraints —
       done 2026-10-29 (`td15-cart-hardening_20261029`, archived)
-- [ ] TD-15.9 gluon — payload contracts/catalogue, registry cleanup, cross-repo
-      end-to-end verification record
+- [x] TD-15.9 gluon — payload contracts/catalogue, registry cleanup, cross-repo
+      end-to-end verification record — done 2026-10-29 (all 8 services
+      redeployed; registry + live E2E green)
 
 **Stub / fan-out:** each repo's own test suite stubs everything outside it
 (Testcontainers, synthetic events). The contract shape is fixed in
@@ -555,7 +556,9 @@ One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
 **Exit criteria:** every repo's suite + scalafmt + registry check green; the
 cross-repo end-to-end run (real local cluster: checkout → dispatch → capture →
 history, plus failure paths) passes; no producer, consumer, or registry
-artifact still references `OrderStatusChanged`.
+artifact still references `OrderStatusChanged`. — **met 2026-10-29**; the only
+CI exceptions are fulfilment-service and user-service's pre-existing GitHub
+Packages auth failure, unrelated to this work.
 
 ---
 

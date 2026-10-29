@@ -295,3 +295,21 @@ own line. See each repo's own `git log` for full detail either way.
   in place of the prototype's customer line, manual Refresh; the localStorage
   mock store and `VITE_FULFILMENT_MOCK` flag are gone. Live-verified end-to-end
   by `scripts/verify-fulfilment-queue.sh`.
+
+## 2026-10-29
+
+### Added
+- All Scala repos (8 services, `lib/purerest`, `tools/pure-service-generator`):
+  `conductor/code_styleguides/scala-fp.md` — pure-FP rules (functional
+  core/effectful shell, state machines, narrowest capability,
+  parse-don't-validate) with a review checklist, now `/conductor:review` "Law";
+  canonical copy lives in pure-service-generator.
+
+### Changed
+- Cross-repo TD-15 hardening across all 8 services: `OrderStatusChanged` split
+  into per-outcome `OrderConfirmed` / `OrderPaymentFailed` / `OrderCancelled`
+  (dispatch stays on `fulfilment-events`); opaque ID types parsed once at every
+  HTTP/Kafka boundary; config-driven AsyncAPI HTML dir and client `Uri`s;
+  Kafka unknown-event logging + raw-payload redaction; ScalaCheck properties;
+  narrowed effect bounds. All services rebuilt and live-verified end-to-end;
+  registry artefacts and system-design contracts match.

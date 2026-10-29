@@ -534,8 +534,17 @@ apply.
 - [x] TD-15.8: cart-service — typed `CartId`; ScalaCheck; narrow constraints. —
       **done 2026-10-29** (`td15-cart-hardening_20261029`, archived; 73 tests,
       90.7%/91.2% coverage).
-- [ ] TD-15.9: gluon — `system-design.md` contracts/catalogue; local registry
-      cleanup; cross-repo end-to-end verification record.
+- [x] TD-15.9: gluon — `system-design.md` contracts/catalogue; local registry
+      cleanup; cross-repo end-to-end verification record. — **done 2026-10-29**:
+      all 8 services rebuilt/deployed on the local cluster (22 pods ready),
+      five Debezium connectors registered, `schemaRegistryCheck` green for
+      order/payment/notification/inventory/fulfilment with the expected 10
+      artifacts and no `OrderStatusChanged`, and the live E2E suite passed:
+      gshop `verify-checkout-real.sh`, `verify-capture-history.sh`,
+      `verify-fulfilment-history.sh`; order-service `verify-capture-outcome.sh`,
+      `verify-dispatched.sh`, `verify-dispatch-failed.sh` (latter two scripts
+      updated for capture-on-dispatch, which moves `dispatched` on to
+      `confirmed`).
 
 Each per-repo task is executed as its own Conductor track (pointer in that
 repo's `conductor/tracks.md`), reviewed and archived before the task is
