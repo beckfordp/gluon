@@ -527,8 +527,9 @@ One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
       typed `OrderId`; `Uri`/`asyncApiHtmlDir` config; unknown-event logging;
       raw-log redaction; ScalaCheck; narrowed effect constraints — done
       2026-10-29 (`td15-order-hardening_20261029`, archived)
-- [ ] TD-15.2 notification-service — consume the 3 new order events, retire
-      the old mirror/artifact; same logging/testing/purity fixes
+- [x] TD-15.2 notification-service — consume the 3 new order events, retire
+      the old mirror/artifact; same logging/testing/purity fixes — done
+      2026-10-29 (`td15-notification-hardening_20261029`, archived)
 - [ ] TD-15.3 payment-service — typed ids, unknown-event logging, raw-log
       redaction, ScalaCheck, narrowed constraints
 - [ ] TD-15.4 inventory-service — typed ids, ScalaCheck, narrowed constraints

@@ -504,10 +504,13 @@ apply.
       properties; narrow effect constraints. — **done 2026-10-29**
       (`td15-order-hardening_20261029`, archived; 199 tests, 88.5% statement
       coverage; live AsyncAPI/order-status scripts green).
-- [ ] TD-15.2: notification-service — consume the 3 new order events; retire
+- [x] TD-15.2: notification-service — consume the 3 new order events; retire
       the `OrderStatusChanged` mirror/consumer; register 3 mirrors, delete the
       old artifact; unknown-event logging; raw-log redaction; ScalaCheck;
-      narrow constraints.
+      narrow constraints. — **done 2026-10-29**
+      (`td15-notification-hardening_20261029`, archived; 37 tests green;
+      overall coverage 42.9% due to the pre-existing ignored Kafka suites,
+      changed files 100%; both live verification scripts green).
 - [ ] TD-15.3: payment-service — typed `PaymentId`/`PaymentMethodId`;
       unknown-event logging; raw-log redaction; ScalaCheck; narrow
       constraints.
