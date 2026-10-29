@@ -522,10 +522,11 @@ consistency patterns repeated across the services, plus an order-event
 contract that no longer matches payment/fulfilment's per-outcome event style.
 One TD — TD-15 — covers the whole sweep so the fix doesn't diverge per repo.
 
-- [ ] TD-15.1 order-service — order-event split (`OrderConfirmed`,
+- [x] TD-15.1 order-service — order-event split (`OrderConfirmed`,
       `OrderPaymentFailed`, `OrderCancelled`; retire `OrderStatusChanged`);
       typed `OrderId`; `Uri`/`asyncApiHtmlDir` config; unknown-event logging;
-      raw-log redaction; ScalaCheck; narrowed effect constraints
+      raw-log redaction; ScalaCheck; narrowed effect constraints — done
+      2026-10-29 (`td15-order-hardening_20261029`, archived)
 - [ ] TD-15.2 notification-service — consume the 3 new order events, retire
       the old mirror/artifact; same logging/testing/purity fixes
 - [ ] TD-15.3 payment-service — typed ids, unknown-event logging, raw-log

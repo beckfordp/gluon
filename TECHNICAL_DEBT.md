@@ -497,11 +497,13 @@ artifacts register fresh, so TD-11's draft-2020-12 mutation blocker does not
 apply.
 
 ### Tasks
-- [ ] TD-15.1: order-service — order-event split producer (3 events, outbox
+- [x] TD-15.1: order-service — order-event split producer (3 events, outbox
       writes, AsyncAPI channels, retire the old artifact); typed `OrderId` at
       routes/store; `Uri` config for both clients; `asyncApiHtmlDir` config;
       log unknown event types; redact raw payload logs; `munit-scalacheck` +
-      properties; narrow effect constraints.
+      properties; narrow effect constraints. — **done 2026-10-29**
+      (`td15-order-hardening_20261029`, archived; 199 tests, 88.5% statement
+      coverage; live AsyncAPI/order-status scripts green).
 - [ ] TD-15.2: notification-service — consume the 3 new order events; retire
       the `OrderStatusChanged` mirror/consumer; register 3 mirrors, delete the
       old artifact; unknown-event logging; raw-log redaction; ScalaCheck;
