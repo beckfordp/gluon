@@ -40,3 +40,4 @@ configMapGenerator:
       - config/grafana/dashboards/gluon-red.json
       - config/grafana/dashboards/gluon-kafka.json
       - config/grafana/dashboards/gluon-pods.json
+      - config/grafana/dashboards/gluon-infra.json
