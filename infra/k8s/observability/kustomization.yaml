@@ -18,6 +18,7 @@ resources:
   - cadvisor.yaml
   - kube-state-metrics.yaml
   - db-exporters.yaml
+  - kafka-exporter.yaml
 configMapGenerator:
   - name: prometheus-config
     files:

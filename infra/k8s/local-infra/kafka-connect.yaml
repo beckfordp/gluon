@@ -4,6 +4,46 @@
 # Delivers rows from each service's outbox_events table to its domain
 # topic (ADR 0008) — see debezium-connectors-register.yaml for the actual
 # per-service connector configs this worker runs.
+#
+# Metrics (PLAN.md PERF-3.1): the Prometheus JMX exporter javaagent serves
+# connector/task status, source-record counts and Debezium streaming metrics
+# (MilliSecondsBehindSource: the outbox -> Kafka hop) on :9404. The image
+# has the entrypoint switch but not the jar, so an initContainer fetches a
+# pinned one from Maven Central. Always on: it costs a little Connect heap
+# headroom, and only the opt-in obs stack (bin/obs) scrapes it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-connect-jmx-exporter
+  namespace: gluon-local
+data:
+  metrics.yaml: |
+    lowercaseOutputName: true
+    rules:
+      # String attributes come through as "<attr>: <value>"; export 1 per state.
+      - pattern: 'kafka.connect<type=connector-metrics, connector=(.+)><>status: ([a-z-]+)'
+        name: kafka_connect_connector_status
+        value: 1
+        type: GAUGE
+        labels: {connector: "$1", status: "$2"}
+      - pattern: 'kafka.connect<type=connector-task-metrics, connector=(.+), task=(.+)><>status: ([a-z-]+)'
+        name: kafka_connect_task_status
+        value: 1
+        type: GAUGE
+        labels: {connector: "$1", task: "$2", status: "$3"}
+      - pattern: 'kafka.connect<type=source-task-metrics, connector=(.+), task=(.+)><>(source-record-poll-total|source-record-write-total|source-record-active-count|poll-batch-avg-time-ms)'
+        name: kafka_connect_source_task_$3
+        type: GAUGE
+        labels: {connector: "$1", task: "$2"}
+      - pattern: 'kafka.connect<type=connect-worker-metrics><>(connector-count|task-count|connector-startup-failure-total|task-startup-failure-total)'
+        name: kafka_connect_worker_$1
+        type: GAUGE
+      # Debezium: debezium.postgres:type=connector-metrics,context=streaming|snapshot,server=<prefix>[,task=0]
+      - pattern: 'debezium.([^:<]+)<type=connector-metrics, context=([^,>]+), server=([^,>]+)(?:, task=[^>]+)?><>(MilliSecondsBehindSource|TotalNumberOfEventsSeen|NumberOfEventsFiltered|QueueRemainingCapacity|Connected|MilliSecondsSinceLastEvent)'
+        name: debezium_$4
+        type: GAUGE
+        labels: {plugin: "$1", context: "$2", server: "$3"}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,6 +59,25 @@ spec:
       labels:
         app: kafka-connect
     spec:
+      initContainers:
+        - name: fetch-jmx-exporter
+          image: curlimages/curl:8.11.1
+          command:
+            - curl
+            - -fsSL
+            - -o
+            - /jmx/jmx_prometheus_javaagent.jar
+            - https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/1.0.1/jmx_prometheus_javaagent-1.0.1.jar
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 32Mi
+          volumeMounts:
+            - name: jmx
+              mountPath: /jmx
       containers:
         - name: kafka-connect
           image: debezium/connect:3.0.0.Final
@@ -32,7 +91,11 @@ spec:
               memory: 1Gi
           ports:
             - containerPort: 8083
+            - name: jmx
+              containerPort: 9404
           env:
+            - name: KAFKA_OPTS
+              value: "-javaagent:/jmx/jmx_prometheus_javaagent.jar=9404:/jmx-config/metrics.yaml"
             # debezium/connect defaults to -Xmx2G.
             - name: HEAP_OPTS
               value: "-Xms256m -Xmx512m"
@@ -74,6 +137,17 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 10
+          volumeMounts:
+            - name: jmx
+              mountPath: /jmx
+            - name: jmx-config
+              mountPath: /jmx-config
+      volumes:
+        - name: jmx
+          emptyDir: {}
+        - name: jmx-config
+          configMap:
+            name: kafka-connect-jmx-exporter
 ---
 apiVersion: v1
 kind: Service
@@ -84,5 +158,10 @@ spec:
   selector:
     app: kafka-connect
   ports:
-    - port: 8083
+    - name: http
+      port: 8083
       targetPort: 8083
+    # Not named "metrics": that name is how Prometheus finds gluon services.
+    - name: jmx
+      port: 9404
+      targetPort: 9404
