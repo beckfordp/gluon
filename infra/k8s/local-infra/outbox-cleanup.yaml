@@ -17,6 +17,14 @@ spec:
           containers:
             - name: cleanup
               image: postgres:16-alpine
+              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
               env:
                 - name: PGPASSWORD
                   value: "order"
@@ -46,6 +54,14 @@ spec:
           containers:
             - name: cleanup
               image: postgres:16-alpine
+              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
               env:
                 - name: PGPASSWORD
                   value: "inventory"
@@ -75,6 +91,14 @@ spec:
           containers:
             - name: cleanup
               image: postgres:16-alpine
+              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
               env:
                 - name: PGPASSWORD
                   value: "payment"
@@ -104,6 +128,14 @@ spec:
           containers:
             - name: cleanup
               image: postgres:16-alpine
+              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
               env:
                 - name: PGPASSWORD
                   value: "user"
@@ -133,6 +165,14 @@ spec:
           containers:
             - name: cleanup
               image: postgres:16-alpine
+              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
               env:
                 - name: PGPASSWORD
                   value: "fulfilment"

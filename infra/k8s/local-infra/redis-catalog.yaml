@@ -16,6 +16,14 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
+          # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
           ports:
             - containerPort: 6379
           readinessProbe:

@@ -16,6 +16,14 @@ spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
+          # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           args: ["-c", "wal_level=logical"]
           ports:
             - containerPort: 5432

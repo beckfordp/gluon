@@ -22,9 +22,20 @@ spec:
       containers:
         - name: kafka-connect
           image: debezium/connect:3.0.0.Final
+          # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
           ports:
             - containerPort: 8083
           env:
+            # debezium/connect defaults to -Xmx2G.
+            - name: HEAP_OPTS
+              value: "-Xms256m -Xmx512m"
             - name: BOOTSTRAP_SERVERS
               value: "kafka:9092"
             - name: GROUP_ID

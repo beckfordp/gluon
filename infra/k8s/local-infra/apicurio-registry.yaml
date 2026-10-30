@@ -39,10 +39,21 @@ spec:
       containers:
         - name: apicurio-registry
           image: apicurio/apicurio-registry:3.3.2
+          # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           ports:
             - containerPort: 8080
             - containerPort: 9000
           env:
+            # run-java.sh defaults to MaxRAMPercentage=80, which OOMs under the 512Mi limit.
+            - name: JAVA_MAX_MEM_RATIO
+              value: "50"
             # Default CORS allow-list is just localhost:8888/127.0.0.1:8888
             # (confirmed live: a real browser request from
             # apicurio-registry-ui's own cluster-DNS origin got a 403 "CORS
