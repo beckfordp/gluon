@@ -1,0 +1,1 @@
+Review fixes: Connect JMX jar sha256-pinned (sha1 matches Maven Central), bin/obs budget counts Pending pods, env README notes 30Mi obs headroom.
