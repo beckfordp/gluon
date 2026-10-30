@@ -316,3 +316,17 @@ own line. See each repo's own `git log` for full detail either way.
   Kafka unknown-event logging + raw-payload redaction; ScalaCheck properties;
   narrowed effect bounds. All services rebuilt and live-verified end-to-end;
   registry artefacts and system-design contracts match.
+
+## 2026-10-30
+
+### Changed
+- `PLAN.md` "Performance" reworked around a Christmas-rush scenario (spiky
+  demand, dispatch team falling behind): 17 provisioning/scaling/support
+  questions, a laptop resource budget with run-validity rules and demo SLOs,
+  and 11 units — observability stack in-cluster, journey telemetry,
+  end-to-end sync + async tracing, runtime fault injection, Christmas load
+  model with a dispatch bot, capacity/resilience experiments, the demo
+  runbook, findings and regression gates. Flags a histogram-bucket defect in
+  purerestlib (seconds recorded against ms-sized default buckets) as the
+  first fix. ADR 0019 amended; new ADRs 0021 (Tempo trace backend) and 0022
+  (fault-injection admin API).
