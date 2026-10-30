@@ -16,6 +16,7 @@ labels:
 resources:
   - prometheus.yaml
   - cadvisor.yaml
+  - kube-state-metrics.yaml
 configMapGenerator:
   - name: prometheus-config
     files:
