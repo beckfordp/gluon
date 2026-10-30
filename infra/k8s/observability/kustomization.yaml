@@ -13,4 +13,10 @@ labels:
   - pairs:
       app.kubernetes.io/part-of: gluon-obs
     includeTemplates: true
-resources: []
+resources:
+  - prometheus.yaml
+  - cadvisor.yaml
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - config/prometheus.yml

@@ -1,0 +1,78 @@
+# cAdvisor for pod CPU, memory and CFS throttling (PLAN.md PERF-3.3, Q2/Q6).
+#
+# Not the kubelet's built-in cAdvisor: OrbStack's node runs Docker via
+# cri-dockerd, and its /metrics/cadvisor endpoint exports only machine_*
+# series, no containers. /metrics/resource has CPU and memory but no
+# throttling. Docker mode in a standalone cAdvisor fails too (it can't read
+# OrbStack's layer store), so this one runs in raw-cgroup mode over
+# /kubepods only: one series per pod cgroup, `id` = its cgroup path, which
+# holds the pod UID (prometheus.yaml extracts it as `pod_uid`).
+#
+# Least privilege: not privileged, no capabilities, runs as nobody with a
+# read-only root filesystem, and mounts only the host's cgroup tree,
+# read-only — raw-cgroup mode with cpu/memory metrics needs nothing else.
+# Without /dev/kmsg it can't see kernel OOM events; kube-state-metrics'
+# last-terminated reason covers OOMKills instead.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cadvisor
+spec:
+  selector:
+    matchLabels:
+      app: cadvisor
+  template:
+    metadata:
+      labels:
+        app: cadvisor
+    spec:
+      containers:
+        - name: cadvisor
+          image: gcr.io/cadvisor/cadvisor:v0.52.1
+          args:
+            - --docker_only=false
+            - --raw_cgroup_prefix_whitelist=/kubepods
+            - --disable_root_cgroup_stats=true
+            - --store_container_labels=false
+            - --enable_metrics=cpu,memory
+            - --housekeeping_interval=5s
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Laptop budget (environments/local/README.md): request = limit.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: cgroup
+              mountPath: /sys/fs/cgroup
+              readOnly: true
+      volumes:
+        - name: cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadvisor
+spec:
+  selector:
+    app: cadvisor
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

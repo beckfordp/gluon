@@ -12,7 +12,7 @@ limits (PLAN.md "Demo, not capacity"). Every container sets memory request
 | Share | Memory limits | Managed by |
 |---|---|---|
 | 8 services (384Mi each, heap 40%) | 3 Gi | `bin/k8s-local-up`, these values + `infra/k8s/gluon` |
-| Shared infra (7 Postgres, 3 Redis, Kafka, Connect, Apicurio) | 4.31 Gi | `bin/k8s-local-up`, `infra/k8s/local-infra` |
+| Shared infra (6 Postgres, 3 Redis, Kafka, Connect, Apicurio) | 4.31 Gi | `bin/k8s-local-up`, `infra/k8s/local-infra` |
 | Observability stack (opt-in) | ≤ 3 Gi | `bin/obs up\|down`, `infra/k8s/observability` |
 | Gatling Job (one run at a time) | 1 Gi | `bin/run-perf`, `tests/performance/k8s/perf-job.yaml` |
 | **Total** | **≤ 11.31 Gi** of 12 Gi | |

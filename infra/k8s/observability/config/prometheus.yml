@@ -1,0 +1,95 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Every gluon service: an EndpointSlice port named `metrics`. Labelled
+  # `service` (the k8s Service name, e.g. order-service) for dashboards.
+  - job_name: gluon-services
+    kubernetes_sd_configs:
+      - role: endpointslice
+        namespaces:
+          names: [gluon-local]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_endpointslice_port_name]
+        regex: metrics
+        action: keep
+      - source_labels: [__meta_kubernetes_service_name]
+        target_label: service
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
+  # cAdvisor DaemonSet (cadvisor.yaml): pod-level CPU, memory and CFS
+  # throttling, keyed by cgroup path; dashboards join its `pod_uid` to
+  # kube_pod_info for pod names.
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+    metric_relabel_configs:
+      - source_labels: [id]
+        regex: "/kubepods/(?:[a-z]+/)?pod([0-9a-f-]+)"
+        target_label: pod_uid
+
+  - job_name: kube-state-metrics
+    static_configs:
+      - targets: ["kube-state-metrics:8080"]
+
+  # Multi-target postgres_exporter: one exporter, a /probe per database.
+  # The target's `<db>-postgres` prefix picks the auth module (see
+  # postgres-exporter.yaml) and becomes the `db` label.
+  - job_name: postgres
+    metrics_path: /probe
+    static_configs:
+      - targets:
+          - catalog-postgres:5432/catalog
+          - fulfilment-postgres:5432/fulfilment
+          - inventory-postgres:5432/inventory
+          - order-postgres:5432/order
+          - payment-postgres:5432/payment
+          - user-postgres:5432/user
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        regex: "([a-z]+)-postgres:.*"
+        target_label: __param_auth_module
+      - source_labels: [__address__]
+        regex: "([a-z]+)-postgres:.*"
+        target_label: db
+      - source_labels: [__address__]
+        target_label: instance
+      - target_label: __address__
+        replacement: postgres-exporter:9187
+
+  # Multi-target redis_exporter: /scrape per instance.
+  - job_name: redis
+    metrics_path: /scrape
+    static_configs:
+      - targets:
+          - redis://cart-redis:6379
+          - redis://catalog-redis:6379
+          - redis://order-redis:6379
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__address__]
+        regex: "redis://([a-z]+)-redis:.*"
+        target_label: redis
+      - source_labels: [__address__]
+        target_label: instance
+      - target_label: __address__
+        replacement: redis-exporter:9121
+
+  - job_name: kafka-exporter
+    static_configs:
+      - targets: ["kafka-exporter:9308"]
+
+  # Kafka Connect worker's JMX agent (infra/k8s/local-infra/kafka-connect.yaml):
+  # connector/task status and Debezium streaming metrics.
+  - job_name: kafka-connect
+    static_configs:
+      - targets: ["kafka-connect:9404"]
