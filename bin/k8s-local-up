@@ -37,6 +37,11 @@ fi
 
 echo "== Applying namespace + shared local infra =="
 kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/namespace.yaml"
+# A Job's pod template is immutable, so re-applying a changed
+# debezium-connector-register fails; delete it first. Re-running it is
+# harmless (PUT .../config is idempotent), and it re-registers connectors
+# lost to an OrbStack restart.
+kubectl delete job debezium-connector-register -n "$NAMESPACE" --ignore-not-found
 kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/"
 
 echo "== Waiting for shared infra to be ready (up to 3m) =="
