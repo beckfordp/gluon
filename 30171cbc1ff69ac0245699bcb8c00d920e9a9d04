@@ -1,0 +1,1 @@
+PERF-2.3 (gluon-performance track run-in-cluster_20261030): chart defaults 250m/384Mi req, 500m/384Mi lim; javaOpts MaxRAMPercentage=40 -> JAVA_OPTS (measured 100-180Mi off-heap; 75% would OOM at 384Mi; user chose 40%).
