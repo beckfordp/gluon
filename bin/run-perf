@@ -14,13 +14,19 @@
 #     simulation   e.g. SmokeSimulation (gluon.perf. prefix optional)
 #     profile      PERF_PROFILE, default smoke
 #
-# Exits with Gatling's own status: 0 ok, 2 assertions failed, 1 error.
+# Exits with Gatling's own status (0 ok, 2 assertions failed, 1 error), or 3
+# if Gatling passed but the run is invalid under the laptop-budget rules
+# (PERF-2.4, bin/lib/run-validity.sh): VM CPU, memory, swap, Gatling-pod
+# throttling, mains power. An invalid run's numbers are noise, not findings.
 # Results: tests/performance/target/gatling-k8s/<simulation>-<timestamp>/
+#   validity.txt next to the report; raw samples under validity/
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PERF_DIR="$GLUON_DIR/tests/performance"
+# shellcheck source=lib/run-validity.sh
+source "$SCRIPT_DIR/lib/run-validity.sh"
 NAMESPACE="gluon-local"
 IMAGE="gluon-performance:latest"
 RUN_TIMEOUT="${RUN_TIMEOUT:-10800}" # seconds; generous for 1h soak + ramp-down
@@ -76,7 +82,11 @@ slug="$(echo "${simulation##*.}" | tr '[:upper:]' '[:lower:]' | cut -c1-40)"
 job="perf-$slug-$ts"
 out="$PERF_DIR/target/gatling-k8s/$slug-$ts"
 
+sampler="perf-sampler-$job"
+samples="$out/validity"
+
 cleanup() {
+  docker rm -f "$sampler" >/dev/null 2>&1 || true
   kubectl -n "$NAMESPACE" delete job "$job" --ignore-not-found --wait=false >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -91,6 +101,19 @@ if ! kubectl -n "$NAMESPACE" wait --for=condition=Ready pod -l "job-name=$job" -
   exit 1
 fi
 pod="$(kubectl -n "$NAMESPACE" get pod -l "job-name=$job" -o jsonpath='{.items[0].metadata.name}')"
+
+# --- run-validity sampling (PERF-2.4) ------------------------------------------
+# Any container sees the OrbStack VM's own /proc/stat and /proc/meminfo, so a
+# plain alpine loop samples the VM; no privileges or in-cluster agent needed.
+mkdir -p "$samples"
+# One sample line: epoch, /proc/stat cpu fields, MemTotal MemAvailable
+# SwapTotal SwapFree (format: bin/lib/run-validity.sh).
+sample='cpu=$(awk "/^cpu /{print \$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9}" /proc/stat)
+mem=$(awk "/^(MemTotal|MemAvailable|SwapTotal|SwapFree):/{printf \"%s \", \$2}" /proc/meminfo)
+echo "$(date +%s) $cpu $mem"'
+docker run -d --rm --name "$sampler" alpine:3.20 sh -c "while :; do $sample; sleep 5; done" >/dev/null
+kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- cat /sys/fs/cgroup/cpu.stat > "$samples/gatling-cpu.start" 2>/dev/null || true
+pmset -g batt > "$samples/power.txt" 2>/dev/null || true
 
 # --- wait for DONE -------------------------------------------------------------
 echo "== Running (pod $pod; follow with: kubectl -n $NAMESPACE logs -f $pod) =="
@@ -109,6 +132,19 @@ until kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- test -e /results/DONE 2>
   sleep 2
 done
 
+# --- stop sampling -------------------------------------------------------------
+# The pod is still running (waiting for COPIED), so its cgroup is still readable.
+kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- cat /sys/fs/cgroup/cpu.stat > "$samples/gatling-cpu.end" 2>/dev/null || true
+pmset -g batt >> "$samples/power.txt" 2>/dev/null || true
+docker logs "$sampler" > "$samples/vm.log" 2>/dev/null || true
+# A final sample, so even a run shorter than the 5s interval has two to diff;
+# the 1s gap keeps it from landing in the same jiffy as the loop's last one.
+sleep 1
+docker exec "$sampler" sh -c "$sample" >> "$samples/vm.log" 2>/dev/null || true
+docker rm -f "$sampler" >/dev/null 2>&1 || true
+# Informational: other heavy apps. `|| true`: head closing early SIGPIPEs ps under pipefail.
+{ ps -Ao pcpu,comm -r | head -6; } > "$samples/host-top.txt" 2>/dev/null || true
+
 # --- copy out ----------------------------------------------------------------
 mkdir -p "$out"
 kubectl -n "$NAMESPACE" cp -c gatling "$pod:/results" "$out" >/dev/null
@@ -117,7 +153,21 @@ kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- touch /results/COPIED >/dev/nu
 
 code="$(cat "$out/EXIT_CODE" 2>/dev/null || echo 1)"
 report="$(ls -d "$out"/*/index.html 2>/dev/null | head -1 || true)"
+
+valid=0
+run_validity_evaluate "$samples" > /dev/null || valid=$?
+cp "$samples/validity.txt" "$out/validity.txt"
+
 echo "== Done: simulation exited $code =="
-echo "results: $out"
-[ -n "$report" ] && echo "report:  $report"
-exit "$code"
+echo "results:  $out"
+[ -n "$report" ] && echo "report:   $report"
+echo "validity: $out/validity.txt"
+sed 's/^/  /' "$out/validity.txt"
+if [ "$code" != 0 ]; then
+  exit "$code"
+fi
+if [ "$valid" != 0 ]; then
+  echo "WARN: run INVALID under the laptop-budget rules — treat its numbers as noise" >&2
+  exit 3
+fi
+exit 0
