@@ -17,6 +17,19 @@ limits (PLAN.md "Demo, not capacity"). Every container sets memory request
 | Gatling Job (one run at a time) | 1 Gi | `bin/run-perf`, `tests/performance/k8s/perf-job.yaml` |
 | **Total** | **≤ 11.31 Gi** of 12 Gi | |
 
+The observability stack's 2.97 Gi, all request = limit:
+
+| Component | Memory |
+|---|---|
+| Elasticsearch (512m heap) | 1152 Mi |
+| Kibana (512m Node heap) | 768 Mi |
+| Prometheus (2d / 1GB retention) | 512 Mi |
+| Grafana | 192 Mi |
+| Filebeat (DaemonSet) | 128 Mi |
+| cAdvisor (DaemonSet), kube-state-metrics, postgres-exporter, kafka-exporter | 64 Mi each |
+| redis-exporter | 32 Mi |
+| `kibana-setup` Job (one-shot, during `bin/obs up`) | 32 Mi |
+
 `bin/obs status` prints the live figures (`bin/lib/obs-budget.sh`); `bin/obs
 up` refuses to report success if the stack exceeds 3 Gi or the namespace
 exceeds 11 Gi, which would leave no room for a Gatling run.
