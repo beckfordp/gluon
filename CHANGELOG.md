@@ -337,3 +337,12 @@ own line. See each repo's own `git log` for full detail either way.
   config (`<SERVICE>_URL`, `PERF_PROFILE`), trace-linked requests (W3C
   `traceparent` per request, trace ids logged), `scripts/port-forward.sh`,
   and a smoke simulation green against `gluon-local`.
+- Performance 2: simulations run in-cluster. `gluon-performance` image
+  (native-packager) + Job template; `bin/run-perf <simulation> [profile]`
+  launches, waits, copies results out, and flags invalid runs (exit 3) from
+  VM CPU/memory/swap, Gatling throttling and power samples
+  (`bin/lib/run-validity.sh`). Every `gluon-local` pod now has explicit
+  requests/limits per the laptop budget (services 250m–500m/384Mi, heap 40%;
+  Kafka/Connect/Apicurio heap capped). `bin/k8s-local-up` re-creates the
+  Debezium register Job, so re-running it restores connectors after an
+  OrbStack restart.

@@ -982,19 +982,25 @@ track `harness-scaffold_20261030`): 8/8 OK, trace ids joined by services.
 
 **Depends on:** Performance 1.
 
-- [ ] PERF-2.1 — container image + k8s Job running a named simulation
+- [x] PERF-2.1 — container image + k8s Job running a named simulation
       inside `gluon-local` (port-forwards would bottleneck results)
-- [ ] PERF-2.2 — `bin/run-perf <simulation> [profile]`: launch Job, wait,
+- [x] PERF-2.2 — `bin/run-perf <simulation> [profile]`: launch Job, wait,
       copy the report out, delete the Job
-- [ ] PERF-2.3 — tight, explicit CPU/memory requests + limits for every
+- [x] PERF-2.3 — tight, explicit CPU/memory requests + limits for every
       service and infra pod per the laptop budget above
       (`infra/k8s/gluon/values.yaml`, `local-infra`), so pods saturate
       before the host and Q6 has a limit to measure against
-- [ ] PERF-2.4 — run-validity capture: `bin/run-perf` records VM CPU,
+- [x] PERF-2.4 — run-validity capture: `bin/run-perf` records VM CPU,
       memory pressure and Gatling-pod throttling alongside the report and
       flags invalid runs
 
 **Exit criteria:** smoke simulation run in-cluster, report on local disk.
+✅ Done 2026-10-30 (`gluon-performance` track `run-in-cluster_20261030`):
+`bin/run-perf SmokeSimulation` green in-cluster with `validity.txt`. Amended
+from the budget above: service heap `-XX:MaxRAMPercentage=40`, not 75
+(services use ~100–180Mi off-heap, so 75% of 384Mi would OOM). Memory
+pressure is MemAvailable, since OrbStack's kernel has no PSI. Pod memory
+limits total 7.3 Gi + Gatling 1 Gi.
 
 ---
 
