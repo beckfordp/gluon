@@ -353,3 +353,16 @@ own line. See each repo's own `git log` for full detail either way.
   250ms–2.5s) on the HTTP server/client histograms; all 8 services bumped
   to it and apply it to their `db.client.operation.duration` histograms, so
   p50/p95/p99 are meaningful. Generator template pins 0.4.0.
+
+### Added
+- Performance 3b (PERF-3.1–3.4): opt-in observability stack in
+  `gluon-local`, `bin/obs up|down|status` (`infra/k8s/observability`, plain
+  kustomize). Prometheus discovers every service's `metrics` port and
+  scrapes cAdvisor (pod CPU/memory/throttling, least-privilege),
+  kube-state-metrics, Postgres/Redis/Kafka exporters and Kafka Connect's
+  new JMX agent (connector status, Debezium lag). Filebeat ships all logs to
+  Elasticsearch with `trace_id`s, so a Gatling request's trace id finds its
+  logs in Kibana (`gluon-logs`). Grafana (:3000) provisions 4 dashboards:
+  services RED (purerest's, templated by `service`), Kafka consumers, pods,
+  infrastructure. Stack is 2.97 Gi, checked against its 3 Gi budget on
+  every `bin/obs up`.

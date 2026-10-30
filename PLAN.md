@@ -1025,16 +1025,21 @@ purerest already has the full stack in `docker-compose.yml`
       *Done 2026-10-30 (purerest track latency-buckets_20261030): purerestlib
       0.4.0 `LatencyBuckets.seconds`, all 8 services bumped, live `le=` check
       green. PERF-3.1–3.4 continue as gluon-performance "Performance 3b".*
-- [ ] PERF-3.1 — Prometheus scraping every service's metrics port, plus
+- [x] PERF-3.1 — Prometheus scraping every service's metrics port, plus
       Postgres, Redis, Kafka (consumer lag) and Kafka Connect exporters
-- [ ] PERF-3.2 — Elasticsearch + Kibana + Filebeat (DaemonSet), with the
+- [x] PERF-3.2 — Elasticsearch + Kibana + Filebeat (DaemonSet), with the
       `gluon-logs-*` data view created by a one-shot Job as purerest's
       `kibana-setup` does
-- [ ] PERF-3.3 — Grafana with purerest's dashboards ported and templated
+- [x] PERF-3.3 — Grafana with purerest's dashboards ported and templated
       by `service`; plus kube-state/cAdvisor panels for pod CPU, memory,
       restarts, throttling (Q2, Q6)
-- [ ] PERF-3.4 — `bin/obs up|down`; resource budget for the stack noted in
+- [x] PERF-3.4 — `bin/obs up|down`; resource budget for the stack noted in
       `environments/local` (ES is the heavy one)
+      *PERF-3.1–3.4 done 2026-10-30 (gluon-performance track
+      obs-stack_20261030): `infra/k8s/observability` (Prometheus, cAdvisor,
+      kube-state-metrics, Postgres/Redis/Kafka exporters, Connect JMX,
+      ES/Kibana/Filebeat, Grafana with 4 dashboards), 2.97 Gi of the 3 Gi
+      budget; exit criteria checked by `scripts/verify-perf3b-phase5.sh`.*
 
 **Exit criteria:** all services visible in Grafana and Kibana during a
 Performance 2 smoke run; p99 panels show plausible values (buckets fixed).
