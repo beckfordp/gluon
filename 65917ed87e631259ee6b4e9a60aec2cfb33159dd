@@ -1,0 +1,1 @@
+Perf 3b P4: gluon-pods: cAdvisor pod-cgroup series joined to kube_pod_info by pod_uid (label_replace uid) for CPU/mem vs kube-state-metrics limits, throttled %, mem %, restarts 1h, OOMKilled; $pod variable.
