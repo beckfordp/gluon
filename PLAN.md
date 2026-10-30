@@ -1015,13 +1015,16 @@ purerest already has the full stack in `docker-compose.yml`
 (`observability` profile) and two dashboards (`purerest.json`,
 `purekafka.json`); none of it is deployed in `gluon-local`.
 
-- [ ] PERF-3.0 — **histogram buckets first** (`lib/purerest`): the
+- [x] PERF-3.0 — **histogram buckets first** (`lib/purerest`): the
       `http.server/client.request.duration` histograms record seconds but set
       no boundaries, so they get the OTel SDK defaults (`0, 5, 10, 25 …
       10000`, sized for ms) — nearly every request lands in the 0–5s bucket
       and p50/p95/p99 are meaningless. Set explicit boundaries (~5ms–10s,
       dense 250ms–2.5s around the SLOs) on HTTP, DB and Kafka histograms;
       verify via `le=` values on `/metrics`
+      *Done 2026-10-30 (purerest track latency-buckets_20261030): purerestlib
+      0.4.0 `LatencyBuckets.seconds`, all 8 services bumped, live `le=` check
+      green. PERF-3.1–3.4 continue as gluon-performance "Performance 3b".*
 - [ ] PERF-3.1 — Prometheus scraping every service's metrics port, plus
       Postgres, Redis, Kafka (consumer lag) and Kafka Connect exporters
 - [ ] PERF-3.2 — Elasticsearch + Kibana + Filebeat (DaemonSet), with the

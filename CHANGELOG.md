@@ -346,3 +346,10 @@ own line. See each repo's own `git log` for full detail either way.
   Kafka/Connect/Apicurio heap capped). `bin/k8s-local-up` re-creates the
   Debezium register Job, so re-running it restores connectors after an
   OrbStack restart.
+
+### Fixed
+- Performance 3a (PERF-3.0): latency histograms now use second-scale
+  buckets. purerestlib 0.4.0 adds `LatencyBuckets.seconds` (5ms–10s, dense
+  250ms–2.5s) on the HTTP server/client histograms; all 8 services bumped
+  to it and apply it to their `db.client.operation.duration` histograms, so
+  p50/p95/p99 are meaningful. Generator template pins 0.4.0.
