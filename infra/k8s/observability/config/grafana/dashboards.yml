@@ -1,0 +1,11 @@
+# Grafana dashboard provider (grafana.yaml): the JSON files in dashboards/,
+# mounted from the grafana-dashboards ConfigMap.
+apiVersion: 1
+providers:
+  - name: gluon
+    folder: gluon
+    type: file
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

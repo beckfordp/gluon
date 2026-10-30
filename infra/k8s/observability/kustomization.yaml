@@ -21,6 +21,7 @@ resources:
   - kafka-exporter.yaml
   - elasticsearch-kibana.yaml
   - filebeat.yaml
+  - grafana.yaml
 configMapGenerator:
   - name: prometheus-config
     files:
@@ -28,3 +29,10 @@ configMapGenerator:
   - name: filebeat-config
     files:
       - config/filebeat.yml
+  - name: grafana-datasources
+    files:
+      - config/grafana/datasources.yml
+  - name: grafana-dashboard-providers
+    files:
+      - config/grafana/dashboards.yml
+  - name: grafana-dashboards
