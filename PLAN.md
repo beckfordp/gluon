@@ -958,20 +958,21 @@ kept up under the demo's constraints", not "production SLOs".
 
 **Repos:** `tests/performance` (new).
 
-- [ ] PERF-1.1 — create repo: sbt + `gatling-sbt` plugin, `/conductor:setup`
+- [x] PERF-1.1 — create repo: sbt + `gatling-sbt` plugin, `/conductor:setup`
       with the standard `workflow.md` + `scala-fp.md`, GitHub remote, CI
       (compile + `scalafmtCheck`)
-- [ ] PERF-1.2 — env-driven config (base URLs per service, profile
+- [x] PERF-1.2 — env-driven config (base URLs per service, profile
       selection), one shared `HttpProtocol`
-- [ ] PERF-1.3 — smoke simulation: `GET /health/ready` on every service,
+- [x] PERF-1.3 — smoke simulation: `GET /health/ready` on every service,
       1 user, assertion `failedRequests.count == 0`
-- [ ] PERF-1.4 — trace-linked requests: every request carries a generated
+- [x] PERF-1.4 — trace-linked requests: every request carries a generated
       W3C `traceparent` and its trace id is logged, so a slow request in the
       Gatling report can be found in Tempo (Gatling's built-in OTel tracing
       is Enterprise-only)
 
 **Exit criteria:** smoke simulation green against the local cluster via
-port-forwards, HTML report produced.
+port-forwards, HTML report produced. ✅ Done 2026-10-30 (`gluon-performance`
+track `harness-scaffold_20261030`): 8/8 OK, trace ids joined by services.
 
 ---
 

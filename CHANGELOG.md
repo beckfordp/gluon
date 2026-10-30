@@ -330,3 +330,10 @@ own line. See each repo's own `git log` for full detail either way.
   purerestlib (seconds recorded against ms-sized default buckets) as the
   first fix. ADR 0019 amended; new ADRs 0021 (Tempo trace backend) and 0022
   (fault-injection admin API).
+
+### Added
+- Performance 1: `tests/performance` (`beckfordp/gluon-performance`)
+  harness repo — Gatling 3.16 / Scala 2.13 scaffold with CI, env-driven
+  config (`<SERVICE>_URL`, `PERF_PROFILE`), trace-linked requests (W3C
+  `traceparent` per request, trace ids logged), `scripts/port-forward.sh`,
+  and a smoke simulation green against `gluon-local`.
