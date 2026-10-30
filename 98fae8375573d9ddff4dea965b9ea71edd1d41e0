@@ -1,0 +1,1 @@
+Perf 3b Phase 3 task 4: jobs/kibana-setup.yaml (curl, uid 100, read-only, caps dropped): data view gluon-logs (override:true), default index, saved search (overwrite=true); fails on non-2xx. Outside the kustomization; bin/obs up deletes/re-creates it. Verified twice in a row: 200/200/200.
