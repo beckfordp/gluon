@@ -1,0 +1,122 @@
+# Filebeat DaemonSet: gluon-local container logs -> Elasticsearch
+# gluon-logs-* (PLAN.md PERF-3.2). Per line:
+#   - JSON app logs (logback LogstashEncoder) become fields, incl. MDC
+#     trace_id/span_id from purerest's traceCorrelated logger
+#   - OpenTelemetry LoggingSpanExporter lines
+#       INFO: 'GET /health/ready' : <trace_id> <span_id> SERVER [tracer: ...] {...}
+#     are dissected into span_name/trace_id/span_id, so every request —
+#     even a smoke run's /health/ready, which logs nothing else — can be
+#     found by the trace id Gatling logged; their timestamp-header lines
+#     are dropped
+#   - anything else stays as `message`
+# `service.name` = the pod's `app` label. The stack's own pods are dropped,
+# so Filebeat never ships Elasticsearch's logs into Elasticsearch.
+#
+# Least privilege: root (Docker's log files are root-owned) but no
+# capabilities, no privilege escalation, read-only root filesystem, and only
+# the node's log directories mounted, read-only. RBAC is a namespace Role.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filebeat
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: filebeat
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: filebeat
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: filebeat
+subjects:
+  - kind: ServiceAccount
+    name: filebeat
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      serviceAccountName: filebeat
+      containers:
+        - name: filebeat
+          image: docker.elastic.co/beats/filebeat:8.19.19
+          args: ["-c", "/etc/filebeat/filebeat.yml", "-e", "--strict.perms=false"]
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # Go runtime soft limit, under the container limit below.
+            - name: GOMEMLIMIT
+              value: "100MiB"
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Laptop budget (environments/local/README.md): request = limit.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/filebeat
+              readOnly: true
+            # Registry (read offsets): an emptyDir, so a Filebeat restart
+            # re-ships what's still on disk — duplicates, not gaps.
+            - name: data
+              mountPath: /usr/share/filebeat/data
+            - name: logs
+              mountPath: /usr/share/filebeat/logs
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            # /var/log/pods/*/*.log symlink into Docker's own log files.
+            - name: docker-containers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: filebeat-config
+        - name: data
+          emptyDir: {}
+        - name: logs
+          emptyDir: {}
+        - name: varlog
+          hostPath:
+            path: /var/log
+            type: Directory
+        - name: docker-containers
+          hostPath:
+            path: /var/lib/docker/containers
+            type: Directory

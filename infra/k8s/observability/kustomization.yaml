@@ -20,7 +20,11 @@ resources:
   - db-exporters.yaml
   - kafka-exporter.yaml
   - elasticsearch-kibana.yaml
+  - filebeat.yaml
 configMapGenerator:
   - name: prometheus-config
     files:
       - config/prometheus.yml
+  - name: filebeat-config
+    files:
+      - config/filebeat.yml

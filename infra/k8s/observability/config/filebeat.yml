@@ -1,0 +1,69 @@
+# Filebeat config for filebeat.yaml (see its header for what each step is
+# for). A configMapGenerator in kustomization.yaml, so edits roll the
+# DaemonSet on `bin/obs up`.
+filebeat.inputs:
+  - type: filestream
+    id: gluon-local-containers
+    paths:
+      - /var/log/containers/*_gluon-local_*.log
+    prospector.scanner.symlinks: true
+    parsers:
+      - container: ~
+    processors:
+      - add_kubernetes_metadata:
+          host: ${NODE_NAME}
+          namespace: gluon-local
+          add_resource_metadata:
+            node:
+              enabled: false
+            namespace:
+              enabled: false
+          matchers:
+            - logs_path:
+                logs_path: /var/log/containers/
+
+processors:
+  # The observability stack's own pods: never ship ES's logs into ES.
+  - drop_event:
+      when:
+        equals:
+          kubernetes.labels.app_kubernetes_io/part-of: gluon-obs
+  # LoggingSpanExporter's JUL header line ("Oct 30, 2026 3:11:52 PM
+  # io.opentelemetry.exporter.logging.LoggingSpanExporter export").
+  - drop_event:
+      when:
+        regexp:
+          message: "LoggingSpanExporter export$"
+  # Only logback's JSON lines: other JSON on stdout (e.g. the Debezium
+  # register Job's curl responses) has shapes that clash with the mapping.
+  - decode_json_fields:
+      when:
+        regexp:
+          message: '^\{"@timestamp"'
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      add_error_key: true
+  - dissect:
+      when:
+        regexp:
+          message: "^INFO: '"
+      tokenizer: "INFO: '%{span_name}' : %{trace_id} %{span_id} %{span_kind} [tracer: %{tracer}] %{span_attributes}"
+      field: message
+      target_prefix: ""
+      ignore_failure: true
+  - copy_fields:
+      fields:
+        - from: kubernetes.labels.app
+          to: service.name
+      fail_on_error: false
+      ignore_missing: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "gluon-logs-%{+yyyy.MM.dd}"
+
+setup.template.name: "gluon-logs"
+setup.template.pattern: "gluon-logs-*"
+setup.ilm.enabled: false
+logging.level: warning
