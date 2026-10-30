@@ -36,3 +36,6 @@ configMapGenerator:
     files:
       - config/grafana/dashboards.yml
   - name: grafana-dashboards
+    files:
+      - config/grafana/dashboards/gluon-red.json
+      - config/grafana/dashboards/gluon-kafka.json
