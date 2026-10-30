@@ -1,0 +1,1 @@
+Job pod templates are immutable, so k8s-local-up's 'kubectl apply -f local-infra/' failed once the register Job changed; delete it first (PUT config is idempotent; also re-registers connectors lost on OrbStack restart).
