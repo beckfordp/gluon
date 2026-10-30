@@ -50,10 +50,11 @@ if ! kubectl get namespace "$NAMESPACE" --request-timeout=5s >/dev/null 2>&1; th
   exit 1
 fi
 
+# Pending pods count: their limits are committed even before they schedule.
 budget() {
   local pods out code=0
   pods="$(mktemp)"
-  kubectl -n "$NAMESPACE" get pods --field-selector=status.phase=Running -o json > "$pods"
+  kubectl -n "$NAMESPACE" get pods --field-selector=status.phase!=Succeeded,status.phase!=Failed -o json > "$pods"
   out="$(obs_budget_evaluate "$pods")" || code=$?
   rm -f "$pods"
   sed 's/^/  /' <<< "$out"

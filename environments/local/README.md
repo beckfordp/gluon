@@ -17,7 +17,8 @@ limits (PLAN.md "Demo, not capacity"). Every container sets memory request
 | Gatling Job (one run at a time) | 1 Gi | `bin/run-perf`, `tests/performance/k8s/perf-job.yaml` |
 | **Total** | **≤ 11.31 Gi** of 12 Gi | |
 
-The observability stack's 2.97 Gi, all request = limit:
+The observability stack's 2.97 Gi, all request = limit. That leaves 30 Mi of
+its 3 Gi: a new component means raising the budget or trimming another.
 
 | Component | Memory |
 |---|---|
