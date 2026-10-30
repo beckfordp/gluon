@@ -1,0 +1,60 @@
+# One-shot Kibana setup (PLAN.md PERF-3.2), as purerest's compose
+# `kibana-setup`: Kibana has no file-based provisioning, so the gluon-logs
+# data view, default index and a saved search go in through its API.
+# Idempotent: every call overwrites, so a re-run gets 200 again (Kibana
+# answers 400, not 409, for a duplicate data view). bin/obs up deletes and
+# re-creates this Job after Kibana is ready; it's outside the kustomization
+# because a Job's pod template is immutable.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kibana-setup
+  namespace: gluon-local
+  labels:
+    app.kubernetes.io/part-of: gluon-obs
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: kibana-setup
+        app.kubernetes.io/part-of: gluon-obs
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kibana-setup
+          image: curlimages/curl:8.11.1
+          securityContext:
+            runAsNonRoot: true
+            # The curl image's curl_user; numeric so runAsNonRoot can be checked.
+            runAsUser: 100
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              k=http://kibana:5601
+              post() { # <path> <json>: fail on anything but 2xx
+                code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$k$1" \
+                  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "$2")
+                echo "$1: $code"
+                case "$code" in 2??) ;; *) exit 1 ;; esac
+              }
+              until curl -sf "$k/api/status" > /dev/null; do sleep 2; done
+              post /api/data_views/data_view \
+                '{"override":true,"data_view":{"id":"gluon-logs","title":"gluon-logs-*","name":"gluon-logs","timeFieldName":"@timestamp"}}'
+              post /api/kibana/settings '{"changes":{"defaultIndex":"gluon-logs"}}'
+              post '/api/saved_objects/search/gluon-logs-search?overwrite=true' \
+                '{"attributes":{"title":"gluon logs","columns":["service.name","level","message","span_name","trace_id","logger_name"],"sort":[["@timestamp","desc"]],"kibanaSavedObjectMeta":{"searchSourceJSON":"{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"}},"references":[{"name":"kibanaSavedObjectMeta.searchSourceJSON.index","type":"index-pattern","id":"gluon-logs"}]}'
