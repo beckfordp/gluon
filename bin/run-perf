@@ -95,6 +95,12 @@ trap 'echo "interrupted — deleting job $job" >&2; exit 130' INT TERM
 echo "== Launching job $job ($simulation, profile $profile) =="
 "$PERF_DIR/scripts/render-job.sh" "$job" "$simulation" "$profile" | kubectl apply -f - >/dev/null
 
+# The Job controller creates the pod asynchronously; `kubectl wait -l` fails
+# at once if nothing matches yet, so wait for the pod to exist first.
+for _ in $(seq 1 60); do
+  [ -n "$(kubectl -n "$NAMESPACE" get pod -l "job-name=$job" -o name 2>/dev/null)" ] && break
+  sleep 1
+done
 if ! kubectl -n "$NAMESPACE" wait --for=condition=Ready pod -l "job-name=$job" --timeout=120s >/dev/null; then
   echo "FAIL: pod for $job never became Ready:" >&2
   kubectl -n "$NAMESPACE" get pods -l "job-name=$job" >&2 || true

@@ -80,4 +80,7 @@ expect "too few VM samples" "$d" 3 vm_samples
 d=$(valid_case nostat); rm "$d/gatling-cpu.end"
 expect "missing Gatling cpu.stat" "$d" 3 gatling_throttled
 
+d=$(valid_case emptystat); : > "$d/gatling-cpu.end"
+expect "empty Gatling cpu.stat (failed capture)" "$d" 3 gatling_throttled
+
 [ "$failures" = 0 ] && echo "PASS: run-validity ($(grep -c '^d=' "$0") cases)" || { echo "$failures failure(s)"; exit 1; }

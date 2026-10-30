@@ -69,7 +69,8 @@ run_validity_evaluate() { # <samples-dir>
     _rv_record "$out" "$ok" vm_swap_growth "${value}kB" "<= ${RUN_VALIDITY_SWAP_GROWTH_MAX}kB"
   fi
 
-  if [ -f "$dir/gatling-cpu.start" ] && [ -f "$dir/gatling-cpu.end" ]; then
+  # -s, not -f: a failed `kubectl exec` capture still leaves an empty file.
+  if [ -s "$dir/gatling-cpu.start" ] && [ -s "$dir/gatling-cpu.end" ]; then
     local periods throttled
     periods=$(( $(_rv_cpu_stat "$dir/gatling-cpu.end" nr_periods) - $(_rv_cpu_stat "$dir/gatling-cpu.start" nr_periods) ))
     throttled=$(( $(_rv_cpu_stat "$dir/gatling-cpu.end" nr_throttled) - $(_rv_cpu_stat "$dir/gatling-cpu.start" nr_throttled) ))
