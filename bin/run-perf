@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Run one Gatling simulation in-cluster (PLAN.md PERF-2.2, ADR 0019 §2) as a
+# k8s Job in gluon-local, then copy its results to local disk. Port-forwards
+# bottleneck real load, so only smoke checks use them.
+#
+# The Job image and template live in tests/performance (gluon-performance).
+# A finished pod can't be `kubectl cp`'d from, so the container waits after
+# the run: it writes /results/EXIT_CODE + DONE, and exits once this script
+# has copied the results and touched /results/COPIED.
+#
+# Usage:
+#   bin/run-perf [--build] <simulation> [profile]
+#     --build      rebuild the image first (default: build only if missing)
+#     simulation   e.g. SmokeSimulation (gluon.perf. prefix optional)
+#     profile      PERF_PROFILE, default smoke
+#
+# Exits with Gatling's own status: 0 ok, 2 assertions failed, 1 error.
+# Results: tests/performance/target/gatling-k8s/<simulation>-<timestamp>/
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PERF_DIR="$GLUON_DIR/tests/performance"
+NAMESPACE="gluon-local"
+IMAGE="gluon-performance:latest"
+RUN_TIMEOUT="${RUN_TIMEOUT:-10800}" # seconds; generous for 1h soak + ramp-down
+
+usage() { echo "usage: bin/run-perf [--build] <simulation> [profile]" >&2; exit 2; }
+
+build=false
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --build) build=true ;;
+    -h|--help) usage ;;
+    *) args+=("$arg") ;;
+  esac
+done
+[ "${#args[@]}" -ge 1 ] && [ "${#args[@]}" -le 2 ] || usage
+simulation="${args[0]}"
+profile="${args[1]:-smoke}"
+
+# --- preflight ---------------------------------------------------------------
+if ! docker info >/dev/null 2>&1; then
+  echo "FAIL: docker isn't reachable — is OrbStack running?" >&2
+  exit 1
+fi
+# Stricter than k8s-local-up's warning: a load run against the wrong cluster
+# is worse than no run.
+if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+  echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
+  exit 1
+fi
+if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+  echo "FAIL: namespace $NAMESPACE missing — run bin/k8s-local-up first" >&2
+  exit 1
+fi
+if [ ! -d "$PERF_DIR" ]; then
+  echo "FAIL: $PERF_DIR missing — clone beckfordp/gluon-performance there" >&2
+  exit 1
+fi
+
+if $build || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "== Building $IMAGE (log: $PERF_DIR/target/run-perf-build.log) =="
+  mkdir -p "$PERF_DIR/target"
+  (cd "$PERF_DIR" && sbt -batch Docker/publishLocal) \
+    > "$PERF_DIR/target/run-perf-build.log" 2>&1 < /dev/null || {
+    echo "FAIL: image build failed — see $PERF_DIR/target/run-perf-build.log" >&2
+    exit 1
+  }
+fi
+
+# --- launch ------------------------------------------------------------------
+ts="$(date +%Y%m%d-%H%M%S)"
+slug="$(echo "${simulation##*.}" | tr '[:upper:]' '[:lower:]' | cut -c1-40)"
+job="perf-$slug-$ts"
+out="$PERF_DIR/target/gatling-k8s/$slug-$ts"
+
+cleanup() {
+  kubectl -n "$NAMESPACE" delete job "$job" --ignore-not-found --wait=false >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+trap 'echo "interrupted — deleting job $job" >&2; exit 130' INT TERM
+
+echo "== Launching job $job ($simulation, profile $profile) =="
+"$PERF_DIR/scripts/render-job.sh" "$job" "$simulation" "$profile" | kubectl apply -f - >/dev/null
+
+if ! kubectl -n "$NAMESPACE" wait --for=condition=Ready pod -l "job-name=$job" --timeout=120s >/dev/null; then
+  echo "FAIL: pod for $job never became Ready:" >&2
+  kubectl -n "$NAMESPACE" get pods -l "job-name=$job" >&2 || true
+  exit 1
+fi
+pod="$(kubectl -n "$NAMESPACE" get pod -l "job-name=$job" -o jsonpath='{.items[0].metadata.name}')"
+
+# --- wait for DONE -------------------------------------------------------------
+echo "== Running (pod $pod; follow with: kubectl -n $NAMESPACE logs -f $pod) =="
+start="$(date +%s)"
+until kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- test -e /results/DONE 2>/dev/null; do
+  phase="$(kubectl -n "$NAMESPACE" get pod "$pod" -o jsonpath='{.status.phase}' 2>/dev/null || echo Unknown)"
+  if [ "$phase" != "Running" ]; then
+    echo "FAIL: pod $pod is $phase before the run finished:" >&2
+    kubectl -n "$NAMESPACE" logs "$pod" -c gatling --tail=30 >&2 || true
+    exit 1
+  fi
+  if [ $(( $(date +%s) - start )) -gt "$RUN_TIMEOUT" ]; then
+    echo "FAIL: run exceeded RUN_TIMEOUT=${RUN_TIMEOUT}s" >&2
+    exit 1
+  fi
+  sleep 2
+done
+
+# --- copy out ----------------------------------------------------------------
+mkdir -p "$out"
+kubectl -n "$NAMESPACE" cp -c gatling "$pod:/results" "$out" >/dev/null
+kubectl -n "$NAMESPACE" logs "$pod" -c gatling > "$out/gatling.log" 2>&1 || true
+kubectl -n "$NAMESPACE" exec "$pod" -c gatling -- touch /results/COPIED >/dev/null 2>&1 || true
+
+code="$(cat "$out/EXIT_CODE" 2>/dev/null || echo 1)"
+report="$(ls -d "$out"/*/index.html 2>/dev/null | head -1 || true)"
+echo "== Done: simulation exited $code =="
+echo "results: $out"
+[ -n "$report" ] && echo "report:  $report"
+exit "$code"
