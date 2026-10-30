@@ -1,0 +1,1 @@
+Perf 3b Phase 2 task 3: kube-state-metrics v2.16.0, --namespaces=gluon-local, Role only (pods, deployments, daemonsets, replicasets, jobs, cronjobs), nobody/read-only. Verified: target up; cAdvisor pod_uid joins kube_pod_info uid for per-pod throttling ratio.
