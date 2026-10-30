@@ -19,6 +19,7 @@ resources:
   - kube-state-metrics.yaml
   - db-exporters.yaml
   - kafka-exporter.yaml
+  - elasticsearch-kibana.yaml
 configMapGenerator:
   - name: prometheus-config
     files:

@@ -1,0 +1,137 @@
+# Elasticsearch + Kibana for gluon-local logs (PLAN.md PERF-3.2), same
+# versions and single-node, security-off shape as purerest's
+# docker-compose observability profile. Filebeat (filebeat.yaml) ships to
+# gluon-logs-*; jobs/kibana-setup.yaml creates the data view.
+#
+# Elasticsearch is the stack's heaviest piece: 512m heap in a 1152Mi limit,
+# ML off, no mmap (so no vm.max_map_count tuning on the node), emptyDir —
+# a run's logs, not an archive.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.19.19
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: xpack.security.enabled
+              value: "false"
+            - name: xpack.security.http.ssl.enabled
+              value: "false"
+            - name: xpack.ml.enabled
+              value: "false"
+            - name: node.store.allow_mmap
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          # Laptop budget (environments/local/README.md): request = limit.
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1152Mi
+            limits:
+              cpu: 1000m
+              memory: 1152Mi
+          ports:
+            - name: http
+              containerPort: 9200
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?wait_for_status=yellow&timeout=1s
+              port: 9200
+            periodSeconds: 5
+            failureThreshold: 60
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:8.19.19
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: '["http://elasticsearch:9200"]'
+            # Node's heap, inside the container limit below.
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=512"
+            - name: TELEMETRY_OPTIN
+              value: "false"
+            - name: TELEMETRY_ENABLED
+              value: "false"
+          # Laptop budget (environments/local/README.md): request = limit.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 768Mi
+            limits:
+              cpu: 1000m
+              memory: 768Mi
+          ports:
+            - name: http
+              containerPort: 5601
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+            periodSeconds: 5
+            failureThreshold: 60
+---
+# OrbStack serves LoadBalancer services on localhost: http://localhost:5601
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  type: LoadBalancer
+  selector:
+    app: kibana
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
