@@ -1,0 +1,16 @@
+# Opt-in observability stack for gluon-local (PLAN.md Performance 3,
+# PERF-3.1–3.4): Prometheus + exporters, Elasticsearch/Kibana/Filebeat,
+# Grafana. Managed by bin/obs up|down, never by bin/k8s-local-up — it costs
+# ~3Gi of the 12Gi laptop budget (see environments/local/README.md).
+#
+# Every object, and every pod template, carries
+# app.kubernetes.io/part-of=gluon-obs: bin/lib/obs-budget.sh sums the
+# stack's memory by it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: gluon-local
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: gluon-obs
+    includeTemplates: true
+resources: []
