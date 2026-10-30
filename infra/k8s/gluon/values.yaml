@@ -25,10 +25,21 @@ readyPath: /health/ready
 
 env: []
 
+# Rendered as JAVA_OPTS, which every service's native-packager launcher
+# honours. Heap is sized from the container limit, not a fixed -Xmx, so it
+# tracks `resources` below (PLAN.md laptop budget, PERF-2.3). 40%, not the
+# usual 75%: measured services use ~100-180Mi off-heap (metaspace, threads,
+# Netty), so at 384Mi a 75% heap would OOM-kill under load. 40% ≈ 154Mi heap,
+# slightly above the 128Mi JVM default the services ran with before.
+javaOpts: "-XX:MaxRAMPercentage=40"
+
+# Laptop budget (PLAN.md "Demo, not capacity"): tight, explicit limits so
+# pods saturate before the host does. Memory request = limit (no
+# overcommit); CPU may burst from 250m to 500m.
 resources:
   requests:
-    cpu: 100m
-    memory: 256Mi
+    cpu: 250m
+    memory: 384Mi
   limits:
     cpu: 500m
-    memory: 512Mi
+    memory: 384Mi

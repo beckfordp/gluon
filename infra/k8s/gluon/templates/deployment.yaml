@@ -32,13 +32,15 @@ spec:
               containerPort: {{ .Values.port }}
             - name: metrics
               containerPort: {{ .Values.metricsPort }}
-          {{- with .Values.env }}
           env:
-            {{- range . }}
+            {{- with .Values.javaOpts }}
+            - name: JAVA_OPTS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-          {{- end }}
           livenessProbe:
             httpGet:
               path: {{ .Values.healthPath }}
