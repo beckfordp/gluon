@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Opt-in observability stack for gluon-local (PLAN.md PERF-3.1–3.4):
+# Prometheus + exporters, Elasticsearch/Kibana/Filebeat, Grafana. Kept out
+# of bin/k8s-local-up because it costs ~3Gi of the 12Gi laptop budget
+# (environments/local/README.md); bring it up only to watch a run.
+#
+# Usage:
+#   bin/obs up       apply infra/k8s/observability, wait for it, run the
+#                    one-shot setup Jobs, print URLs and the memory budget
+#   bin/obs down     delete the stack (services and shared infra untouched)
+#   bin/obs status   stack pods and the memory budget
+#
+# OrbStack serves the stack's LoadBalancer services on localhost:
+#   Grafana http://localhost:3000, Kibana http://localhost:5601,
+#   Prometheus http://localhost:9092
+#
+# Exits 3 if the stack is up but over budget (bin/lib/obs-budget.sh): its
+# numbers are fine, but a Gatling run beside it would starve the node.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# shellcheck source=lib/obs-budget.sh
+source "$SCRIPT_DIR/lib/obs-budget.sh"
+NAMESPACE="gluon-local"
+STACK_DIR="$GLUON_DIR/infra/k8s/observability"
+# One-shot Jobs (e.g. kibana-setup) live outside the kustomization: a Job's
+# pod template is immutable and it should re-run on every `up`, so it's
+# deleted and re-created rather than re-applied.
+JOBS_DIR="$STACK_DIR/jobs"
+SELECTOR="app.kubernetes.io/part-of=gluon-obs"
+WAIT_TIMEOUT="${OBS_WAIT_TIMEOUT:-300s}"
+
+usage() { echo "usage: bin/obs up|down|status" >&2; exit 2; }
+
+[ "$#" = 1 ] || usage
+cmd="$1"
+case "$cmd" in
+  up|down|status) ;;
+  *) usage ;;
+esac
+
+# --- preflight (as bin/run-perf) ---------------------------------------------
+if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+  echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
+  exit 1
+fi
+if ! kubectl get namespace "$NAMESPACE" --request-timeout=5s >/dev/null 2>&1; then
+  echo "FAIL: namespace $NAMESPACE missing or cluster unreachable — run bin/k8s-local-up first" >&2
+  exit 1
+fi
+
+budget() {
+  local pods out code=0
+  pods="$(mktemp)"
+  kubectl -n "$NAMESPACE" get pods --field-selector=status.phase=Running -o json > "$pods"
+  out="$(obs_budget_evaluate "$pods")" || code=$?
+  rm -f "$pods"
+  sed 's/^/  /' <<< "$out"
+  return "$code"
+}
+
+workloads() {
+  kubectl -n "$NAMESPACE" get deployment,statefulset,daemonset -l "$SELECTOR" -o name
+}
+
+run_jobs() {
+  [ -d "$JOBS_DIR" ] || return 0
+  local f job
+  for f in "$JOBS_DIR"/*.yaml; do
+    [ -e "$f" ] || continue
+    job="$(kubectl create --dry-run=client -o jsonpath='{.metadata.name}' -f "$f")"
+    kubectl -n "$NAMESPACE" delete job "$job" --ignore-not-found >/dev/null
+    kubectl -n "$NAMESPACE" apply -f "$f" >/dev/null
+    if kubectl -n "$NAMESPACE" wait --for=condition=complete "job/$job" --timeout="$WAIT_TIMEOUT" >/dev/null; then
+      echo "  job/$job complete"
+    else
+      echo "FAIL: job/$job didn't complete — kubectl -n $NAMESPACE logs job/$job" >&2
+      return 1
+    fi
+  done
+}
+
+case "$cmd" in
+  up)
+    echo "== Applying $STACK_DIR =="
+    if [ -z "$(kubectl kustomize "$STACK_DIR")" ]; then
+      echo "  (no resources yet)"
+    else
+      kubectl apply -k "$STACK_DIR" >/dev/null
+    fi
+    echo "== Waiting for the stack (up to $WAIT_TIMEOUT each) =="
+    for w in $(workloads); do
+      kubectl -n "$NAMESPACE" rollout status "$w" --timeout="$WAIT_TIMEOUT" >/dev/null || {
+        echo "FAIL: $w not ready — kubectl -n $NAMESPACE describe $w" >&2
+        exit 1
+      }
+      echo "  $w ready"
+    done
+    echo "== One-shot setup Jobs =="
+    run_jobs
+    echo "== Up =="
+    echo "  Grafana     http://localhost:3000"
+    echo "  Kibana      http://localhost:5601"
+    echo "  Prometheus  http://localhost:9092"
+    echo "== Memory budget =="
+    budget || { echo "WARN: over budget — no room for a Gatling run beside the stack" >&2; exit 3; }
+    ;;
+  down)
+    echo "== Deleting the observability stack =="
+    if [ -d "$JOBS_DIR" ]; then
+      kubectl -n "$NAMESPACE" delete -f "$JOBS_DIR" --ignore-not-found >/dev/null
+    fi
+    if [ -n "$(kubectl kustomize "$STACK_DIR")" ]; then
+      kubectl delete -k "$STACK_DIR" --ignore-not-found >/dev/null
+    fi
+    kubectl -n "$NAMESPACE" wait --for=delete pod -l "$SELECTOR" --timeout="$WAIT_TIMEOUT" >/dev/null 2>&1 || true
+    echo "== Memory budget =="
+    budget || true
+    ;;
+  status)
+    echo "== Stack pods =="
+    kubectl -n "$NAMESPACE" get pods -l "$SELECTOR" 2>&1 | sed 's/^/  /'
+    echo "== Memory budget =="
+    budget
+    ;;
+esac
