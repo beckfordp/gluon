@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Run the Playwright acceptance suite (PLAN.md ACC-6.2, ADR 0020) against
+# gluon-local: gshop driven in Chromium against the real services.
+#
+# The suite lives in tests/acceptance (gluon-acceptance). This script checks
+# the cluster and toolchain, checks the user-story coverage matrix, runs the
+# suite, checks it left inventory as it found it, then opens the report.
+#
+# Usage:
+#   bin/run-acceptance [--no-open] [playwright args...]
+#     --no-open        don't serve the HTML report afterwards
+#     playwright args  passed through, e.g. --grep @US-17 or --headed
+#
+# Exits with Playwright's status, or 1 if a preflight check or the coverage
+# matrix fails. A changed inventory is a warning, not a failure: a scenario
+# that failed mid-way may legitimately leave it changed.
+# Outputs: tests/acceptance/playwright-report/, target/coverage-matrix.md
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SUITE_DIR="$GLUON_DIR/tests/acceptance"
+NAMESPACE="gluon-local"
+GSHOP_PORT=5173
+
+usage() { echo "usage: bin/run-acceptance [--no-open] [playwright args...]" >&2; exit 2; }
+
+open_report=true
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --no-open) open_report=false ;;
+    -h|--help) usage ;;
+    *) args+=("$arg") ;;
+  esac
+done
+
+node_major() { "$1" -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/'; }
+
+# --- preflight ---------------------------------------------------------------
+if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+  echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
+  exit 1
+fi
+if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
+  echo "FAIL: namespace $NAMESPACE missing — run bin/k8s-local-up first" >&2
+  exit 1
+fi
+if [ ! -d "$SUITE_DIR" ]; then
+  echo "FAIL: $SUITE_DIR missing — clone beckfordp/gluon-acceptance there" >&2
+  exit 1
+fi
+# Playwright 1.64 needs Node >= 20 and the suite pins 24; the nvm default may be older.
+if [ "$(node_major node || echo 0)" -lt 24 ]; then
+  if [ -x /opt/homebrew/opt/node@24/bin/node ]; then
+    export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
+  else
+    echo "FAIL: node $(node -v 2>/dev/null || echo missing); need 24 (nvm use, or brew install node@24)" >&2
+    exit 1
+  fi
+fi
+if [ ! -d "$SUITE_DIR/node_modules" ]; then
+  echo "FAIL: suite dependencies missing — run 'npm ci' in $SUITE_DIR" >&2
+  exit 1
+fi
+# Playwright would reuse a dev server already on the port, possibly one wired to mocks.
+if curl -s -m 2 -o /dev/null "http://localhost:$GSHOP_PORT"; then
+  echo "FAIL: :$GSHOP_PORT already in use — stop that gshop dev server first" >&2
+  exit 1
+fi
+
+cd "$SUITE_DIR"
+
+# --- coverage matrix ---------------------------------------------------------
+echo "== Coverage matrix =="
+GLUON_DIR="$GLUON_DIR" npm run -s coverage:matrix || {
+  echo "FAIL: coverage matrix has problems — see $SUITE_DIR/target/coverage-matrix.md" >&2
+  exit 1
+}
+
+# --- suite -------------------------------------------------------------------
+echo "== Acceptance suite =="
+mkdir -p target
+scripts/inventory-snapshot.sh > target/run-acceptance-inventory-before.txt
+npx bddgen < /dev/null
+status=0
+npx playwright test "${args[@]+"${args[@]}"}" < /dev/null || status=$?
+scripts/inventory-snapshot.sh > target/run-acceptance-inventory-after.txt
+if ! cmp -s target/run-acceptance-inventory-before.txt target/run-acceptance-inventory-after.txt; then
+  echo "WARN: inventory changed during the run:"
+  diff target/run-acceptance-inventory-before.txt target/run-acceptance-inventory-after.txt || true
+fi
+
+# --- report ------------------------------------------------------------------
+# show-report serves until Ctrl+C, so only when someone is there to close it.
+if $open_report && [ -t 1 ]; then
+  echo "== Report (Ctrl+C to stop serving) =="
+  npx playwright show-report || true
+else
+  echo "Report: $SUITE_DIR/playwright-report/index.html (npx playwright show-report)"
+fi
+exit "$status"

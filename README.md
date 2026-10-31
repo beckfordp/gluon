@@ -27,6 +27,7 @@ gluon/
 ├── frontends/       each frontend app — its own git repo, gitignored here
 ├── tools/           platform tooling repos (pure-service-generator) — own git repo, gitignored here
 ├── lib/             shared platform library repos (purerest) — own git repo, gitignored here
+├── tests/           acceptance (Playwright) and performance (Gatling) suites — own git repos, gitignored here; run via bin/run-acceptance, bin/run-perf
 ├── infra/
 │   ├── docker/        shared local runtime infra (Kafka, schema registry — not per-service Postgres)
 │   ├── k8s/            Helm chart(s), parameterized per environment
