@@ -656,10 +656,15 @@ differs from typical production registry use, plus the upgrade path.
       artifact (warn and skip if absent). Producers label artifacts
       `producer=<service>` (new `schemaRegistryProducer` setting), which
       `bin/registry-export` groups by.
-- [ ] TD-18.3: gluon — `bin/registry-export` (every version + rules as JSON
+- [x] TD-18.3: gluon — `bin/registry-export` (every version + rules as JSON
       under `registry/<group>/<artifact>/`) and `bin/registry-restore`
       (replay versions in order into an empty registry); seed `registry/`
-      from the current local registry.
+      from the current local registry. Layout changed to one file per
+      producer, `registry/<producer-service>/registry.json` (see
+      `registry/README.md`); seeded with the 10 artifacts of order, payment,
+      fulfilment and user-service. Verified: restore → export round-trips
+      identically, and producers re-running against restored content add no
+      versions.
 - [x] TD-18.4: gluon infra — restore Job in `infra/k8s/local-infra` so the
       registry is repopulated after every restart; document the
       check → export → commit loop in `infra/k8s/README.md` and

@@ -133,7 +133,9 @@ not yet effective.** Review of what the registry actually catches today:
 **Decision: git is the registry's persistent store; Apicurio is a
 rebuildable cache.** The build-time model (registry off the hot path)
 stands. Registry content — every artifact version and rule — is exported
-as plain JSON to `gluon/registry/<group>/<artifact>/` and committed, giving
+as plain JSON to `gluon/registry/<producer-service>/registry.json` (one file
+per producer, every artifact it owns with its rules and versions) and
+committed, giving
 diffable history in git alongside Apicurio's own versions. A restore step
 replays the export into any empty registry: the local one at startup (a k8s
 Job, like Debezium's register Job) and CI's throwaway container, so CI

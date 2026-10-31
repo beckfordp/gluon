@@ -1,0 +1,115 @@
+{
+  "producer": "order-service",
+  "groupId": "gluon",
+  "artifacts": [
+    {
+      "artifactId": "order-events-OrderCancelled",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "OrderCancelledEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "customerId",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "customerId": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "artifactId": "order-events-OrderConfirmed",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "OrderConfirmedEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "customerId",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "customerId": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "artifactId": "order-events-OrderPaymentFailed",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "OrderPaymentFailedEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "customerId",
+              "reason",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "customerId": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  ]
+}

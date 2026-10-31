@@ -1,0 +1,157 @@
+{
+  "producer": "payment-service",
+  "groupId": "gluon",
+  "artifacts": [
+    {
+      "artifactId": "payment-events-PaymentAuthorizationExpired",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "PaymentAuthorizationExpiredEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "artifactId": "payment-events-PaymentAuthorized",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "PaymentAuthorizedEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "authId",
+              "expiresAt",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "authId": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "artifactId": "payment-events-PaymentCaptured",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "PaymentCapturedEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "amountCents",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "amountCents": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "artifactId": "payment-events-PaymentFailed",
+      "artifactType": "JSON",
+      "rules": {
+        "COMPATIBILITY": "BACKWARD_TRANSITIVE"
+      },
+      "versions": [
+        {
+          "version": "1",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "PaymentFailedEvent",
+            "type": "object",
+            "required": [
+              "orderId",
+              "paymentId",
+              "amountCents",
+              "reason",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "type": "string"
+              },
+              "paymentId": {
+                "type": "string"
+              },
+              "amountCents": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  ]
+}
