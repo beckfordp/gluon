@@ -1392,8 +1392,13 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 2.
 
-- [ ] ACC-3.1 — US-1 feature: browse catalog, product detail
-- [ ] ACC-3.2 — US-2 feature: add/remove/update cart items
+- [x] ACC-3.1 — US-1 feature: browse catalog, product detail
+- [x] ACC-3.2 — US-2 feature: add/remove/update cart items
+      *ACC-3.1–3.2 done 2026-10-31 (gluon-acceptance track
+      browse-cart_20261031): `@US-1.1` catalog in order, card name/SKU/price
+      (gshop has no separate detail view), Load more; `@US-2.1` empty cart,
+      add, `+1`, remove. 7 scenarios green, inventory unchanged. US-1.2
+      (cache) isn't UI-observable: out of scope in the ACC-6.1 matrix.*
 
 **Exit criteria:** US-1/US-2 features green.
 

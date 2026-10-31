@@ -387,3 +387,8 @@ own line. See each repo's own `git log` for full detail either way.
   precheck stops the run up front, listing each problem and its fix, when a
   service isn't ready, a Debezium connector is missing or the catalog is
   empty.
+- Acceptance 3 (ACC-3.1–3.2): browse and cart features. Catalog shows
+  catalog-service's products in order with each card's name, SKU and price,
+  and Load more shows the next page (US-1); a new shopper's cart is empty,
+  and adding, `+1` and removing a product update the cart and its total
+  (US-2).
