@@ -630,3 +630,33 @@ services share the settings, so any of them can do the same.
 - [ ] TD-17.2: re-run the full acceptance suite at default workers
       (`bin/run-acceptance --workers=5`) with no restarts, then drop the
       suite's `workers: 2` pin if it's no longer needed.
+
+## TD-18 — Schema registry enforces nothing and persists nothing
+
+`schemaRegistryCheck` runs in CI against a throwaway, empty Apicurio
+container, so BACKWARD compatibility is never actually checked; the local
+registry is in-memory, so an OrbStack restart wipes it. Combined with TD-11
+(changed schemas 500) and TD-14 (consumer mirrors overwrite producer
+artifacts), the registry is a catalogue, not an enforcement point. Fix per
+ADR 0003's 2026-10-31 note: git export as the persistent store, Apicurio as
+a rebuildable cache.
+
+### Tasks
+- [ ] TD-18.1: purekafka — fix TD-11 (emit draft-07, `$defs` →
+      `definitions`); prove a compatible change registers as version 2;
+      set `BACKWARD_TRANSITIVE` on new artifacts.
+- [ ] TD-18.2: purekafka — producer-only registration: subscribe channels
+      no longer write; they dry-run their mirror against the producer's
+      artifact (warn and skip if absent).
+- [ ] TD-18.3: gluon — `bin/registry-export` (every version + rules as JSON
+      under `registry/<group>/<artifact>/`) and `bin/registry-restore`
+      (replay versions in order into an empty registry); seed `registry/`
+      from the current local registry.
+- [ ] TD-18.4: gluon infra — restore Job in `infra/k8s/local-infra` so the
+      registry is repopulated after every restart; document the
+      check → export → commit loop in `infra/k8s/README.md` and
+      `system-design.md` contract governance.
+- [ ] TD-18.5: every Kafka service (order, payment, notification,
+      fulfilment, inventory, user) — bump purekafka; CI restores gluon's
+      `registry/` export into the throwaway container before
+      `schemaRegistryCheck`; update `verify-schema-registry-check.sh`.

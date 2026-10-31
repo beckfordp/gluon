@@ -104,3 +104,41 @@ Avro or Protobuf.
   never reaches a running broker. This also means the registry has zero
   presence on the runtime produce/consume path at all, maximizing the
   resilience benefit from the wire-format decision above.
+
+**Note (2026-10-31), still Accepted — the build-time enforcement above is
+not yet effective.** Review of what the registry actually catches today:
+- **No baseline in CI.** CI has no route to the local OrbStack registry, so
+  every service's workflow starts a throwaway, empty Apicurio container.
+  Each run is a first registration, so there is never a prior version to
+  check against and BACKWARD always passes. "A breaking change fails CI"
+  (10-25 note) assumed a persistent registry reachable from CI; none
+  exists, and a hosted one doesn't fit the budget (ADR 0015).
+- **No persistence locally either.** The local registry uses Apicurio's
+  default in-memory storage, so any pod or OrbStack restart wipes every
+  artifact and version.
+- **Evolution blocked (TD-11).** Schemas are emitted as draft 2020-12,
+  which Apicurio's checker can't read; any changed schema 500s, so
+  contracts change by retirement/new artifact, not versioning.
+- **Consumers write producer artifacts (TD-14).** Producer and consumer
+  mirrors register to the same `gluon/<topic>-<eventType>` artifact; last
+  writer wins. Common practice is producer-owned subjects, consumers read
+  only.
+- **No runtime conformance.** With plain `StringConverter` (kept — the
+  10-25 rationale on debuggability and the outbox pipeline still holds),
+  nothing checks that the circe-encoded payload matches the tapir
+  `Schema[T]` that gets registered. The outage argument is weaker than
+  stated: registry-aware serializers cache schemas, so an outage blocks
+  only new schemas and cold-starting consumers.
+
+**Decision: git is the registry's persistent store; Apicurio is a
+rebuildable cache.** The build-time model (registry off the hot path)
+stands. Registry content — every artifact version and rule — is exported
+as plain JSON to `gluon/registry/<group>/<artifact>/` and committed, giving
+diffable history in git alongside Apicurio's own versions. A restore step
+replays the export into any empty registry: the local one at startup (a k8s
+Job, like Debezium's register Job) and CI's throwaway container, so CI
+checks against the real baseline again. Rejected: a database file kept in
+git (binary, unmergeable, unsafe to commit while written) and a hosted
+registry (cost). Only producers register; consumers dry-run their mirror
+against the producer's artifact. Cost: a schema change in a service repo
+needs a matching export commit in gluon. Tracked as TD-18.
