@@ -1323,8 +1323,11 @@ slice with `verify-*.sh`, but nothing re-checks the user journeys
 together, or traces them back to `user-stories.md`. This section builds a
 Playwright suite ([ADR 0020](./docs/adr/0020-playwright-acceptance-tests.md))
 that drives gshop against the real local cluster, in its own repo,
-`tests/acceptance` (`beckfordp/gluon-acceptance`). Each test is tagged with
-the `US-N.M` it accepts. The `verify-*.sh` scripts stay as track-level live
+`tests/acceptance` (`beckfordp/gluon-acceptance`). Tests are written as
+Gherkin `.feature` files compiled by playwright-bdd
+([ADR 0023](./docs/adr/0023-bdd-acceptance-tests-playwright-bdd.md)), with
+domain-level steps over page objects. Each scenario is tagged with the
+`@US-N.M` it accepts. The `verify-*.sh` scripts stay as track-level live
 checks; they are not replaced. Numbered `Acceptance N`, promoted into
 tracks in that repo's own `conductor/tracks.md`.
 
@@ -1334,14 +1337,16 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Repos:** `tests/acceptance` (new).
 
-- [ ] ACC-1.1 — create repo: Playwright (TypeScript), `/conductor:setup`
-      with the standard `workflow.md` (no `scala-fp.md`), GitHub remote, CI
-      (lint + typecheck only; no cluster in CI)
+- [ ] ACC-1.1 — create repo: Playwright (TypeScript) + playwright-bdd
+      (`features/`, `steps/`, `bddgen` before `playwright test`; generated
+      specs gitignored), `/conductor:setup` with the standard `workflow.md`
+      (no `scala-fp.md`), GitHub remote, CI (`bddgen` + lint + typecheck
+      only; no cluster in CI)
 - [ ] ACC-1.2 — decide and wire how gshop is served for tests (vite dev
       with real-wiring env vs a deployed build): the first track's spec
       question
-- [ ] ACC-1.3 — one smoke test: gshop loads, catalog renders from the real
-      catalog-service
+- [ ] ACC-1.3 — one smoke feature: gshop loads, catalog renders from the
+      real catalog-service; proves the feature → step → page-object chain
 
 **Exit criteria:** smoke test green against the local cluster.
 
@@ -1354,7 +1359,9 @@ tracks in that repo's own `conductor/tracks.md`.
 **Depends on:** Acceptance 1.
 
 - [ ] ACC-2.1 — API helpers: throwaway user, stocked-sku lookup, payment
-      method setup
+      method setup; exposed as Playwright fixtures to steps via
+      `createBdd(test)`, plus shared `Given` steps (e.g. "Given I am a
+      registered customer")
 - [ ] ACC-2.2 — cleanup fixtures: release reservations, delete orders
 - [ ] ACC-2.3 — precheck: services ready, Debezium connectors registered
       (lost on OrbStack restart), fail fast with a clear message
@@ -1369,10 +1376,10 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 2.
 
-- [ ] ACC-3.1 — US-1: browse catalog, product detail
-- [ ] ACC-3.2 — US-2: add/remove/update cart items
+- [ ] ACC-3.1 — US-1 feature: browse catalog, product detail
+- [ ] ACC-3.2 — US-2 feature: add/remove/update cart items
 
-**Exit criteria:** US-1/US-2 acceptance tests green.
+**Exit criteria:** US-1/US-2 features green.
 
 ---
 
@@ -1382,11 +1389,11 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 2.
 
-- [ ] ACC-4.1 — US-16: register, login, logout
-- [ ] ACC-4.2 — US-11–14 happy path: addresses, payment method, authorize,
-      order appears in history as `Authorized`
-- [ ] ACC-4.3 — failure paths: decline (`402`), out of stock (`409`,
-      remove-and-retry), validation (`400`)
+- [ ] ACC-4.1 — US-16 feature: register, login, logout
+- [ ] ACC-4.2 — US-11–14 happy-path feature: addresses, payment method,
+      authorize, order appears in history as `Authorized`
+- [ ] ACC-4.3 — failure paths as `Scenario Outline`s: decline (`402`),
+      out of stock (`409`, remove-and-retry), validation (`400`)
 
 **Exit criteria:** happy and failure checkout paths green.
 
@@ -1402,8 +1409,8 @@ tracks in that repo's own `conductor/tracks.md`.
 - [ ] ACC-5.2 — US-18: dispatch failure path
 - [ ] ACC-5.3 — US-19: capture → `Confirmed`; capture failure →
       `Payment failed`, as shown in order history
-- [ ] ACC-5.4 — async waits via polling assertions (`expect.poll`), never
-      fixed sleeps
+- [ ] ACC-5.4 — async waits via polling assertions (`expect.poll`) inside
+      `Then` steps, never fixed sleeps
 
 **Exit criteria:** full order lifecycle accepted through the UI.
 
@@ -1415,10 +1422,10 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 3–5.
 
-- [ ] ACC-6.1 — `US-N.M` tags → coverage matrix against `user-stories.md`
-      (which stories have tests, which don't)
+- [ ] ACC-6.1 — `@US-N.M` feature tags → coverage matrix against
+      `user-stories.md` (which stories have scenarios, which don't)
 - [ ] ACC-6.2 — `bin/run-acceptance`: prechecks, run suite, open report
-- [ ] ACC-6.3 — add US-20 scenarios when Checkout Journey 5 lands
+- [ ] ACC-6.3 — add US-20 feature when Checkout Journey 5 lands
 
 **Exit criteria:** every done US-N story is either covered or explicitly
 marked out of scope in the matrix.

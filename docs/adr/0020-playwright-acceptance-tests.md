@@ -1,7 +1,8 @@
 # 0020. Playwright acceptance tests through gshop
 
 ## Status
-Accepted (2026-10-29)
+Accepted (2026-10-29). Amended by [0023](./0023-bdd-acceptance-tests-playwright-bdd.md)
+(Gherkin features via playwright-bdd).
 
 ## Context
 US-1 to US-20 have no automated acceptance tests. Each track proved its
