@@ -1,29 +1,37 @@
-# registry/ — Kafka schema registry store
+# registry/ — Kafka event contracts, source of truth
 
-Git is the schema registry's persistent store; Apicurio is a rebuildable
-cache ([ADR 0003](../docs/adr/0003-kafka-schema-registry.md), 2026-10-31
-notes; TD-18).
+Every Kafka event contract in gluon lives here. Each
+`registry/<producer-service>/registry.json` holds every event its producer
+publishes, with every version and compatibility rule. **If anything else
+disagrees with these files, the files win.** That covers
+[`system-design.md`](../docs/system-design.md#payload-contracts), a service's
+AsyncAPI docs, and a consumer's mirror case class.
+
+Apicurio Registry is a rebuildable cache of these files, not the store
+([ADR 0003](../docs/adr/0003-kafka-schema-registry.md), 2026-10-31 notes;
+TD-18). `system-design.md` keeps a readable copy of each payload plus the
+reasons behind it; keep that copy in step with these files (step 5 below).
 
 ## Layout
-
-One file per producer service, named after its `services/<name>` repo:
 
 ```
 registry/<producer-service>/registry.json
 ```
 
-Only producers own artifacts. A consumer-only service (notification-service)
-or one with no events (inventory-service) has no file.
+- One file per producer, named after its `services/<name>` repo. Only
+  producers own artifacts. notification-service (consumer only) and
+  inventory-service (no events) have no file.
+- Each artifact is `<topic>-<eventType>`, in the shared Apicurio group `gluon`.
 
 ## Format
 
 ```json
 {
-  "producer": "order-service",
+  "producer": "payment-service",
   "groupId": "gluon",
   "artifacts": [
     {
-      "artifactId": "order-events-OrderCancelled",
+      "artifactId": "payment-events-PaymentCaptured",
       "artifactType": "JSON",
       "rules": { "COMPATIBILITY": "BACKWARD_TRANSITIVE" },
       "versions": [
@@ -34,23 +42,92 @@ or one with no events (inventory-service) has no file.
 }
 ```
 
-- `artifactId` is `<topic>-<eventType>`, in the shared `gluon` group.
-- `versions` are every registered version, oldest first; `schema` is the
-  JSON Schema as JSON (not an escaped string), so diffs show field changes.
-- No timestamps or registry ids: an unchanged registry re-exports with no diff.
-- The producer comes from the `producer` label purekafka (0.5.0+) sets when a
-  producer build runs `schemaRegistryCheck`.
+- `versions` lists every registered version, oldest first. The last one is
+  the current contract.
+- `schema` is the JSON Schema as JSON, not an escaped string, so a diff shows
+  field changes.
+- Schemas are draft-07 and closed (`additionalProperties: false`), generated
+  by purekafka from the producer's tapir `Schema[T]`. Never edit them by hand.
+- Artifacts are sorted, and there are no timestamps or registry ids. An
+  unchanged registry re-exports with no diff.
+- The envelope (`eventId`, `eventType`, `timestamp`, `source`,
+  `correlationId`, `payload`) isn't registered. These schemas describe
+  `payload` only; the envelope is specified in `system-design.md`.
 
-## Loop
+## Workflow: changing an event contract
 
-1. Change an event in the producer service; its `sbt schemaRegistryCheck`
-   registers the new version in the local registry (and fails on an
-   incompatible change). Consumers' checks dry-run their mirrors against it.
-2. `bin/registry-export` — rewrites the producer's `registry.json`.
-3. Commit it in gluon, alongside the service change.
+Run these from a local cluster that's up (`bin/k8s-local-up`); the registry
+refills itself from these files within about 30s of any restart.
 
-`bin/registry-restore` replays this directory into an empty registry. It runs
-automatically in the local registry's restore sidecar (after any OrbStack or
-pod restart) and in every Kafka service's CI before `schemaRegistryCheck`,
-so CI checks against the real baseline. Export refuses to drop committed
-versions (e.g. after a wipe); restore first, or `--force` deliberately.
+1. **Producer service:** change the payload case class (and its tapir
+   `Schema`), then run `sbt schemaRegistryCheck`.
+   - A compatible change, such as a new optional field, registers as the
+     next version.
+   - An incompatible change fails here with a `RuleViolationException`. See
+     "Breaking changes" below.
+2. **Each consumer service:** update its mirror case class if it needs the
+   change, then run `sbt schemaRegistryCheck`. Consumers never write: they
+   check their mirror against the producer's artifact. The check fails if the
+   mirror requires a field the producer doesn't send, or a field's type or
+   enum doesn't match. Extra producer fields a mirror ignores are fine.
+3. **gluon:** run `bin/registry-export`. It rewrites the producer's
+   `registry.json` from the local registry.
+4. **Check the diff:** `git diff registry/` should show only the new
+   version you intended.
+5. **Update `system-design.md`'s payload contract** for that event to match,
+   with the reason for the change.
+6. **Commit** the export and the `system-design.md` change together in
+   gluon, and push them **before** the service repos. Each service's CI
+   restores gluon's `main` before its `schemaRegistryCheck`; if the service
+   lands first, CI checks it against the old baseline.
+
+### Adding a new event
+
+The same steps. The producer's first `schemaRegistryCheck` creates the
+artifact with its `producer` label and the `BACKWARD_TRANSITIVE` rule.
+Consumers that run their check before the producer has registered get a
+warning and are skipped, not failed. Add a new payload contract to
+`system-design.md` in step 5.
+
+### Breaking changes
+
+`BACKWARD_TRANSITIVE` means each new version must be able to read data
+written with every earlier version. Adding a required field, removing a
+field, or changing a type fails the check. To make such a change, retire
+the event and publish a new event type. That creates a new artifact and a
+new history, as TD-15 did when it replaced `OrderStatusChanged` with
+`OrderConfirmed`, `OrderPaymentFailed` and `OrderCancelled`.
+
+1. Add the new event type, following the steps above.
+2. Once nothing produces or consumes the old one, delete its artifact from
+   the local registry (`DELETE .../groups/gluon/artifacts/<id>`).
+3. Run `bin/registry-export --force`. `--force` is needed because the old
+   artifact's versions are being dropped.
+4. In `system-design.md`, mark the old contract **RETIRED** and give the date.
+
+Don't use `--force` for anything else. Export refuses to drop versions
+already committed. Without `--force` it only fails if history went missing,
+for example after a wipe; run `bin/registry-restore` and export again.
+
+## What runs where
+
+| Where | What | Effect |
+|---|---|---|
+| Producer build | `sbt schemaRegistryCheck` | Registers the closed schema labelled `producer=<service>`; fails if incompatible |
+| Consumer build | `sbt schemaRegistryCheck` | Checks the mirror against the producer's artifact without writing |
+| Local cluster | `registry-restore` sidecar on the Apicurio pod | Re-runs `bin/registry-restore` every 30s from a ConfigMap of these files |
+| Service CI | Checks out gluon's `registry/`, runs `bin/registry-restore`, then `schemaRegistryCheck` | Checks against the committed baseline |
+| gluon | `bin/registry-export` | Writes registry → these files |
+
+The sidecar's ConfigMap is rebuilt by `bin/k8s-local-up`. To load a newly
+committed export without a full `k8s-local-up`, see
+[`infra/k8s/README.md`](../infra/k8s/README.md#persistence-git-export--restore-sidecar-td-18).
+
+## Scripts
+
+- `bin/registry-export [--url URL] [--group gluon] [--force] [DIR]`
+- `bin/registry-restore [--url URL] [--quiet] [DIR]`. Only creates
+  artifacts the registry doesn't have, so it's safe to re-run.
+
+Both are Python 3 stdlib only. Both default to the gluon-local in-cluster
+registry, or `$SCHEMA_REGISTRY_URL` if set.

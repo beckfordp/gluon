@@ -62,8 +62,9 @@ question's own text already anticipated, so a customer is never told
 US-19) — only authorization moved, not the whole payment lifecycle.
 
 ### REST contracts
-Same rule as the Kafka payloads below: no shared schema registry/OpenAPI
-registry across repos yet, so this section — not either service's own
+Unlike the Kafka payloads below, whose source of truth is gluon's
+[`registry/`](../registry/README.md), REST has no shared OpenAPI registry
+across repos yet, so this section — not either service's own
 source code — is what a caller and callee in different repos should agree
 against. Each generated service also serves its own tapir-generated
 Swagger/OpenAPI docs at `/docs`, which is the authoritative *current* shape
@@ -270,7 +271,8 @@ topic subscription to filter event types for it.
   authorize is learned synchronously), notification-service
   (`PaymentCaptured`/`PaymentFailed` — receipt / payment-problem emails,
   **built 2026-10-28**, US-19.4), fulfilment-service
-  (`PaymentAuthorized`/`PaymentAuthorizationExpired`, not yet built),
+  (`PaymentAuthorized`, built 2026-10-28; `PaymentAuthorizationExpired`
+  not yet built),
   and later inventory-service. `PaymentSettled` is
   retired (Rework 7).
 - **`user-events`** — producer: user-service (built 2026-10-28, outbox +
@@ -291,36 +293,40 @@ six old per-event-type topics (`order.reserved`, `order.status-changed`,
 `payment.settled`, `payment.failed`) — no producer or consumer anywhere
 still targets them.
 
-Schema/contract management: see [ADR 0003](./adr/0003-kafka-schema-registry.md)
-(schema registry) — Apicurio Registry now enforces backward compatibility
-at **build time** (Rework 5, done 2026-10-25: a `schemaRegistryCheck` sbt
-task, adopted by all 4 Kafka-touching services, and in every future
-generated service by default). It only checks the raw JSON Schema shape
-though, with none of this section's narrative (publish timing,
-`correlationId` gaps, etc.) — this remains the human source of truth for
-*why* each payload looks the way it does, not just its shape. See
-[`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio)
-for how to browse the live registered schemas.
+**Source of truth for event payloads: gluon's
+[`registry/`](../registry/README.md)** ([ADR 0003](./adr/0003-kafka-schema-registry.md),
+TD-18). `registry/<producer-service>/registry.json` holds every version of
+every event that service publishes, as JSON Schema generated from the
+producer's code. The "Payload contracts" below are a readable copy plus the
+reasons behind each shape: publish timing, consumers, correlation. If the two
+disagree, the registry is right and this document is stale. The envelope
+below isn't registered; this document is its only specification.
 
-**Contract governance (TD-14.2, TD-18):** the producer's registered schema is
-authoritative. A consumer's local mirror must be updated in the same change as
-the producer's, not in a later cleanup. Each contract is one
-`gluon/<topic>-<eventType>` artifact, written only by its producer (purekafka
-0.5.0+, labelled `producer=<service>`); a consumer's `schemaRegistryCheck`
-dry-runs its mirror against it and fails if the mirror requires something the
-producer doesn't send. Schemas are draft-07, and producer schemas are closed
-(`additionalProperties: false`), so adding an optional field registers as a new
-version under `BACKWARD_TRANSITIVE`; a breaking change still needs the
-retirement/new-artifact route demonstrated by TD-15. Git is the registry's
-persistent store: after a schema change, run `bin/registry-export` and commit
-`registry/<producer>/registry.json` in gluon with the service change (see
-[`registry/README.md`](../registry/README.md)).
+**Contract governance (TD-14.2, TD-18):**
+- Only the producer writes a contract. Its `sbt schemaRegistryCheck`
+  registers each event as `gluon/<topic>-<eventType>`, labelled
+  `producer=<service>`.
+- A consumer's mirror case class is checked against the producer's artifact
+  and never written. The check fails if the mirror requires a field the
+  producer doesn't send, or a type or enum doesn't match. Update a mirror in
+  the same change as the producer, not in a later cleanup.
+- Rule `BACKWARD_TRANSITIVE` applies to draft-07, closed schemas. Adding an
+  optional field is a new version. A breaking change means retiring the
+  event and adding a new event type, as TD-15 did.
+- Every contract change follows the workflow in
+  [`registry/README.md`](../registry/README.md#workflow-changing-an-event-contract):
+  check in the producer and consumers, `bin/registry-export`, then commit the
+  export **and** the matching "Payload contracts" update here in one gluon
+  commit.
+- Every Kafka service's CI restores `registry/` before its check, so a change
+  is checked against the committed contracts. Browse the live copy via
+  [`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio).
 
 Each service with Kafka contracts serves its own AsyncAPI docs (ADR 0010) — raw
 spec at `/docs/asyncapi.json`, rendered static HTML at
-`/docs/asyncapi/index.html` — the Kafka-side counterpart to the REST
-section's own `/docs` note above: the authoritative *current* shape if
-this section ever drifts. order-service, payment-service and
+`/docs/asyncapi/index.html`, generated from the same `Schema[T]` the
+registry gets, so they show each service's view, including consumer
+mirrors. For the contract itself, the registry wins. order-service, payment-service and
 notification-service serve both. inventory-service (TD-7.5, 2026-10-27)
 has no events: it serves the raw route with an empty channel list, and
 build-time HTML generation is disabled because the AsyncAPI validator
@@ -359,6 +365,12 @@ a matching `eventType` with an undecodable `payload`, is a real error log
 line.
 
 ### Payload contracts
+
+Each live contract names its registry entry as `registry/<producer>/registry.json`
+→ `<artifactId>` v`<latest version>`. Those files are the source of truth
+(see "Kafka topics" above); the JSON here is a readable copy with field
+notes. Update both in the same gluon commit. Retired contracts have no
+registry entry and are kept here for history only.
 
 **`StockReserved`** / **`StockReservationFailed`** — **RETIRED (TD-7,
 2026-10-27)**: no longer published once inventory-service's bulk reserve
@@ -406,6 +418,8 @@ notification-service) — split by outcome, TD-15, replacing
 `OrderStatusChanged`:
 
 **`OrderConfirmed`**:
+
+Registry: [`registry/order-service/registry.json`](../registry/order-service/registry.json) → `order-events-OrderConfirmed` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -417,6 +431,8 @@ Published when order-service consumes `PaymentCaptured` and moves the order to
 `confirmed`.
 
 **`OrderPaymentFailed`**:
+
+Registry: [`registry/order-service/registry.json`](../registry/order-service/registry.json) → `order-events-OrderPaymentFailed` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -430,6 +446,8 @@ and moves the order to `payment_failed`. Checkout-time declines are
 synchronous and publish nothing (ADR 0018).
 
 **`OrderCancelled`**:
+
+Registry: [`registry/order-service/registry.json`](../registry/order-service/registry.json) → `order-events-OrderCancelled` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -442,8 +460,7 @@ the order to `cancelled`.
 
 Dispatch outcomes stay authoritative on `fulfilment-events`
 (`DispatchConfirmed`/`DispatchFailed`); order-service does not mirror them
-into `order-events`. New per-outcome artifacts register fresh, so the
-draft-2020-12 mutation blocker (TD-11) does not apply.
+into `order-events`.
 
 **Reliability (decided 2026-10-02, implemented 2026-10-15): transactional
 outbox via Debezium CDC** — [ADR 0008](./adr/0008-outbox-pattern-via-debezium-cdc.md),
@@ -457,9 +474,11 @@ and connector remain inert.
 **`PaymentFailed`** (producer: payment-service, capture-decline only;
 consumers: order-service; notification-service **built 2026-10-28**,
 US-19.4):
+
+Registry: [`registry/payment-service/registry.json`](../registry/payment-service/registry.json) → `payment-events-PaymentFailed` v1.
 ```json
 {
-  "orderId": "string (UUID) — order-service's own order id; what its OrderStatusChanged publish needs to correlate back to",
+  "orderId": "string (UUID) — order-service's own order id; what its OrderPaymentFailed publish correlates back to",
   "paymentId": "string (UUID) — payment-service's own Payment.id, included for cross-service log/trace correlation only",
   "amountCents": "int — the amount that failed to charge",
   "reason": "string — e.g. capture_failed",
@@ -468,16 +487,17 @@ US-19.4):
 ```
 Published only when capture fails on `fulfilment-events: DispatchConfirmed`
 (US-19.1), with `reason: capture_failed`. An authorize decline stays purely
-synchronous — nothing is published; order-service handles it in the same
-request and publishes its own `order-events: OrderStatusChanged {status:
-payment_failed}`. Keyed by `orderId`.
+synchronous: nothing is published, and order-service handles it in the
+same request with no order row and no event (ADR 0018). Keyed by `orderId`.
 
 `PaymentSettled` is **retired** (Rework 7): the single-step create-then-settle
 publish is replaced by the authorize/capture split below.
 
 **`PaymentAuthorized`** (producer: payment-service, US-14.1, **built
-2026-10-27**; consumer: fulfilment-service, US-17.1, not yet built — **not**
-order-service, see below):
+2026-10-27**; consumer: fulfilment-service, US-17.1, **built 2026-10-28** —
+**not** order-service, see below):
+
+Registry: [`registry/payment-service/registry.json`](../registry/payment-service/registry.json) → `payment-events-PaymentAuthorized` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -507,6 +527,8 @@ speculatively now.
 **`PaymentCaptured`** (producer: payment-service, US-19.1, **built
 2026-10-28**; consumers: order-service, US-19.2, **built 2026-10-28**;
 notification-service, US-19.4, **built 2026-10-28**):
+
+Registry: [`registry/payment-service/registry.json`](../registry/payment-service/registry.json) → `payment-events-PaymentCaptured` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -521,6 +543,8 @@ the point money actually moves. Idempotency-checked on `orderId` first
 **`PaymentAuthorizationExpired`** (producer: payment-service, US-20.1, not
 yet built; consumers: order-service US-20.2, inventory-service US-20.3,
 fulfilment-service US-20.4, all not yet built):
+
+Registry: [`registry/payment-service/registry.json`](../registry/payment-service/registry.json) → `payment-events-PaymentAuthorizationExpired` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -534,20 +558,24 @@ as the `TECHNICAL_DEBT.md` TD-3 outbox-cleanup CronJob precedent.
 
 **`DispatchConfirmed`** (producer: fulfilment-service, US-17.3, **built
 2026-10-28**; consumers: order-service US-17.4, payment-service US-19.1,
-notification-service US-17.5, not yet built):
+notification-service US-17.5, all **built 2026-10-28**):
+
+Registry: [`registry/fulfilment-service/registry.json`](../registry/fulfilment-service/registry.json) → `fulfilment-events-DispatchConfirmed` v1.
 ```json
 {
   "orderId": "string (UUID)",
   "trackingNo": "string",
-  "items": "array — full snapshot [{sku, productName, quantity, unitPriceCents}], so consumers need no order lookup"
+  "items": "array, optional in the schema (tapir doesn't mark collections required), always sent — full snapshot [{sku, productName, quantity, unitPriceCents}], so consumers need no order lookup"
 }
 ```
 Published once pick/pack/dispatch succeeds for an order. Three
 consumers — same fan-out shape as `PaymentAuthorized` above.
 
 **`DispatchFailed`** (producer: fulfilment-service, US-18.1, **built
-2026-10-28**; consumers: order-service US-18.3, payment-service US-18.2, not
-yet built):
+2026-10-28**; consumers: order-service US-18.3, payment-service US-18.2,
+notification-service, all **built 2026-10-28**):
+
+Registry: [`registry/fulfilment-service/registry.json`](../registry/fulfilment-service/registry.json) → `fulfilment-events-DispatchFailed` v1.
 ```json
 {
   "orderId": "string (UUID)",
@@ -562,6 +590,8 @@ status and release inventory reservations.
 
 **`UserRegistered`** (producer: user-service, US-16.3, **built 2026-10-28**;
 consumer: notification-service, US-16.4, **built 2026-10-28**):
+
+Registry: [`registry/user-service/registry.json`](../registry/user-service/registry.json) → `user-events-UserRegistered` v1.
 ```json
 {
   "userId": "string (UUID)",

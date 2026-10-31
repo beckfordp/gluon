@@ -144,12 +144,5 @@ itself within about 30s. To pick up a newly committed export without a
 full `k8s-local-up`, rebuild the ConfigMap the same way (the kubelet syncs
 the mounted files within about a minute).
 
-The check → export → commit loop:
-
-1. In the producer service, `sbt schemaRegistryCheck` registers the changed
-   schema (failing on an incompatible change). Consumers' checks dry-run
-   their mirrors against it and never write.
-2. In gluon, `bin/registry-export` rewrites `registry/<producer>/registry.json`.
-3. Commit it in gluon with the service change. Every Kafka service's CI
-   restores `registry/` into its throwaway Apicurio before
-   `schemaRegistryCheck`, so the next CI run checks against it.
+The workflow for changing a contract (check, then `bin/registry-export`, then
+commit) is in [`registry/README.md`](../../registry/README.md#workflow-changing-an-event-contract).
