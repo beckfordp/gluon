@@ -413,3 +413,9 @@ own line. See each repo's own `git log` for full detail either way.
   `bin/run-acceptance` runs prechecks, the matrix and the whole suite (36
   scenarios) from gluon's root, then opens the report. ACC-6.3 (US-20
   feature) waits on Checkout Journey 5.
+- Node 26 LTS everywhere. purerest 0.4.1 (sbt-purekafka-docs 0.4.0-dev)
+  renders AsyncAPI HTML with @asyncapi/cli 6.2.2 + html-template 3.5.6,
+  with no local patching. It needs Node ≥ 24.11 and warns and skips on
+  older versions. Five event-publishing services pick it up and set up
+  Node 26 in CI. inventory-service only gets the bump, since it has no
+  events. The acceptance suite pins Node 26 too.
