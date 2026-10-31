@@ -50,12 +50,14 @@ if [ ! -d "$SUITE_DIR" ]; then
   echo "FAIL: $SUITE_DIR missing — clone beckfordp/gluon-acceptance there" >&2
   exit 1
 fi
-# Playwright 1.64 needs Node >= 20 and the suite pins 24; the nvm default may be older.
+# The suite pins Node 26 (.nvmrc; engines >= 24); a shell's PATH may still have an
+# older node first, so fall back to nvm's newest installed 26.
 if [ "$(node_major node || echo 0)" -lt 24 ]; then
-  if [ -x /opt/homebrew/opt/node@24/bin/node ]; then
-    export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
+  nvm26=$(ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v26.* 2>/dev/null | sort -V | tail -1)
+  if [ -n "$nvm26" ] && [ -x "$nvm26/bin/node" ]; then
+    export PATH="$nvm26/bin:$PATH"
   else
-    echo "FAIL: node $(node -v 2>/dev/null || echo missing); need 24 (nvm use, or brew install node@24)" >&2
+    echo "FAIL: node $(node -v 2>/dev/null || echo missing); need >= 24 (nvm install 26)" >&2
     exit 1
   fi
 fi
