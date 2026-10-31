@@ -302,14 +302,19 @@ though, with none of this section's narrative (publish timing,
 [`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio)
 for how to browse the live registered schemas.
 
-**Contract governance (TD-14.2):** the producer's registered schema is
+**Contract governance (TD-14.2, TD-18):** the producer's registered schema is
 authoritative. A consumer's local mirror must be updated in the same change as
-the producer's, not in a later cleanup. Producers and consumers of the same
-contract share one `gluon/<topic>-<eventType>` artifact, so whichever side runs
-`schemaRegistryCheck` last wins the registry content — a consumer whose mirror
-lags can therefore mask a producer change. Until TD-11 is fixed, schema
-mutations cannot register as a new version; contract changes that alter a
-schema use the retirement/new-artifact route demonstrated by TD-15.
+the producer's, not in a later cleanup. Each contract is one
+`gluon/<topic>-<eventType>` artifact, written only by its producer (purekafka
+0.5.0+, labelled `producer=<service>`); a consumer's `schemaRegistryCheck`
+dry-runs its mirror against it and fails if the mirror requires something the
+producer doesn't send. Schemas are draft-07, and producer schemas are closed
+(`additionalProperties: false`), so adding an optional field registers as a new
+version under `BACKWARD_TRANSITIVE`; a breaking change still needs the
+retirement/new-artifact route demonstrated by TD-15. Git is the registry's
+persistent store: after a schema change, run `bin/registry-export` and commit
+`registry/<producer>/registry.json` in gluon with the service change (see
+[`registry/README.md`](../registry/README.md)).
 
 Each service with Kafka contracts serves its own AsyncAPI docs (ADR 0010) — raw
 spec at `/docs/asyncapi.json`, rendered static HTML at

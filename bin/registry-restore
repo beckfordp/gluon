@@ -10,10 +10,13 @@ so history is replayed as it was accepted, not re-judged. Artifacts that
 already exist are left alone, so it's safe to re-run.
 
 Usage:
-  bin/registry-restore [--url URL] [REGISTRY_DIR]
+  bin/registry-restore [--url URL] [--quiet] [REGISTRY_DIR]
     --url         registry base URL (default: $SCHEMA_REGISTRY_URL, else the
                   gluon-local in-cluster service)
-    REGISTRY_DIR  default: registry/ next to this script's bin/
+    --quiet       print only restored artifacts, not the summary
+    REGISTRY_DIR  default: registry/ next to this script's bin/. Reads
+                  <producer>/registry.json, and also flat *.json (the
+                  sidecar's ConfigMap mount can't hold subdirectories).
 
 Python 3 stdlib only: runs on CI runners and in the local registry's restore
 sidecar (infra/k8s/local-infra/apicurio-registry.yaml).
@@ -41,6 +44,8 @@ def call(method, url, body=None):
         if e.code == 404:
             return 404
         raise SystemExit(f"{method} {url} failed ({e.code}): {e.read().decode()}")
+    except urllib.error.URLError as e:
+        raise SystemExit(f"{method} {url} failed: {e.reason}")
 
 
 def content(schema):
@@ -79,11 +84,13 @@ def main():
     here = os.path.dirname(os.path.realpath(__file__))
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--url", default=os.environ.get("SCHEMA_REGISTRY_URL", DEFAULT_URL))
+    p.add_argument("--quiet", action="store_true")
     p.add_argument("registry_dir", nargs="?", default=os.path.join(here, "..", "registry"))
     args = p.parse_args()
     api = args.url.rstrip("/") + "/apis/registry/v3"
 
-    files = sorted(glob.glob(os.path.join(args.registry_dir, "*", "registry.json")))
+    files = sorted(glob.glob(os.path.join(args.registry_dir, "*", "registry.json"))
+                   + glob.glob(os.path.join(args.registry_dir, "*.json")))
     created = skipped = 0
     for path in files:
         with open(path, encoding="utf-8") as f:
@@ -95,8 +102,9 @@ def main():
                       f"({len(artifact['versions'])} version(s))")
             else:
                 skipped += 1
-    print(f"registry-restore: {created} restored, {skipped} already present, "
-          f"{len(files)} producer file(s)")
+    if not args.quiet:
+        print(f"registry-restore: {created} restored, {skipped} already present, "
+              f"{len(files)} producer file(s)")
 
 
 if __name__ == "__main__":

@@ -125,10 +125,31 @@ directly, the REST API still works the same way:
 # Everything registered, across every service:
 curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/search/artifacts
 
-# One service's own group (one group per service, its name.value):
-curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/order-service/artifacts
+# The shared group every service registers into:
+curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/gluon/artifacts
 
 # One artifact's actual JSON Schema content — artifact ids are
 # <topic>-<eventType>:
-curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/order-service/artifacts/order-events-OrderReserved/versions/1/content
+curl http://apicurio-registry.gluon-local.svc.cluster.local:8080/apis/registry/v3/groups/gluon/artifacts/order-events-OrderConfirmed/versions/1/content
 ```
+
+### Persistence: git export + restore sidecar (TD-18)
+
+Apicurio's storage here is ephemeral; [`registry/`](../../registry/README.md)
+in gluon is the persistent store. The `registry-restore` sidecar in
+`apicurio-registry.yaml` re-runs `bin/registry-restore` every 30s against
+the `apicurio-registry-export` ConfigMap (built by `bin/k8s-local-up` from
+`registry/*/registry.json`), so after any restart the registry refills
+itself within about 30s. To pick up a newly committed export without a
+full `k8s-local-up`, rebuild the ConfigMap the same way (the kubelet syncs
+the mounted files within about a minute).
+
+The check → export → commit loop:
+
+1. In the producer service, `sbt schemaRegistryCheck` registers the changed
+   schema (failing on an incompatible change). Consumers' checks dry-run
+   their mirrors against it and never write.
+2. In gluon, `bin/registry-export` rewrites `registry/<producer>/registry.json`.
+3. Commit it in gluon with the service change. Every Kafka service's CI
+   restores `registry/` into its throwaway Apicurio before
+   `schemaRegistryCheck`, so the next CI run checks against it.

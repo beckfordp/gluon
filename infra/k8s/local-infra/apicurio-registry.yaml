@@ -15,12 +15,14 @@
 # "No Registry storage variant defined for value mem"). Local-dev-only,
 # mirrors every other local-infra component's own ephemeral-storage
 # convention (even Postgres here uses a plain `emptyDir`, not a real PVC -
-# see postgres-catalog.yaml). Schemas don't survive a pod restart, but the
-# source of truth is the code; the build-time task just
-# re-registers/validates on every run anyway, so restart-loses-data is
-# low-stakes for this local-only, single-developer setup. KafkaSQL storage
-# (reusing the already-deployed broker, surviving restarts) is a
-# reasonable future upgrade if that changes, not needed now.
+# see postgres-catalog.yaml). Schemas don't survive a pod restart, so
+# git is the persistent store instead (TD-18, ADR 0003's 2026-10-31 note):
+# the registry-restore sidecar below replays gluon's registry/ export
+# (mounted from the apicurio-registry-export ConfigMap, which
+# bin/k8s-local-up builds from registry/*/registry.json and
+# bin/registry-restore) into this pod's empty H2 whenever artifacts are
+# missing. It loops rather than running once, as a Job would, so it also
+# covers an OrbStack restart or a container-only restart.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -89,6 +91,38 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 10
+        # Re-runs bin/registry-restore every 30s: it only creates artifacts
+        # the registry lacks, so steady state is a few GETs and no output.
+        # Failures (registry not ready yet) are retried on the next pass.
+        - name: registry-restore
+          image: python:3.13-alpine
+          command:
+            - sh
+            - -c
+            - |
+              while true; do
+                python3 /restore/registry-restore --quiet --url http://localhost:8080 /restore || true
+                sleep 30
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+          volumeMounts:
+            - name: registry-export
+              mountPath: /restore
+              readOnly: true
+      volumes:
+        - name: registry-export
+          configMap:
+            name: apicurio-registry-export
+            # Plain `kubectl apply -f local-infra/` without bin/k8s-local-up
+            # still starts the registry; the sidecar then just finds nothing.
+            optional: true
+            defaultMode: 0555
 ---
 apiVersion: v1
 kind: Service
