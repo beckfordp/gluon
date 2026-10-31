@@ -399,3 +399,10 @@ own line. See each repo's own `git log` for full detail either way.
   (US-11–14); a declined card retried with another, a sold-out item removed
   and the rest ordered, and each address/card validation rule shown before
   ordering (US-14).
+- Acceptance 5 (ACC-5.1–5.4): fulfilment and capture features, driven
+  through gshop's Order processing screen. An operator picks, packs and
+  dispatches an order (US-17), and the customer's history then shows it
+  `Confirmed` once payment is captured (US-19), or `Payment failed` when
+  capture is declined. A problem reported at any stage before dispatch shows
+  `Dispatch failed` and releases the stock (US-18). Full suite: 34
+  scenarios, now run on 2 workers with service DNS pinned in Chromium.

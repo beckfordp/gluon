@@ -1434,12 +1434,26 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 4.
 
-- [ ] ACC-5.1 — US-17: pick/pack/dispatch via gshop's fulfilment screen
-- [ ] ACC-5.2 — US-18: dispatch failure path
-- [ ] ACC-5.3 — US-19: capture → `Confirmed`; capture failure →
+- [x] ACC-5.1 — US-17: pick/pack/dispatch via gshop's fulfilment screen
+- [x] ACC-5.2 — US-18: dispatch failure path
+- [x] ACC-5.3 — US-19: capture → `Confirmed`; capture failure →
       `Payment failed`, as shown in order history
-- [ ] ACC-5.4 — async waits via polling assertions (`expect.poll`) inside
+- [x] ACC-5.4 — async waits via polling assertions (`expect.poll`) inside
       `Then` steps, never fixed sleeps
+      *ACC-5.1–5.4 done 2026-10-31 (gluon-acceptance track
+      fulfilment-capture_20261031): orders bought through gshop, then the
+      operator drives Order processing. `@US-17` pick/pack/dispatch with
+      state badges and tracking; `@US-18` problem reported while
+      Pending/Picking/Packed → `Dispatch failed`, stock released, plus
+      missing-reason rejection; `@US-19` capture → `Confirmed`, card
+      `5555…4444` → `Payment failed`. 7 scenarios green; full suite 34.
+      Order History is cached (60 s TTL), so steps poll the order API
+      before opening it. The suite now runs 2 workers and pins service DNS
+      in Chromium: under load, Chromium's `.cluster.local` lookups failed,
+      and order-service's liveness probe (1 s timeout, no startup probe)
+      crash-looped it. `Dispatched` in history (transient), emails, void
+      and reconciliation flag aren't UI-observable: out of scope in the
+      ACC-6.1 matrix.*
 
 **Exit criteria:** full order lifecycle accepted through the UI.
 
