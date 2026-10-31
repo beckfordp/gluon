@@ -392,3 +392,10 @@ own line. See each repo's own `git log` for full detail either way.
   and Load more shows the next page (US-1); a new shopper's cart is empty,
   and adding, `+1` and removing a product update the cart and its total
   (US-2).
+- Acceptance 4 (ACC-4.1–4.3): account and checkout features. Sign up, sign
+  in and out, with wrong password, duplicate email and mismatched passwords
+  rejected (US-16); anonymous and signed-in checkout, billing address
+  differing from shipping, and the order showing `Authorized` in history
+  (US-11–14); a declined card retried with another, a sold-out item removed
+  and the rest ordered, and each address/card validation rule shown before
+  ordering (US-14).

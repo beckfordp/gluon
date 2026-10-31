@@ -1410,11 +1410,19 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 2.
 
-- [ ] ACC-4.1 — US-16 feature: register, login, logout
-- [ ] ACC-4.2 — US-11–14 happy-path feature: addresses, payment method,
+- [x] ACC-4.1 — US-16 feature: register, login, logout
+- [x] ACC-4.2 — US-11–14 happy-path feature: addresses, payment method,
       authorize, order appears in history as `Authorized`
-- [ ] ACC-4.3 — failure paths as `Scenario Outline`s: decline (`402`),
+- [x] ACC-4.3 — failure paths as `Scenario Outline`s: decline (`402`),
       out of stock (`409`, remove-and-retry), validation (`400`)
+      *ACC-4.1–4.3 done 2026-10-31 (gluon-acceptance track
+      account-checkout_20261031): `@US-16` sign up, sign in/out, wrong
+      password, duplicate email, mismatched passwords; `@US-11`–`14`
+      anonymous order, billing differs, signed-in order in history as
+      `Authorized`; outlines for decline + retry, sold out (0/1 left) +
+      remove-and-retry, 8 field-validation rules. 19 scenarios green.
+      Server-side `400`s unreachable (gshop validates first); US-16.3/16.4
+      not UI-observable: out of scope in the ACC-6.1 matrix.*
 
 **Exit criteria:** happy and failure checkout paths green.
 
