@@ -682,3 +682,29 @@ differs from typical production registry use, plus the upgrade path.
       it; every run green restoring the 10-artifact baseline. Locally,
       notification-service's 8 consumer mirrors dry-run clean against the
       producers' real artifacts.
+
+## TD-19 — AsyncAPI docs show publish/subscribe inverted
+
+AsyncAPI 2.x describes operations from the client's side: `publish` means
+clients send to the channel, so the service *receives*; `subscribe` means
+clients receive, so the service *sends*. purekafka's `AsyncApiDoc`
+(`ChannelItem(publish = ..., subscribe = ...)`) maps a service's own
+`ChannelDirection.Publish` events to `publish`, the inverse. The HTML
+template follows the spec (anchors `#operation-receive-publish` /
+`#operation-send-subscribe`), so every service's `/docs/asyncapi/` says it
+receives what it produces and sends what it consumes. Found 2026-10-31
+while checking the new schema descriptions in order-service's docs.
+
+Related, same module: `/docs/asyncapi` without a trailing slash serves the
+HTML, but its relative `css/`/`js/` paths then resolve under `/docs/` and
+404, so the page renders unstyled and empty.
+
+### Tasks
+- [ ] TD-19.1: purekafka — swap the mapping in `AsyncApiDoc` (produced →
+      `subscribe`, consumed → `publish`), keep the CDC note on the
+      produced side, update tests. Or move to AsyncAPI 3.0 `send`/`receive`
+      if tapir's apispec model supports it (check first; clearer badges).
+- [ ] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`.
+- [ ] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
+      services with `AsyncApiChannels` (order, payment, fulfilment,
+      notification, user, inventory); check each live `/docs/asyncapi/`.
