@@ -433,3 +433,14 @@ own line. See each repo's own `git log` for full detail either way.
   `producer=<service>`; consumers dry-run their mirrors against the
   producer's artifact. Seeded with 10 artifacts from order, payment,
   fulfilment and user-service.
+- Event schemas documented. The 10 producer events in order, payment,
+  fulfilment and user-service carry tapir `@description` and
+  `@encodedExample` annotations, at event and field level. These show in
+  the registry UI's Documentation tab and in the AsyncAPI docs. The v1
+  baseline in `registry/` was regenerated in place, since nothing is live
+  yet, so every artifact is still version 1. `bin/registry-reload` loads a
+  committed export into the local cluster: it rebuilds the restore
+  sidecar's ConfigMap and waits for it to sync. `--wipe` also deletes the
+  artifacts so the sidecar restores them, which is needed when an export
+  rewrites an existing version. `registry/README.md` now covers browsing
+  in the UI.
