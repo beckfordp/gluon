@@ -419,3 +419,17 @@ own line. See each repo's own `git log` for full detail either way.
   older versions. Five event-publishing services pick it up and set up
   Node 26 in CI. inventory-service only gets the bump, since it has no
   events. The acceptance suite pins Node 26 too.
+- Schema registry kept in git (TD-18, ADR 0003). The local Apicurio
+  registry lost everything on restart, and CI checked against an empty
+  one, so compatibility was never really enforced. Now
+  `registry/<producer-service>/registry.json` holds every artifact a
+  producer owns, with its rules and all versions. `bin/registry-export`
+  writes it and `bin/registry-restore` replays it. A sidecar refills the
+  local registry within about 30s of any restart, and every Kafka
+  service's CI restores it before `schemaRegistryCheck`. purekafka 0.5.0:
+  schemas are draft-07, which fixes TD-11 (changed schemas used to 500).
+  Producer schemas are closed, so adding an optional field registers as
+  version 2 under `BACKWARD_TRANSITIVE`. Only producers write, labelled
+  `producer=<service>`; consumers dry-run their mirrors against the
+  producer's artifact. Seeded with 10 artifacts from order, payment,
+  fulfilment and user-service.

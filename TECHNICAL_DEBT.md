@@ -398,7 +398,7 @@ payment failure is a `503` rather than a retry.
       (`max-retries = 3`) once TD-10.1 lands. — **done 2026-10-27**
       (`payment-retries_20261027`).
 
-## TD-11 — Apicurio can't version draft 2020-12 JSON schemas
+## TD-11 — Apicurio can't version draft 2020-12 JSON schemas — **RESOLVED 2026-10-31**
 
 `schemaRegistryCheck` registers schemas generated as JSON Schema draft
 2020-12. Apicurio's compatibility checker can't read that draft: any
@@ -417,8 +417,8 @@ artifact 500s the same way; the artifact currently holds notification-service's
       prove one compatible change registers as version 2. Done as TD-18.1
       (purekafka v0.5.0): draft-07, plus closed producer schemas — with an
       open content model even an optional field addition is rejected.
-- [ ] TD-11.2: every service using `schemaRegistryCheck` — pick up the
-      plugin fix and re-run it.
+- [x] TD-11.2: every service using `schemaRegistryCheck` — pick up the
+      plugin fix and re-run it. Done as TD-18.5.
 
 ## TD-12 — Generator has no way to skip the placeholder CRUD surface
 
@@ -633,7 +633,7 @@ services share the settings, so any of them can do the same.
       (`bin/run-acceptance --workers=5`) with no restarts, then drop the
       suite's `workers: 2` pin if it's no longer needed.
 
-## TD-18 — Schema registry enforces nothing and persists nothing
+## TD-18 — Schema registry enforces nothing and persists nothing — **RESOLVED 2026-10-31**
 
 `schemaRegistryCheck` runs in CI against a throwaway, empty Apicurio
 container, so BACKWARD compatibility is never actually checked; the local
@@ -673,7 +673,12 @@ differs from typical production registry use, plus the upgrade path.
       restart), fed by the `apicurio-registry-export` ConfigMap that
       `bin/k8s-local-up` builds; verified live: a wiped group refills within
       ~30s with version history intact.
-- [ ] TD-18.5: every Kafka service (order, payment, notification,
+- [x] TD-18.5: every Kafka service (order, payment, notification,
       fulfilment, inventory, user) — bump purekafka; CI restores gluon's
       `registry/` export into the throwaway container before
       `schemaRegistryCheck`; update `verify-schema-registry-check.sh`.
+      Done via track `schema-registry-baseline_20261031` in all six repos
+      (archived). CI sparse-checks-out gluon's `registry/` and restores
+      it; every run green restoring the 10-artifact baseline. Locally,
+      notification-service's 8 consumer mirrors dry-run clean against the
+      producers' real artifacts.
