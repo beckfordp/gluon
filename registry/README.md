@@ -120,17 +120,22 @@ for example after a wipe; run `bin/registry-restore` and export again.
 | gluon | `bin/registry-export` | Writes registry → these files |
 
 The sidecar's ConfigMap is rebuilt by `bin/k8s-local-up`. To load a newly
-committed export without a full `k8s-local-up`, see
-[`infra/k8s/README.md`](../infra/k8s/README.md#persistence-git-export--restore-sidecar-td-18).
+committed export without a full `k8s-local-up`, run `bin/registry-reload`
+(add `--wipe` if the export rewrote an existing version).
 
 ## Scripts
 
 - `bin/registry-export [--url URL] [--group gluon] [--force] [DIR]`
 - `bin/registry-restore [--url URL] [--quiet] [DIR]`. Only creates
   artifacts the registry doesn't have, so it's safe to re-run.
+- `bin/registry-reload [--wipe | --configmap-only]`. Loads these files
+  into the local cluster: rebuilds the sidecar's ConfigMap and waits for
+  it to sync. `--wipe` then deletes the group's artifacts so the sidecar
+  restores them from these files.
 
-Both are Python 3 stdlib only. Both default to the gluon-local in-cluster
-registry, or `$SCHEMA_REGISTRY_URL` if set.
+`registry-export` and `registry-restore` are Python 3 stdlib only. All
+three default to the gluon-local in-cluster registry, or
+`$SCHEMA_REGISTRY_URL` if set.
 
 ## Browsing in the UI
 

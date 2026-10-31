@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Load the committed registry/ export into the local cluster's Apicurio
+# (TD-18). Rebuilds the apicurio-registry-export ConfigMap from
+# registry/<producer>/registry.json plus bin/registry-restore (the sidecar
+# runs the script from the same ConfigMap, so both must always be in it),
+# then waits until the restore sidecar sees the new files.
+#
+# The sidecar only creates missing artifacts, so a changed export (e.g. a
+# rewritten v1) doesn't replace what's already there. --wipe deletes every
+# artifact in the group and waits for the sidecar to restore them.
+#
+# Usage:
+#   bin/registry-reload                    # rebuild ConfigMap, wait for sync
+#   bin/registry-reload --wipe             # ...then delete + restore artifacts
+#   bin/registry-reload --configmap-only   # rebuild ConfigMap, no waiting
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+NAMESPACE="gluon-local"
+REGISTRY_URL="${SCHEMA_REGISTRY_URL:-http://apicurio-registry.gluon-local.svc.cluster.local:8080}"
+GROUP="gluon"
+API="$REGISTRY_URL/apis/registry/v3"
+SIDECAR=(-n "$NAMESPACE" deploy/apicurio-registry -c registry-restore)
+
+wipe=false
+configmap_only=false
+case "${1:-}" in
+  "") ;;
+  --wipe) wipe=true ;;
+  --configmap-only) configmap_only=true ;;
+  *) echo "usage: bin/registry-reload [--wipe | --configmap-only]" >&2; exit 2 ;;
+esac
+
+# Keys are flat (<producer>.json) since a ConfigMap can't hold subdirectories.
+keys=(registry-restore)
+sources=("$GLUON_DIR/bin/registry-restore")
+for f in "$GLUON_DIR"/registry/*/registry.json; do
+  [ -e "$f" ] || continue
+  keys+=("$(basename "$(dirname "$f")").json")
+  sources+=("$f")
+done
+args=()
+for i in "${!keys[@]}"; do
+  args+=(--from-file="${keys[$i]}=${sources[$i]}")
+done
+
+echo "== Rebuilding ConfigMap apicurio-registry-export (${#keys[@]} files) =="
+kubectl create configmap apicurio-registry-export -n "$NAMESPACE" "${args[@]}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+$configmap_only && exit 0
+
+# The kubelet syncs mounted ConfigMaps within about a minute.
+echo "== Waiting for the restore sidecar to see the new files (up to 3m) =="
+synced=false
+for _ in $(seq 1 36); do
+  synced=true
+  for i in "${!keys[@]}"; do
+    if ! kubectl exec "${SIDECAR[@]}" -- cat "/restore/${keys[$i]}" 2>/dev/null \
+      | cmp -s - "${sources[$i]}"; then
+      synced=false
+      break
+    fi
+  done
+  $synced && break
+  sleep 5
+done
+if ! $synced; then
+  echo "FAIL: sidecar's /restore still differs from the ConfigMap after 3m" >&2
+  exit 1
+fi
+echo "synced"
+$wipe || exit 0
+
+expected=$(python3 -c '
+import json, sys
+print(sum(len(json.load(open(f))["artifacts"]) for f in sys.argv[1:]))
+' "${sources[@]:1}")
+
+count() {
+  curl -sf "$API/search/artifacts?groupId=$GROUP&limit=500" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["count"])'
+}
+
+echo "== Deleting every artifact in group $GROUP =="
+for id in $(curl -sf "$API/search/artifacts?groupId=$GROUP&limit=500" \
+  | python3 -c 'import json, sys; [print(a["artifactId"]) for a in json.load(sys.stdin)["artifacts"]]'); do
+  curl -sf -o /dev/null -X DELETE "$API/groups/$GROUP/artifacts/$id"
+  echo "deleted $id"
+done
+
+# The sidecar re-runs registry-restore every 30s.
+echo "== Waiting for the sidecar to restore $expected artifacts (up to 2m) =="
+for _ in $(seq 1 24); do
+  n=$(count)
+  if [ "$n" = "$expected" ]; then
+    echo "restored $n artifacts"
+    exit 0
+  fi
+  sleep 5
+done
+echo "FAIL: registry has $(count) artifacts, expected $expected" >&2
+exit 1

@@ -141,8 +141,10 @@ in gluon is the persistent store. The `registry-restore` sidecar in
 the `apicurio-registry-export` ConfigMap (built by `bin/k8s-local-up` from
 `registry/*/registry.json`), so after any restart the registry refills
 itself within about 30s. To pick up a newly committed export without a
-full `k8s-local-up`, rebuild the ConfigMap the same way (the kubelet syncs
-the mounted files within about a minute).
+full `k8s-local-up`, run `bin/registry-reload`. It rebuilds the ConfigMap
+and waits for the kubelet to sync it (within about a minute). The sidecar
+only creates missing artifacts, so if an export rewrites an existing
+version, use `bin/registry-reload --wipe` to delete and restore them.
 
 The workflow for changing a contract (check, then `bin/registry-export`, then
 commit) is in [`registry/README.md`](../../registry/README.md#workflow-changing-an-event-contract).

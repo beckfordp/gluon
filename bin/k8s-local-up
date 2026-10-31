@@ -42,16 +42,9 @@ kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/namespace.yaml"
 # harmless (PUT .../config is idempotent), and it re-registers connectors
 # lost to an OrbStack restart.
 kubectl delete job debezium-connector-register -n "$NAMESPACE" --ignore-not-found
-# The schema registry's git store (TD-18): registry/<producer>/registry.json
-# plus the restore script, for apicurio-registry's restore sidecar. Keys are
-# flat (<producer>.json) since a ConfigMap can't hold subdirectories.
-registry_files=(--from-file=registry-restore="$GLUON_DIR/bin/registry-restore")
-for f in "$GLUON_DIR"/registry/*/registry.json; do
-  [ -e "$f" ] || continue
-  registry_files+=(--from-file="$(basename "$(dirname "$f")").json=$f")
-done
-kubectl create configmap apicurio-registry-export -n "$NAMESPACE" "${registry_files[@]}" \
-  --dry-run=client -o yaml | kubectl apply -f -
+# The schema registry's git store (TD-18), for apicurio-registry's restore
+# sidecar - see bin/registry-reload.
+"$SCRIPT_DIR/registry-reload" --configmap-only
 kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/"
 
 echo "== Waiting for shared infra to be ready (up to 3m) =="
