@@ -1365,13 +1365,22 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 1.
 
-- [ ] ACC-2.1 — API helpers: throwaway user, stocked-sku lookup, payment
+- [x] ACC-2.1 — API helpers: throwaway user, stocked-sku lookup, payment
       method setup; exposed as Playwright fixtures to steps via
       `createBdd(test)`, plus shared `Given` steps (e.g. "Given I am a
       registered customer")
-- [ ] ACC-2.2 — cleanup fixtures: release reservations, delete orders
-- [ ] ACC-2.3 — precheck: services ready, Debezium connectors registered
+- [x] ACC-2.2 — cleanup fixtures: release reservations, delete orders
+- [x] ACC-2.3 — precheck: services ready, Debezium connectors registered
       (lost on OrbStack restart), fail fast with a clear message
+      *ACC-2.1–2.3 done 2026-10-31 (gluon-acceptance track
+      fixtures-test-data_20261031): shape-checked API helpers; fixtures
+      `shopper` (pinned `gshop:customerId`), `registeredCustomer`,
+      `stockedProduct`, `orders`, auto `testData` teardown (fail open
+      fulfilment task → terminal status → delete order → restore inventory
+      snapshot until stable); `globalSetup` precheck (8 services, 5 outbox
+      connectors, catalog seeded). Verified inventory byte-identical across
+      a run. Users, carts, payment methods and failed fulfilment tasks
+      (`acceptance cleanup`) have no delete endpoint and remain.*
 
 **Exit criteria:** fixtures leave demo inventory/history unchanged.
 

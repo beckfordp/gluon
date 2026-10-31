@@ -379,3 +379,11 @@ own line. See each repo's own `git log` for full detail either way.
   feature, US-1.1 browse catalog, is green. `npm run test:acceptance:ui`
   shows each Given/When/Then step beside gshop live; CI runs `bddgen`, lint,
   typecheck and unit tests (no cluster).
+- Acceptance 2 (ACC-2.1–2.3): acceptance-suite fixtures and test data.
+  Scenarios get a fresh anonymous shopper, a throwaway registered
+  customer, a stocked product and API-placed orders as Playwright fixtures;
+  after each scenario its orders are closed out and deleted and inventory
+  restored exactly, so demo stock and order history are unchanged. A
+  precheck stops the run up front, listing each problem and its fix, when a
+  service isn't ready, a Debezium connector is missing or the catalog is
+  empty.
