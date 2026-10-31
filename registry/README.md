@@ -131,3 +131,14 @@ committed export without a full `k8s-local-up`, see
 
 Both are Python 3 stdlib only. Both default to the gluon-local in-cluster
 registry, or `$SCHEMA_REGISTRY_URL` if set.
+
+## Browsing in the UI
+
+Local cluster UI: http://apicurio-registry-ui.gluon-local.svc.cluster.local:8080/
+
+To view a schema's JSON:
+
+1. **Explore** → click the artifact (e.g. `order-events-OrderConfirmed`).
+2. **Versions** tab → click a version (or "latest").
+3. **Content** tab shows the JSON Schema (JSON/YAML toggle).
+   **Documentation** tab shows it as a field list.
