@@ -14,6 +14,7 @@
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "OrderCancelledEvent",
+            "description": "Order cancelled: order-service consumed PaymentAuthorizationExpired and moved the order to cancelled.",
             "type": "object",
             "required": [
               "orderId",
@@ -22,12 +23,24 @@
             ],
             "properties": {
               "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
                 "type": "string"
               },
               "customerId": {
+                "description": "Customer who placed the order.",
+                "examples": [
+                  "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                ],
                 "type": "string"
               },
               "timestamp": {
+                "description": "When the order was cancelled (ISO-8601 instant).",
+                "examples": [
+                  "2026-10-31T10:15:30Z"
+                ],
                 "type": "string",
                 "format": "date-time"
               }
@@ -49,6 +62,7 @@
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "OrderConfirmedEvent",
+            "description": "Order confirmed: order-service consumed PaymentCaptured and moved the order to confirmed.",
             "type": "object",
             "required": [
               "orderId",
@@ -57,12 +71,24 @@
             ],
             "properties": {
               "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
                 "type": "string"
               },
               "customerId": {
+                "description": "Customer who placed the order.",
+                "examples": [
+                  "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                ],
                 "type": "string"
               },
               "timestamp": {
+                "description": "When the order was confirmed (ISO-8601 instant).",
+                "examples": [
+                  "2026-10-31T10:15:30Z"
+                ],
                 "type": "string",
                 "format": "date-time"
               }
@@ -84,6 +110,7 @@
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "OrderPaymentFailedEvent",
+            "description": "Payment capture failed: order-service consumed PaymentFailed and moved the order to payment_failed.",
             "type": "object",
             "required": [
               "orderId",
@@ -93,15 +120,31 @@
             ],
             "properties": {
               "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
                 "type": "string"
               },
               "customerId": {
+                "description": "Customer who placed the order.",
+                "examples": [
+                  "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                ],
                 "type": "string"
               },
               "reason": {
+                "description": "payment-service's capture-failure reason.",
+                "examples": [
+                  "capture_failed"
+                ],
                 "type": "string"
               },
               "timestamp": {
+                "description": "When the order moved to payment_failed (ISO-8601 instant).",
+                "examples": [
+                  "2026-10-31T10:15:30Z"
+                ],
                 "type": "string",
                 "format": "date-time"
               }

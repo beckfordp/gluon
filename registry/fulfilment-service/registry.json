@@ -14,6 +14,7 @@
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "DispatchConfirmedEvent",
+            "description": "Order dispatched: pick/pack/dispatch succeeded. Carries a full item snapshot so consumers need no order lookup.",
             "type": "object",
             "required": [
               "orderId",
@@ -21,12 +22,21 @@
             ],
             "properties": {
               "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
                 "type": "string"
               },
               "trackingNo": {
+                "description": "Carrier tracking number.",
+                "examples": [
+                  "TRK-123456789"
+                ],
                 "type": "string"
               },
               "items": {
+                "description": "Items dispatched. Always sent.",
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -38,16 +48,32 @@
                   ],
                   "properties": {
                     "sku": {
+                      "description": "Product SKU.",
+                      "examples": [
+                        "SKU-0042"
+                      ],
                       "type": "string"
                     },
                     "productName": {
+                      "description": "Product name at dispatch time.",
+                      "examples": [
+                        "Espresso cup"
+                      ],
                       "type": "string"
                     },
                     "quantity": {
+                      "description": "Units dispatched.",
+                      "examples": [
+                        2
+                      ],
                       "type": "integer",
                       "format": "int32"
                     },
                     "unitPriceCents": {
+                      "description": "Unit price, in cents.",
+                      "examples": [
+                        1250
+                      ],
                       "type": "integer",
                       "format": "int32"
                     }
@@ -73,6 +99,7 @@
           "schema": {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "DispatchFailedEvent",
+            "description": "Dispatch failed: pick/pack/dispatch hit an error. payment-service voids the hold; order-service marks the order failed.",
             "type": "object",
             "required": [
               "orderId",
@@ -80,9 +107,17 @@
             ],
             "properties": {
               "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
                 "type": "string"
               },
               "reason": {
+                "description": "Why dispatch failed.",
+                "examples": [
+                  "carrier_unavailable"
+                ],
                 "type": "string"
               }
             },
