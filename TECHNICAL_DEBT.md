@@ -603,3 +603,30 @@ newTrack → implement → review → archive), ticked here once archived.
 - [ ] TD-16.7: user-service — full review + fixes.
 - [ ] TD-16.8: re-run the cross-repo live E2E suite (list above) after the
       sweep; re-create the Debezium register Job first if OrbStack restarted.
+
+## TD-17 — Liveness probes too tight for JVM services on 500m CPU
+
+Every service's Deployment comes from the shared chart
+(`infra/k8s/gluon/templates/deployment.yaml`): liveness and readiness both
+`initialDelaySeconds: 5`, `periodSeconds: 5`, the default
+`timeoutSeconds: 1` and `failureThreshold: 3`, and no `startupProbe`. With
+the 500m CPU limit (`values.yaml`), a throttled JVM can't answer `/health`
+within 1 s under load, so the kubelet kills it. A cold start under the same
+throttling then takes longer than the ~20 s the probe allows, so the
+restarted container is killed again and backs off.
+
+Seen 2026-10-31 running the acceptance suite (gluon-acceptance,
+Acceptance 5): back-to-back full runs at 5 Playwright workers put
+order-service into `CrashLoopBackOff` (10 restarts, exit 143, "failed
+liveness probe"). It only recovered once the load stopped. The suite now
+runs 2 workers to stay clear of it; that's a workaround, not a fix. All 8
+services share the settings, so any of them can do the same.
+
+### Tasks
+- [ ] TD-17.1: chart — add a `startupProbe` (e.g. `/health`, period 5 s,
+      `failureThreshold` ~24, so ~2 min to start) so liveness only applies
+      after startup; raise liveness `timeoutSeconds` (e.g. 3) and
+      `failureThreshold`; make them values, not template literals.
+- [ ] TD-17.2: re-run the full acceptance suite at default workers
+      (`bin/run-acceptance --workers=5`) with no restarts, then drop the
+      suite's `workers: 2` pin if it's no longer needed.
