@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Replay gluon's committed schema-registry export into an Apicurio Registry
+(TD-18.4/18.5, ADR 0003's 2026-10-31 note: git is the store, Apicurio a
+rebuildable cache).
+
+Reads every registry/<producer>/registry.json and, for each artifact the
+registry doesn't already have, creates it with its producer label, replays its
+versions in order (keeping their numbers), then sets its rules. Rules go last
+so history is replayed as it was accepted, not re-judged. Artifacts that
+already exist are left alone, so it's safe to re-run.
+
+Usage:
+  bin/registry-restore [--url URL] [REGISTRY_DIR]
+    --url         registry base URL (default: $SCHEMA_REGISTRY_URL, else the
+                  gluon-local in-cluster service)
+    REGISTRY_DIR  default: registry/ next to this script's bin/
+
+Python 3 stdlib only: runs on CI runners and in the local registry's restore
+sidecar (infra/k8s/local-infra/apicurio-registry.yaml).
+"""
+import argparse
+import glob
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+DEFAULT_URL = "http://apicurio-registry.gluon-local.svc.cluster.local:8080"
+
+
+def call(method, url, body=None):
+    data = None if body is None else json.dumps(body).encode()
+    req = urllib.request.Request(url, data=data, method=method)
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return 404
+        raise SystemExit(f"{method} {url} failed ({e.code}): {e.read().decode()}")
+
+
+def content(schema):
+    # Compact, key order kept, non-ASCII unescaped: byte-identical to the
+    # circe `noSpaces` string purekafka registers, so a producer re-running
+    # schemaRegistryCheck finds this version instead of adding a duplicate.
+    return {
+        "content": json.dumps(schema, separators=(",", ":"), ensure_ascii=False),
+        "contentType": "application/json",
+    }
+
+
+def restore_artifact(api, group, producer, artifact):
+    aid = artifact["artifactId"]
+    base = f"{api}/groups/{urllib.parse.quote(group)}/artifacts"
+    if call("GET", f"{base}/{urllib.parse.quote(aid)}") != 404:
+        return False
+    versions = artifact["versions"]
+    first, rest = versions[0], versions[1:]
+    call("POST", base, {
+        "artifactId": aid,
+        "artifactType": artifact["artifactType"],
+        "labels": {"producer": producer},
+        "firstVersion": {"version": first["version"], "content": content(first["schema"])},
+    })
+    for v in rest:
+        call("POST", f"{base}/{urllib.parse.quote(aid)}/versions",
+             {"version": v["version"], "content": content(v["schema"])})
+    for rule_type, config in sorted(artifact.get("rules", {}).items()):
+        call("POST", f"{base}/{urllib.parse.quote(aid)}/rules",
+             {"ruleType": rule_type, "config": config})
+    return True
+
+
+def main():
+    here = os.path.dirname(os.path.realpath(__file__))
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("--url", default=os.environ.get("SCHEMA_REGISTRY_URL", DEFAULT_URL))
+    p.add_argument("registry_dir", nargs="?", default=os.path.join(here, "..", "registry"))
+    args = p.parse_args()
+    api = args.url.rstrip("/") + "/apis/registry/v3"
+
+    files = sorted(glob.glob(os.path.join(args.registry_dir, "*", "registry.json")))
+    created = skipped = 0
+    for path in files:
+        with open(path, encoding="utf-8") as f:
+            export = json.load(f)
+        for artifact in export["artifacts"]:
+            if restore_artifact(api, export["groupId"], export["producer"], artifact):
+                created += 1
+                print(f"restored {export['groupId']}/{artifact['artifactId']} "
+                      f"({len(artifact['versions'])} version(s))")
+            else:
+                skipped += 1
+    print(f"registry-restore: {created} restored, {skipped} already present, "
+          f"{len(files)} producer file(s)")
+
+
+if __name__ == "__main__":
+    main()

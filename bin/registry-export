@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Export an Apicurio Registry group into gluon's git store (TD-18.3, ADR
+0003's 2026-10-31 note): one registry/<producer>/registry.json per producer
+service, holding every artifact it owns with its rules and every version's
+schema, in order.
+
+Producer comes from the `producer` label purekafka (0.5.0+) sets when a
+producer build registers. Output is deterministic (no timestamps or ids,
+artifacts sorted, 2-space JSON) so an unchanged registry re-exports with no
+diff. Refuses to write a file that would drop versions already committed for
+an artifact - e.g. exporting a freshly wiped-and-reregistered registry - unless
+--force; restore first (bin/registry-restore). Never deletes producer files.
+
+Usage:
+  bin/registry-export [--url URL] [--group GROUP] [--force] [REGISTRY_DIR]
+    --url    registry base URL (default: $SCHEMA_REGISTRY_URL, else gluon-local)
+    --group  default: gluon
+"""
+import argparse
+import json
+import os
+import sys
+import urllib.parse
+import urllib.request
+from collections import defaultdict
+
+DEFAULT_URL = "http://apicurio-registry.gluon-local.svc.cluster.local:8080"
+
+
+def get(url):
+    with urllib.request.urlopen(url, timeout=30) as resp:
+        return json.load(resp)
+
+
+def export_artifact(base, aid):
+    a = f"{base}/{urllib.parse.quote(aid)}"
+    meta = get(a)
+    rules = {r: get(f"{a}/rules/{r}")["config"] for r in sorted(get(f"{a}/rules"))}
+    listed = get(f"{a}/versions?limit=1000")["versions"]
+    numbers = sorted((v["version"] for v in listed), key=int)
+    versions = [{"version": n, "schema": get(f"{a}/versions/{n}/content")} for n in numbers]
+    producer = (meta.get("labels") or {}).get("producer")
+    return producer, {
+        "artifactId": aid,
+        "artifactType": meta["artifactType"],
+        "rules": rules,
+        "versions": versions,
+    }
+
+
+def committed_versions(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return {a["artifactId"]: len(a["versions"]) for a in json.load(f)["artifacts"]}
+
+
+def main():
+    here = os.path.dirname(os.path.realpath(__file__))
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("--url", default=os.environ.get("SCHEMA_REGISTRY_URL", DEFAULT_URL))
+    p.add_argument("--group", default="gluon")
+    p.add_argument("--force", action="store_true")
+    p.add_argument("registry_dir", nargs="?", default=os.path.join(here, "..", "registry"))
+    args = p.parse_args()
+    base = f"{args.url.rstrip('/')}/apis/registry/v3/groups/{urllib.parse.quote(args.group)}/artifacts"
+
+    listed = get(f"{base}?limit=1000")["artifacts"]
+    by_producer, unlabelled = defaultdict(list), []
+    for aid in sorted(a["artifactId"] for a in listed):
+        producer, artifact = export_artifact(base, aid)
+        if producer:
+            by_producer[producer].append(artifact)
+        else:
+            unlabelled.append(aid)
+
+    for aid in unlabelled:
+        print(f"WARN: {aid} has no producer label (registered before purekafka 0.5.0?) - skipped",
+              file=sys.stderr)
+
+    failed = False
+    for producer, artifacts in sorted(by_producer.items()):
+        path = os.path.join(args.registry_dir, producer, "registry.json")
+        before = committed_versions(path)
+        shrunk = [f"{a['artifactId']} ({before[a['artifactId']]} -> {len(a['versions'])})"
+                  for a in artifacts if len(a["versions"]) < before.get(a["artifactId"], 0)]
+        if shrunk and not args.force:
+            print(f"FAIL: {path} would lose committed versions: {', '.join(shrunk)}. "
+                  "Run bin/registry-restore first, or pass --force.", file=sys.stderr)
+            failed = True
+            continue
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        export = {"producer": producer, "groupId": args.group, "artifacts": artifacts}
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(export, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print(f"wrote {os.path.relpath(path)} ({len(artifacts)} artifact(s))")
+    if not by_producer:
+        print(f"registry-export: no labelled artifacts in group '{args.group}'")
+    sys.exit(1 if failed else 0)
+
+
+if __name__ == "__main__":
+    main()
