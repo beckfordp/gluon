@@ -366,3 +366,16 @@ own line. See each repo's own `git log` for full detail either way.
   services RED (purerest's, templated by `service`), Kafka consumers, pods,
   infrastructure. Stack is 2.97 Gi, checked against its 3 Gi budget on
   every `bin/obs up`.
+
+## 2026-10-31
+
+### Added
+- Acceptance 1 (ACC-1.1–1.3): BDD acceptance suite in its own repo,
+  `tests/acceptance` (`beckfordp/gluon-acceptance`, ADRs 0020/0023).
+  Gherkin `.feature` files compiled by playwright-bdd and run by Playwright
+  in Chromium, driving gshop against `gluon-local`; scenarios tagged
+  `@US-N.M`. Playwright starts gshop's Vite dev server wired to the
+  services' OrbStack cluster DNS names, so no port-forwards are needed. First
+  feature, US-1.1 browse catalog, is green. `npm run test:acceptance:ui`
+  shows each Given/When/Then step beside gshop live; CI runs `bddgen`, lint,
+  typecheck and unit tests (no cluster).

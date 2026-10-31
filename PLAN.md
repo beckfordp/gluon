@@ -1337,16 +1337,23 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Repos:** `tests/acceptance` (new).
 
-- [ ] ACC-1.1 — create repo: Playwright (TypeScript) + playwright-bdd
+- [x] ACC-1.1 — create repo: Playwright (TypeScript) + playwright-bdd
       (`features/`, `steps/`, `bddgen` before `playwright test`; generated
       specs gitignored), `/conductor:setup` with the standard `workflow.md`
       (no `scala-fp.md`), GitHub remote, CI (`bddgen` + lint + typecheck
       only; no cluster in CI)
-- [ ] ACC-1.2 — decide and wire how gshop is served for tests (vite dev
+- [x] ACC-1.2 — decide and wire how gshop is served for tests (vite dev
       with real-wiring env vs a deployed build): the first track's spec
       question
-- [ ] ACC-1.3 — one smoke feature: gshop loads, catalog renders from the
+- [x] ACC-1.3 — one smoke feature: gshop loads, catalog renders from the
       real catalog-service; proves the feature → step → page-object chain
+      *ACC-1.1–1.3 done 2026-10-31 (gluon-acceptance track
+      suite-scaffold_20261031): public `beckfordp/gluon-acceptance`,
+      Playwright 1.64 + playwright-bdd 9.2 on Node 24, CI `bddgen` + lint +
+      typecheck + unit tests. gshop served by Playwright's `webServer` (Vite
+      dev), wired to services by OrbStack cluster DNS, so no port-forwards.
+      `@US-1.1 @smoke` feature green; UI/headed modes show the Gherkin steps
+      beside live gshop.*
 
 **Exit criteria:** smoke test green against the local cluster.
 
