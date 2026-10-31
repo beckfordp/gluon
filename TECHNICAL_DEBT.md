@@ -412,9 +412,11 @@ artifact 500s the same way; the artifact currently holds notification-service's
 3-value consumer mirror — see TD-14.
 
 ### Tasks
-- [ ] TD-11.1: purekafka (sbt-purekafka-docs) — emit a draft Apicurio's
+- [x] TD-11.1: purekafka (sbt-purekafka-docs) — emit a draft Apicurio's
       checker supports (draft-07) or configure the registry for 2020-12;
-      prove one compatible change registers as version 2.
+      prove one compatible change registers as version 2. Done as TD-18.1
+      (purekafka v0.5.0): draft-07, plus closed producer schemas — with an
+      open content model even an optional field addition is rejected.
 - [ ] TD-11.2: every service using `schemaRegistryCheck` — pick up the
       plugin fix and re-run it.
 
@@ -643,20 +645,29 @@ a rebuildable cache. ADR 0003's second 2026-10-31 note records how this
 differs from typical production registry use, plus the upgrade path.
 
 ### Tasks
-- [ ] TD-18.1: purekafka — fix TD-11 (emit draft-07, `$defs` →
+- [x] TD-18.1: purekafka — fix TD-11 (emit draft-07, `$defs` →
       `definitions`); prove a compatible change registers as version 2;
-      set `BACKWARD_TRANSITIVE` on new artifacts.
-- [ ] TD-18.2: purekafka — producer-only registration: subscribe channels
+      set `BACKWARD_TRANSITIVE` on new artifacts. Released in purekafka /
+      sbt-purekafka-docs v0.5.0 (`0.5.0-dev` plugin), track
+      `schema-registry-git-store_20261031`; producer schemas are also closed
+      (`additionalProperties: false`) so optional additions are compatible.
+- [x] TD-18.2: purekafka — producer-only registration: subscribe channels
       no longer write; they dry-run their mirror against the producer's
-      artifact (warn and skip if absent).
+      artifact (warn and skip if absent). Producers label artifacts
+      `producer=<service>` (new `schemaRegistryProducer` setting), which
+      `bin/registry-export` groups by.
 - [ ] TD-18.3: gluon — `bin/registry-export` (every version + rules as JSON
       under `registry/<group>/<artifact>/`) and `bin/registry-restore`
       (replay versions in order into an empty registry); seed `registry/`
       from the current local registry.
-- [ ] TD-18.4: gluon infra — restore Job in `infra/k8s/local-infra` so the
+- [x] TD-18.4: gluon infra — restore Job in `infra/k8s/local-infra` so the
       registry is repopulated after every restart; document the
       check → export → commit loop in `infra/k8s/README.md` and
-      `system-design.md` contract governance.
+      `system-design.md` contract governance. A looping sidecar on the
+      Apicurio pod instead of a Job (a Job doesn't re-run after an OrbStack
+      restart), fed by the `apicurio-registry-export` ConfigMap that
+      `bin/k8s-local-up` builds; verified live: a wiped group refills within
+      ~30s with version history intact.
 - [ ] TD-18.5: every Kafka service (order, payment, notification,
       fulfilment, inventory, user) — bump purekafka; CI restores gluon's
       `registry/` export into the throwaway container before
