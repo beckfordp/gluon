@@ -142,3 +142,40 @@ git (binary, unmergeable, unsafe to commit while written) and a hosted
 registry (cost). Only producers register; consumers dry-run their mirror
 against the producer's artifact. Cost: a schema change in a service repo
 needs a matching export commit in gluon. Tracked as TD-18.
+
+**Note (2026-10-31): how this differs from typical production use.** For
+future reference when funding allows a hosted registry.
+
+A registry does two jobs:
+1. **Runtime lookup.** Registry-aware serdes write a schema ID into every
+   message (a magic byte plus the ID). Consumers resolve that ID to
+   deserialize, so the registry sits on the data path. Production runs it as
+   critical infrastructure: an HA cluster, durable storage (Confluent uses a
+   compacted `_schemas` topic; Apicurio uses KafkaSQL or Postgres), and
+   backups. Serde caching limits an outage to new IDs and cold starts.
+   Losing the registry's data makes old messages unreadable, which is where
+   its "single point" reputation comes from.
+2. **Governance.** In mature setups git, not the registry, is the source of
+   truth. A schema change is a PR. CI checks it against the registry and
+   registers it on merge. Production apps run with
+   `auto.register.schemas=false`. The registry can always be rebuilt from git.
+
+| | Typical production | Gluon (this ADR + TD-18) |
+|---|---|---|
+| Runtime path | Registry required (IDs in messages) | None: `StringConverter`, no IDs |
+| Runtime conformance | Serde validates payload against schema | None: circe output is not checked against `Schema[T]` |
+| Source of truth | Git, pushed into the registry by CI | Registry export committed to git (the reverse direction) |
+| Compatibility check | CI against a persistent shared registry | Local build, and CI against a throwaway registry restored from git |
+| Who registers | CI pipeline only | Producer builds |
+| Durability | HA cluster plus backups | In-memory Apicurio, rebuilt from git on restart |
+
+What we give up: no runtime check that payloads match the registered schema,
+and the export commit is a manual step that can drift from what services
+register. What we gain: no runtime dependency, no hosting cost.
+
+Upgrade path: stand up a persistent registry (hosted or cloud) and seed it
+with `bin/registry-restore`. Point CI at it in place of the throwaway
+container, and make the CI pipeline the only registrant. Optionally invert
+the flow to git → registry. The runtime path stays registry-free unless a
+schema-ID wire format is adopted. That would be its own decision, since it
+reverses the `StringConverter` choice.

@@ -639,7 +639,8 @@ registry is in-memory, so an OrbStack restart wipes it. Combined with TD-11
 (changed schemas 500) and TD-14 (consumer mirrors overwrite producer
 artifacts), the registry is a catalogue, not an enforcement point. Fix per
 ADR 0003's 2026-10-31 note: git export as the persistent store, Apicurio as
-a rebuildable cache.
+a rebuildable cache. ADR 0003's second 2026-10-31 note records how this
+differs from typical production registry use, plus the upgrade path.
 
 ### Tasks
 - [ ] TD-18.1: purekafka — fix TD-11 (emit draft-07, `$defs` →
