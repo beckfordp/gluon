@@ -406,3 +406,10 @@ own line. See each repo's own `git log` for full detail either way.
   capture is declined. A problem reported at any stage before dispatch shows
   `Dispatch failed` and releases the stock (US-18). Full suite: 34
   scenarios, now run on 2 workers with service DNS pinned in Chromium.
+- Acceptance 6 (ACC-6.1–6.2): traceability and a runner. A coverage matrix
+  maps every done `US-N.M` task in `user-stories.md` to the scenarios tagged
+  with it or to a recorded reason it's out of scope, and fails on gaps:
+  30 covered, 18 out of scope, none missing; US-20 isn't built yet.
+  `bin/run-acceptance` runs prechecks, the matrix and the whole suite (36
+  scenarios) from gluon's root, then opens the report. ACC-6.3 (US-20
+  feature) waits on Checkout Journey 5.

@@ -1465,9 +1465,19 @@ tracks in that repo's own `conductor/tracks.md`.
 
 **Depends on:** Acceptance 3–5.
 
-- [ ] ACC-6.1 — `@US-N.M` feature tags → coverage matrix against
+- [x] ACC-6.1 — `@US-N.M` feature tags → coverage matrix against
       `user-stories.md` (which stories have scenarios, which don't)
-- [ ] ACC-6.2 — `bin/run-acceptance`: prechecks, run suite, open report
+- [x] ACC-6.2 — `bin/run-acceptance`: prechecks, run suite, open report
+      *ACC-6.1–6.2 done 2026-10-31 (gluon-acceptance track
+      traceability-runner_20261031): `npm run coverage:matrix` reads
+      `user-stories.md` + feature tags into `target/coverage-matrix.md` and
+      fails on any done task neither covered nor out of scope (reasons in
+      `src/outOfScope.ts`): 30 covered, 18 out of scope, 0 missing, 6 not
+      built (US-20). `bin/run-acceptance` checks OrbStack, namespace, Node 24,
+      deps and :5173, then the matrix, runs the suite (Playwright args pass
+      through), warns if inventory changed and serves the report. Full suite
+      36 green. Acceptance 3–6 each got a `/conductor:review` pass before
+      archive (3–5 retroactively).*
 - [ ] ACC-6.3 — add US-20 feature when Checkout Journey 5 lands
 
 **Exit criteria:** every done US-N story is either covered or explicitly
