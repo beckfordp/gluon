@@ -458,3 +458,10 @@ own line. See each repo's own `git log` for full detail either way.
   to it. Consumed events now carry the producer's descriptions and
   examples too, copied from `registry/`; nothing checks the copies stay
   current.
+- `bin/registry-scala` generates event case classes from `registry/`. It
+  prints the named events (or all of one producer's, with `--producer`) as
+  Scala with tapir `@description`/`@encodedExample` annotations and a
+  circe/tapir companion, ready to paste into a service as a producer class
+  or consumer mirror. Delete fields a service doesn't use. Unedited output
+  derives back to the exact registry schema, checked for all 10 artifacts.
+  See `registry/README.md`, "Writing a mirror".
