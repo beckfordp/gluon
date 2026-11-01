@@ -470,3 +470,12 @@ own line. See each repo's own `git log` for full detail either way.
   `RECEIVE payment-events`. purekafka 0.6.1 puts every `send` before every
   `receive`, each in registration order. All six Kafka services and the
   generator template are on it (TD-19.6).
+- REST docs have a convention and a check (TD-20.1). purerest's README
+  "Documenting endpoints" says what each endpoint, parameter, DTO and
+  error variant must describe. purerestlib 0.7.3's `Docs.undocumented`
+  lists what a service's generated OpenAPI spec is missing, so one test
+  per service keeps it complete. Services adopt it in TD-20.2–20.10.
+- purerest releases no longer fail when sbt-purekafka-docs is unchanged.
+  Its version is fixed and bumped by hand, so re-publishing it failed the
+  release and skipped the Scaladoc deploy (v0.4.0, v0.7.0). release.yml
+  now skips any module whose version is already published.

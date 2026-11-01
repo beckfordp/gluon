@@ -798,11 +798,19 @@ are ordinary tapir builder calls, not annotations.
   any OpenAPI doc and need none.
 
 ### Tasks
-- [ ] TD-20.1: purerest — write the convention up (README "Documenting
+- [x] TD-20.1: purerest — write the convention up (README "Documenting
       endpoints") and add a coverage check to purerestlib: given the
       service's endpoints, list operations without summary/description and
       schema properties without a description, so each service can assert
-      none in one test. Release it.
+      none in one test. Release it. purerestlib v0.7.3 (purerest track
+      `rest-docs_20261101`, archived): `Docs.undocumented(endpoints.map(
+      _.endpoint))` returns a `List[DocGap]` for missing summaries,
+      descriptions (operation, parameter, non-2xx response, body field) and
+      body examples (on the class, the body, or every field; enums count).
+      Services use 0.7.3. The release also fixed release.yml re-publishing
+      the fixed-version sbt-purekafka-docs (v0.7.0/0.7.1 failed on it).
+      Before implementing TD-20.2–20.10, show the proposed descriptions
+      and examples for review.
 - [ ] TD-20.2: pure-service-generator — apply the convention to the g8
       template's placeholder CRUD endpoints and DTOs, add the coverage
       test, bump purerestlib; scratch service green, `/docs` shows them.
