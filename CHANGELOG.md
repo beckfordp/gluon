@@ -489,3 +489,32 @@ own line. See each repo's own `git log` for full detail either way.
   parameter, DTO field and error is described with examples, and its docs
   test fails on any gap. Each endpoint now lists only the errors it can
   return; before, all eleven appeared on every endpoint.
+- cart-service documents its REST API (TD-20.8). Every endpoint,
+  parameter, DTO field and error is described with examples, its docs
+  test fails on any gap, and `scripts/verify-rest-docs.sh` checks the
+  served spec.
+- notification-service documents its REST API (TD-20.9) and now serves
+  `/docs` at all: the health endpoints go through
+  `purerest.docs.Docs.routes`, and the docs test and verify script check
+  the spec (there are no parameters, bodies or errors to describe).
+- fulfilment-service documents its REST API (TD-20.5). Every endpoint,
+  parameter, DTO field and error is described with examples, each
+  endpoint lists only the errors it can return, and the verify script
+  checks the served spec.
+- catalog-service documents its REST API (TD-20.7). Every endpoint,
+  parameter, header, DTO field and error is described with examples, its
+  docs test fails on any gap, and the verify script checks the served
+  spec; fixed validation messages are shared between docs and responses.
+- user-service documents its REST API (TD-20.10). Both auth endpoints and
+  the health endpoints are described with examples (fake credentials and
+  placeholder tokens only), errors are per-variant, and the verify script
+  checks the served spec.
+- payment-service documents its REST API (TD-20.4). Every endpoint,
+  parameter, DTO field and error is described with examples, its docs
+  test fails on any gap, and the verify script checks the served spec.
+- inventory-service documents its REST API (TD-20.6). All ten endpoints,
+  parameters, DTO fields and errors are described with examples, its docs
+  test fails on any gap, and the verify script checks the served spec.
+- `docs/system-design.md`'s REST contracts section now points at the
+  documentation convention, the per-service `Docs.undocumented` test and
+  `scripts/verify-rest-docs.sh` (TD-20.11).

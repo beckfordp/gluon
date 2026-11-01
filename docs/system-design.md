@@ -71,6 +71,15 @@ Swagger/OpenAPI docs at `/docs`, which is the authoritative *current* shape
 if this section ever drifts — update this section to match rather than
 trusting it blindly.
 
+Those `/docs` pages are documented, not bare (TD-20): every endpoint
+carries a summary, description and tag; each path/query parameter has a
+description and example; every request/response field has a description
+and its class an example; and every error variant says when it happens,
+with an example body. The convention lives in purerest's README,
+"Documenting endpoints". Each service's docs test fails when
+`purerest.docs.Docs.undocumented` finds a gap, and each service's
+`scripts/verify-rest-docs.sh` checks the served `/docs/docs.yaml`.
+
 **`POST /inventorys/reservations`** — per item, **removed (TD-7.5,
 2026-10-27)**: order-service uses the bulk endpoint below. The path now
 falls through to `GET /inventorys/{id}` and returns `405`; the historical

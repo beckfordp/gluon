@@ -832,13 +832,36 @@ are ordinary tapir builder calls, not annotations.
       the served `/docs/docs.yaml`. Note for 20.4–20.10: tapir folds a
       single-use nested class's field description into its component, so
       the field's `$ref` renders bare — describe the class, not the field.
-- [ ] TD-20.4: payment-service — same.
-- [ ] TD-20.5: fulfilment-service — same.
-- [ ] TD-20.6: inventory-service — same.
-- [ ] TD-20.7: catalog-service — same.
-- [ ] TD-20.8: cart-service — same.
-- [ ] TD-20.9: notification-service — same.
-- [ ] TD-20.10: user-service — same (auth endpoints: never a real
-      credential or token in an example).
-- [ ] TD-20.11: `docs/system-design.md` — note the REST documentation
-      convention next to the event one.
+- [x] TD-20.4: payment-service — same. Track `rest-docs_20261101`
+      (archived): purerestlib 0.7.3 (no drift); error outputs already
+      narrowed by TD-16.1; 64 doc gaps → 0; 209 tests;
+      `PaymentDocsSuite` also pins each endpoint's error statuses;
+      `scripts/verify-rest-docs.sh` checks the served `/docs/docs.yaml`.
+- [x] TD-20.5: fulfilment-service — same. Track `rest-docs_20261101`
+      (archived): purerestlib 0.7.3; per-endpoint error outputs narrowed
+      in-track; 61 gaps → 0; 70 tests; verify script PASS (72 checks with
+      simulation enabled).
+- [x] TD-20.6: inventory-service — same. Track `rest-docs_20261101`
+      (archived): purerestlib 0.7.3; error outputs already narrowed by
+      TD-16.2; 69 gaps → 0; 142 tests; verify script PASS.
+- [x] TD-20.7: catalog-service — same. Track `rest-docs_20261101`
+      (archived): purerestlib 0.7.3; 50 gaps → 0; 99 tests; verify script
+      PASS (70 checks); review shares the fixed validation messages
+      between docs examples and response mapping.
+- [x] TD-20.8: cart-service — same. Track `rest-docs_20261101` (archived):
+      purerestlib 0.7.3; error outputs already narrow from TD-16.5; 35
+      gaps → 0; 96 tests; verify script PASS (42 checks); review shares
+      the served endpoint list with the docs test.
+- [x] TD-20.9: notification-service — same. Track `rest-docs_20261101`
+      (archived): the service served no `/docs` before; health endpoints
+      now go through `purerest.docs.Docs.routes`; 4 gaps → 0; 58 tests;
+      verify script PASS (17 checks). No parameters, DTOs or error
+      variants to document (`/health/ready` is intentionally always 200).
+- [x] TD-20.10: user-service — same (auth endpoints: never a real
+      credential or token in an example). Track `rest-docs_20261101`
+      (archived): purerestlib 0.7.3; 28 gaps → 0; 78 tests; verify script
+      PASS (43 checks) and asserts the examples stay obviously fake.
+- [x] TD-20.11: `docs/system-design.md` — note the REST documentation
+      convention next to the event one. The REST contracts section now
+      points at purerest's "Documenting endpoints", the per-service docs
+      test and `scripts/verify-rest-docs.sh`.
