@@ -181,3 +181,10 @@ container, and make the CI pipeline the only registrant. Optionally invert
 the flow to git → registry. The runtime path stays registry-free unless a
 schema-ID wire format is adopted. That would be its own decision, since it
 reverses the `StringConverter` choice.
+
+**Note (2026-11-01): consumers read from git too.** `bin/registry-scala`
+generates consumer mirror case classes (with the producer's descriptions and
+examples) from `registry/`, so contracts now flow producer code → registry →
+git → consumer code, with each consumer's dry-run check closing the loop.
+Mirrors are pasted, not generated at build time, so a stale mirror is still
+caught only by that check (see `registry/README.md`).

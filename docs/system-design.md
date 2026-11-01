@@ -306,10 +306,11 @@ below isn't registered; this document is its only specification.
 - Only the producer writes a contract. Its `sbt schemaRegistryCheck`
   registers each event as `gluon/<topic>-<eventType>`, labelled
   `producer=<service>`.
-- A consumer's mirror case class is checked against the producer's artifact
-  and never written. The check fails if the mirror requires a field the
-  producer doesn't send, or a type or enum doesn't match. Update a mirror in
-  the same change as the producer, not in a later cleanup.
+- A consumer's mirror case class is generated from `registry/` with
+  `bin/registry-scala` (fields it doesn't need deleted), checked against the
+  producer's artifact, and never written. The check fails if the mirror
+  requires a field the producer doesn't send, or a type or enum doesn't
+  match. Update a mirror in the same change as the producer.
 - Rule `BACKWARD_TRANSITIVE` applies to draft-07, closed schemas. Adding an
   optional field is a new version. A breaking change means retiring the
   event and adding a new event type, as TD-15 did.
@@ -322,19 +323,13 @@ below isn't registered; this document is its only specification.
   is checked against the committed contracts. Browse the live copy via
   [`infra/k8s/README.md`](../infra/k8s/README.md#schema-registry-apicurio).
 
-Each service with Kafka contracts serves its own AsyncAPI docs (ADR 0010) — raw
-spec at `/docs/asyncapi.json`, rendered static HTML at
-`/docs/asyncapi/index.html`, generated from the same `Schema[T]` the
-registry gets, so they show each service's view, including consumer
-mirrors. For the contract itself, the registry wins. order-service, payment-service and
-notification-service serve both. inventory-service (TD-7.5, 2026-10-27)
-has no events: it serves the raw route with an empty channel list, and
-build-time HTML generation is disabled because the AsyncAPI validator
-rejects an empty document — so no static HTML exists for it. For the other
-three the HTML is generated at build time (`sbt-purekafka-docs`'s
-`asyncApiGenerate`) and baked into the Docker image. See
-[`infra/k8s/README.md`](../infra/k8s/README.md#asyncapi-docs) for the
-live links.
+Each Kafka service serves its own AsyncAPI 3.0 docs (ADR 0010, TD-19): raw
+spec at `/docs/asyncapi.json`, HTML at `/docs/asyncapi/`, built from the
+same `Schema[T]` the registry gets. Each topic shows as `SEND` (produced) or
+`RECEIVE` (consumed), and mirrors carry the producer's descriptions via
+`bin/registry-scala`. For the contract itself, the registry wins.
+inventory-service has no events, so it serves an empty spec and no HTML.
+Live links: [`infra/k8s/README.md`](../infra/k8s/README.md#asyncapi-docs).
 
 ### Envelope (plain JSON for now — see ADR 0003)
 Every message on every domain topic above has this shape; no shared library

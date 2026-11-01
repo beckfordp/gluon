@@ -12,6 +12,15 @@ Apicurio Registry is a rebuildable cache of these files, not the store
 TD-18). `system-design.md` keeps a readable copy of each payload plus the
 reasons behind it; keep that copy in step with these files (step 5 below).
 
+The loop:
+
+```
+producer case class ──sbt schemaRegistryCheck──▶ Apicurio ──bin/registry-export──▶ registry/ (git)
+                                                                                      │
+consumer mirror ◀──────────────bin/registry-scala (paste, trim fields)─────────────────┘
+       └──sbt schemaRegistryCheck (dry-run against the producer's artifact)
+```
+
 ## Layout
 
 ```
@@ -65,17 +74,16 @@ refills itself from these files within about 30s of any restart.
      next version.
    - An incompatible change fails here with a `RuleViolationException`. See
      "Breaking changes" below.
-2. **Each consumer service:** update its mirror case class if it needs the
-   change, then run `sbt schemaRegistryCheck`. Consumers never write: they
-   check their mirror against the producer's artifact. The check fails if the
-   mirror requires a field the producer doesn't send, or a field's type or
-   enum doesn't match. Extra producer fields a mirror ignores are fine.
-   To write or refresh a mirror, generate it from these files (see
-   "Writing a mirror" below) rather than typing it by hand.
-3. **gluon:** run `bin/registry-export`. It rewrites the producer's
+2. **gluon:** run `bin/registry-export`. It rewrites the producer's
    `registry.json` from the local registry.
-4. **Check the diff:** `git diff registry/` should show only the new
+3. **Check the diff:** `git diff registry/` should show only the new
    version you intended.
+4. **Each consumer service:** if it needs the change, regenerate its mirror
+   with `bin/registry-scala` (see "Writing a mirror"), then run
+   `sbt schemaRegistryCheck`. Consumers never write: they dry-run their
+   mirror against the producer's artifact. The check fails if the mirror
+   requires a field the producer doesn't send, or a type or enum doesn't
+   match. Producer fields a mirror omits are fine.
 5. **Update `system-design.md`'s payload contract** for that event to match,
    with the reason for the change.
 6. **Commit** the export and the `system-design.md` change together in
@@ -120,6 +128,7 @@ for example after a wipe; run `bin/registry-restore` and export again.
 | Local cluster | `registry-restore` sidecar on the Apicurio pod | Re-runs `bin/registry-restore` every 30s from a ConfigMap of these files |
 | Service CI | Checks out gluon's `registry/`, runs `bin/registry-restore`, then `schemaRegistryCheck` | Checks against the committed baseline |
 | gluon | `bin/registry-export` | Writes registry → these files |
+| Consumer dev | `bin/registry-scala` | Prints mirror case classes from these files |
 
 The sidecar's ConfigMap is rebuilt by `bin/k8s-local-up`. To load a newly
 committed export without a full `k8s-local-up`, run `bin/registry-reload`
@@ -128,23 +137,19 @@ committed export without a full `k8s-local-up`, run `bin/registry-reload`
 ## Writing a mirror
 
 `bin/registry-scala` prints Scala case classes for the events you name,
-straight from these files: tapir `@description`/`@encodedExample` on the
-event and each field, plus a companion with a circe `Codec` and tapir
-`Schema`. That's the same shape the producers use, so the consumer's
-AsyncAPI docs read the same as the producer's.
+with the producer's `@description`/`@encodedExample` annotations and a
+circe/tapir companion, so a consumer's AsyncAPI docs match the producer's.
 
 ```
 bin/registry-scala PaymentCaptured DispatchConfirmed   # event types or artifact ids
 bin/registry-scala --producer payment-service          # all of a producer's events
 ```
 
-Name only the events the service produces or consumes, paste the output
-into the service, and delete any fields it doesn't need (a mirror may ignore
-producer fields). Then run `scalafmt`. Nested objects become their own case
-class, named `<Event><Field>` when the schema gives no title; rename them if
-you like. Unedited output derives back to the exact registry schema, checked
-for all 10 current artifacts. Nothing checks a pasted mirror stays current,
-so re-run it when the producer's contract changes.
+Name only the events the service consumes, paste the output, delete fields
+it doesn't need, and run `scalafmt`. Untitled nested objects are named
+`<Event><Field>`; rename freely. Unedited output derives back to the exact
+registry schema. Nothing checks a pasted mirror stays current, so re-run it
+whenever the producer's contract changes (step 4 above).
 
 ## Scripts
 
