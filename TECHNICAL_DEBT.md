@@ -749,7 +749,7 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
       registry as the source to copy from. Track `asyncapi-v3_20261101`
       (archived): template 0.3.0 → 0.6.0; scratch service 89/89, spec
       validates.
-- [ ] TD-19.6: sends first. html-template renders operations in document
+- [x] TD-19.6: sends first. html-template renders operations in document
       order, which followed channel registration, so order-service's docs
       opened with `RECEIVE payment-events`. purekafka v0.6.1 (purerest
       track `asyncapi-ordering_20261101`, archived) puts every `send`
@@ -757,10 +757,14 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
       purekafka 0.6.1 / sbt-purekafka-docs 0.6.1-dev in all seven (visible
       change only in order and fulfilment; the rest stay aligned), track
       `asyncapi-ordering_20261101` in each:
-  - [ ] order-service (verify script asserts sends first; live check)
-  - [ ] fulfilment-service (verify script asserts sends first; live check)
-  - [ ] payment-service
-  - [ ] notification-service
-  - [ ] user-service
-  - [ ] inventory-service
-  - [ ] pure-service-generator (g8 template; scratch service)
+  - [x] order-service (verify script asserts sends first; live check)
+  - [x] fulfilment-service (verify script asserts sends first; live check)
+  - [x] payment-service
+  - [x] notification-service
+  - [x] user-service
+  - [x] inventory-service
+  - [x] pure-service-generator (g8 template; scratch service)
+      All seven archived, CI green. The five verify scripts with operations
+      now assert no `receive` precedes a `send` (inventory has none).
+      Live: order opens with `SEND order-events`, fulfilment with
+      `SEND fulfilment-events`. Scratch service 89/89, spec validates.

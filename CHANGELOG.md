@@ -465,3 +465,8 @@ own line. See each repo's own `git log` for full detail either way.
   or consumer mirror. Delete fields a service doesn't use. Unedited output
   derives back to the exact registry schema, checked for all 10 artifacts.
   See `registry/README.md`, "Writing a mirror".
+- AsyncAPI docs list a service's own events first. html-template renders
+  operations in document order, so order-service's docs opened with
+  `RECEIVE payment-events`. purekafka 0.6.1 puts every `send` before every
+  `receive`, each in registration order. All six Kafka services and the
+  generator template are on it (TD-19.6).
