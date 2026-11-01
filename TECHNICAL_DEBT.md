@@ -811,9 +811,17 @@ are ordinary tapir builder calls, not annotations.
       the fixed-version sbt-purekafka-docs (v0.7.0/0.7.1 failed on it).
       Before implementing TD-20.2–20.10, show the proposed descriptions
       and examples for review.
-- [ ] TD-20.2: pure-service-generator — apply the convention to the g8
+- [x] TD-20.2: pure-service-generator — apply the convention to the g8
       template's placeholder CRUD endpoints and DTOs, add the coverage
       test, bump purerestlib; scratch service green, `/docs` shows them.
+      Generator track `rest-docs_20261101` (archived): purerestlib 0.7.3,
+      every template endpoint/parameter/DTO/error described, and
+      `<Domain>DocsSuite` asserts `Docs.undocumented` is empty. The
+      field-spec gains a required `description`, rendered with the example
+      as `@description`/`@encodedExample` on the DTOs only (new
+      `DTO_*_FIELD` anchors). Also fixed: the Outbox example's insert
+      ignored codegen fields. `scripts/verify-rest-docs.sh` checks the
+      served `/docs/docs.yaml`.
 - [ ] TD-20.3: order-service — describe endpoints, parameters, DTOs, error
       variants; coverage test.
 - [ ] TD-20.4: payment-service — same.

@@ -479,3 +479,9 @@ own line. See each repo's own `git log` for full detail either way.
   Its version is fixed and bumped by hand, so re-publishing it failed the
   release and skipped the Scaladoc deploy (v0.4.0, v0.7.0). release.yml
   now skips any module whose version is already published.
+- Generated services document their REST API (TD-20.2). The generator
+  template describes every endpoint, parameter, DTO field and error, and
+  each generated service's docs test fails on any gap. Field-codegen's
+  field-spec now requires a `description` per field, so added fields stay
+  documented. The template's outbox example no longer breaks once fields
+  are added.
