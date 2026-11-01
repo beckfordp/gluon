@@ -485,3 +485,7 @@ own line. See each repo's own `git log` for full detail either way.
   field-spec now requires a `description` per field, so added fields stay
   documented. The template's outbox example no longer breaks once fields
   are added.
+- order-service documents its REST API (TD-20.3). Every endpoint,
+  parameter, DTO field and error is described with examples, and its docs
+  test fails on any gap. Each endpoint now lists only the errors it can
+  return; before, all eleven appeared on every endpoint.

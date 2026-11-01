@@ -822,8 +822,16 @@ are ordinary tapir builder calls, not annotations.
       `DTO_*_FIELD` anchors). Also fixed: the Outbox example's insert
       ignored codegen fields. `scripts/verify-rest-docs.sh` checks the
       served `/docs/docs.yaml`.
-- [ ] TD-20.3: order-service — describe endpoints, parameters, DTOs, error
-      variants; coverage test.
+- [x] TD-20.3: order-service — describe endpoints, parameters, DTOs, error
+      variants; coverage test. order-service track `rest-docs_20261101`
+      (archived): purerestlib 0.4.0 → 0.7.3 (no drift); each endpoint's
+      error output now lists only the variants it can return (was all 11
+      everywhere); every endpoint/parameter/DTO/error described with
+      examples; `OrderDocsSuite` asserts `Docs.undocumented` is empty and
+      each endpoint's error statuses; `scripts/verify-rest-docs.sh` checks
+      the served `/docs/docs.yaml`. Note for 20.4–20.10: tapir folds a
+      single-use nested class's field description into its component, so
+      the field's `$ref` renders bare — describe the class, not the field.
 - [ ] TD-20.4: payment-service — same.
 - [ ] TD-20.5: fulfilment-service — same.
 - [ ] TD-20.6: inventory-service — same.
