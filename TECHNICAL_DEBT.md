@@ -718,7 +718,10 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
       `send`, consumed → `receive` operations, messages under
       `components.messages`, channels with `address`. Hand-built (small ADT
       or circe `Json`) since apispec lacks 3.0; keep the CDC note on the
-      `send` side; validate in tests via the cli; update tests.
+      `send` side; validate in tests via the cli; update tests. Key each
+      operation by its topic name alone (as 2.6 did); disambiguate only
+      for a `Both` topic (two operations on one topic, e.g. `<topic>-send`
+      / `<topic>-receive`) — no service uses `Both` today.
 - [ ] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`.
 - [ ] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
       services with `AsyncApiChannels` (order, payment, fulfilment,
