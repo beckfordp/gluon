@@ -683,7 +683,7 @@ differs from typical production registry use, plus the upgrade path.
       notification-service's 8 consumer mirrors dry-run clean against the
       producers' real artifacts.
 
-## TD-19 — AsyncAPI docs show publish/subscribe inverted
+## TD-19 — AsyncAPI docs show publish/subscribe inverted — **RESOLVED 2026-11-01**
 
 AsyncAPI 2.x describes operations from the client's side: `publish` means
 clients send to the channel, so the service *receives*; `subscribe` means
@@ -727,13 +727,25 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
       channel, so a `Both(Cdc)` message carries the CDC note for readers too.
 - [x] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`
       (301, in `Docs.routes`; same track and release).
-- [ ] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
+- [x] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
       services with `AsyncApiChannels` (order, payment, fulfilment,
       notification, user, inventory); check each live `/docs/asyncapi/`.
-- [ ] TD-19.4: the six services — add descriptions/examples to consumed
-      event schemas, copied from the producer's registry artifact.
-- [ ] TD-19.5: pure-service-generator — bump the g8 template to the new
+      Track `asyncapi-v3_20261101` in all six repos (archived), each with
+      `scripts/verify-asyncapi-v3.sh` (spec validates, send/receive
+      operations, `schemaRegistryCheck` vs the restored registry); CI green.
+      Live on the local cluster: all six serve 3.0.0 with the expected
+      operations and 301 `/docs/asyncapi`; HTML 200 except inventory, whose
+      empty channel list still skips HTML (3.0 now validates an empty
+      document, so that override could go).
+- [x] TD-19.4: the six services — add descriptions/examples to consumed
+      event schemas, copied from the producer's registry artifact. Done in
+      order (5 events), payment (2), fulfilment (1), notification (8), same
+      tracks; user/inventory consume nothing. Each mirror's doc comment
+      notes the copy is unchecked.
+- [x] TD-19.5: pure-service-generator — bump the g8 template to the new
       purekafka / sbt-purekafka-docs; update `AsyncApiChannelsExampleSuite`
       for the 3.0 shape; give the example consumed `ExampleEvent` a
       description and example, with a comment pointing authors at the
-      registry as the source to copy from.
+      registry as the source to copy from. Track `asyncapi-v3_20261101`
+      (archived): template 0.3.0 → 0.6.0; scratch service 89/89, spec
+      validates.

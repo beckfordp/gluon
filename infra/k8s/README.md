@@ -100,6 +100,13 @@ made automatic 2026-10-26, confirmed live in this cluster:
 - http://inventory-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
 - http://payment-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
 - http://notification-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+- http://fulfilment-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+- http://user-service.gluon-local.svc.cluster.local:8080/docs/asyncapi/index.html
+
+The docs are AsyncAPI 3.0 since purekafka 0.6.0 (TD-19): each topic shows
+`SEND` (the service produces it) or `RECEIVE` (it consumes it), from the
+service's own side, and consumed events carry the producer's descriptions
+and examples. `/docs/asyncapi` redirects to `/docs/asyncapi/`.
 
 `catalog-service`/`cart-service` have no entry — neither touches Kafka.
 

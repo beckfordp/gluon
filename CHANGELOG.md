@@ -444,3 +444,17 @@ own line. See each repo's own `git log` for full detail either way.
   artifacts so the sidecar restores them, which is needed when an export
   rewrites an existing version. `registry/README.md` now covers browsing
   in the UI.
+
+## 2026-11-01
+
+- AsyncAPI docs read from the service's own side (TD-19). AsyncAPI 2.x's
+  `publish`/`subscribe` describe what a client does, so every service's
+  docs said it received what it produced. purekafka 0.6.0 emits AsyncAPI
+  3.0 instead: each topic is a `send` (produced) or `receive` (consumed)
+  operation keyed by topic name, rendered as `SEND`/`RECEIVE` badges.
+  sttp-apispec only models 2.6, so the document is built as circe JSON.
+  `/docs/asyncapi` now redirects to `/docs/asyncapi/`, which fixes the
+  unstyled page. All six Kafka services and the generator template moved
+  to it. Consumed events now carry the producer's descriptions and
+  examples too, copied from `registry/`; nothing checks the copies stay
+  current.
