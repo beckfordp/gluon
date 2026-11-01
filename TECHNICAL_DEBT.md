@@ -714,15 +714,19 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
 0.12.1, both 2.6.0 only), so the document is built by hand.
 
 ### Tasks
-- [ ] TD-19.1: purekafka — emit AsyncAPI 3.0 from `AsyncApiDoc`: produced →
+- [x] TD-19.1: purekafka — emit AsyncAPI 3.0 from `AsyncApiDoc`: produced →
       `send`, consumed → `receive` operations, messages under
       `components.messages`, channels with `address`. Hand-built (small ADT
       or circe `Json`) since apispec lacks 3.0; keep the CDC note on the
       `send` side; validate in tests via the cli; update tests. Key each
       operation by its topic name alone (as 2.6 did); disambiguate only
       for a `Both` topic (two operations on one topic, e.g. `<topic>-send`
-      / `<topic>-receive`) — no service uses `Both` today.
-- [ ] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`.
+      / `<topic>-receive`) — no service uses `Both` today. Released in
+      purekafka / sbt-purekafka-docs v0.6.0 (`0.6.0-dev` plugin), track
+      `asyncapi-v3_20261101` (archived). Messages sit inline on their
+      channel, so a `Both(Cdc)` message carries the CDC note for readers too.
+- [x] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`
+      (301, in `Docs.routes`; same track and release).
 - [ ] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
       services with `AsyncApiChannels` (order, payment, fulfilment,
       notification, user, inventory); check each live `/docs/asyncapi/`.
