@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+"""Generate Scala event case classes from gluon's registry/ export (TD-19),
+printed to stdout for a developer to paste into a service.
+
+Each named event becomes a case class with tapir @description/@encodedExample
+annotations copied from the registry schema, plus a companion with a circe
+Codec and a tapir Schema - the same shape the producers and consumer mirrors
+use. Name only the events the service produces or consumes; for a consumer,
+delete any fields it doesn't need (the consumer dry-run accepts a subset).
+
+Type mapping: string -> String (date-time -> Instant), integer -> Int (int64 ->
+Long), number -> Double, boolean -> Boolean, array -> List[T], object with
+properties -> its own case class (named from its title, else
+<Event><Field>, and inlined with `.copy(name = None)` when untitled, as the
+producers do), not required -> Option[T] (except arrays: tapir never marks a
+collection required, so it stays List[T]). Enum values are noted in a
+comment; the field stays a String.
+
+Usage:
+  bin/registry-scala [--registry DIR] [--version N] EVENT...
+  bin/registry-scala [--registry DIR] --producer SERVICE
+    EVENT       artifact id (payment-events-PaymentCaptured) or event type
+                (PaymentCaptured)
+    --producer  every event of one producer (registry/<SERVICE>/registry.json)
+    --version   schema version to use (default: latest)
+"""
+import argparse
+import glob
+import json
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def load(registry_dir):
+    """artifactId -> (producer, artifact), for every registry/*/registry.json."""
+    artifacts = {}
+    for path in sorted(glob.glob(os.path.join(registry_dir, "*", "registry.json"))):
+        doc = json.load(open(path))
+        for artifact in doc["artifacts"]:
+            artifacts[artifact["artifactId"]] = (doc["producer"], artifact)
+    return artifacts
+
+
+def resolve(name, artifacts):
+    if name in artifacts:
+        return name
+    matches = [a for a in artifacts if a.endswith("-" + name)]
+    if len(matches) == 1:
+        return matches[0]
+    if matches:
+        sys.exit(f"registry-scala: '{name}' is ambiguous: {', '.join(matches)}")
+    sys.exit(f"registry-scala: no artifact '{name}' in registry/")
+
+
+def pick_version(artifact, version):
+    versions = artifact["versions"]
+    if version is None:
+        return versions[-1]
+    for v in versions:
+        if v["version"] == version:
+            return v
+    sys.exit(f"registry-scala: {artifact['artifactId']} has no version {version}")
+
+
+def scala_string(s):
+    return json.dumps(s, ensure_ascii=False)
+
+
+def literal(value):
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return repr(value)
+    if isinstance(value, str):
+        return scala_string(value)
+    return None  # objects/arrays: no @encodedExample
+
+
+def pascal(name):
+    return name[:1].upper() + name[1:]
+
+
+def singular(name):
+    if name.endswith("ies"):
+        return name[:-3] + "y"
+    if name.endswith("s") and not name.endswith("ss"):
+        return name[:-1]
+    return name
+
+
+class Generator:
+    def __init__(self):
+        self.classes = []  # rendered case classes, nested ones first
+        self.names = set()
+        self.uses_instant = False
+
+    def scala_type(self, schema, owner, field):
+        types = schema.get("type")
+        if isinstance(types, list):  # e.g. ["string", "null"]
+            non_null = [t for t in types if t != "null"]
+            inner = self.scala_type(dict(schema, type=non_null[0]), owner, field)
+            return f"Option[{inner}]" if "null" in types else inner
+        if types == "string":
+            if schema.get("format") == "date-time":
+                self.uses_instant = True
+                return "Instant"
+            return "String"
+        if types == "integer":
+            return "Long" if schema.get("format") == "int64" else "Int"
+        if types == "number":
+            return "Double"
+        if types == "boolean":
+            return "Boolean"
+        if types == "array":
+            item = schema.get("items", {})
+            return f"List[{self.scala_type(item, owner, singular(field))}]"
+        if types == "object" or "properties" in schema:
+            name = schema.get("title") or owner + pascal(field)
+            # No title means the producer inlined it (Schema name = None);
+            # mirror that so the derived schema matches the registry.
+            self.case_class(name, schema, inline="title" not in schema)
+            return name
+        sys.exit(f"registry-scala: unsupported schema for {owner}.{field}: {json.dumps(schema)}")
+
+    def case_class(self, name, schema, header=None, inline=False):
+        if name in self.names:  # nested type shared by several events
+            return
+        self.names.add(name)
+        required = set(schema.get("required", []))
+        fields = []
+        for field, prop in schema.get("properties", {}).items():
+            typ = self.scala_type(prop, name, field)
+            optional = field not in required and prop.get("type") != "array"
+            if optional and not typ.startswith("Option["):
+                typ = f"Option[{typ}]"
+            lines = []
+            if "enum" in prop:
+                lines.append(f"// one of: {', '.join(map(str, prop['enum']))}")
+            if prop.get("description"):
+                lines.append(f"@description({scala_string(prop['description'])})")
+            examples = prop.get("examples") or []
+            example = literal(examples[0]) if examples else None
+            if example is not None:
+                lines.append(f"@encodedExample({example})")
+            lines.append(f"{field}: {typ}")
+            fields.append("\n".join("    " + line for line in lines))
+
+        out = []
+        if header:
+            out.append(header)
+        if schema.get("description"):
+            out.append(f"@description({scala_string(schema['description'])})")
+        out.append(f"final case class {name}(")
+        out.append(",\n".join(fields))
+        out.append(")")
+        out.append("")
+        out.append(f"object {name} {{")
+        out.append(f"  implicit val codec: Codec[{name}] = deriveCodec")
+        if inline:
+            out.append(f"  implicit val schema: Schema[{name}] =")
+            out.append(f"    Schema.derived[{name}].copy(name = None)")
+        else:
+            out.append(f"  implicit val schema: Schema[{name}] = Schema.derived")
+        out.append("}")
+        self.classes.append("\n".join(out))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Print Scala case classes for registry/ events.",
+        epilog="Name only the events this service produces or consumes; delete unused fields by hand.",
+    )
+    parser.add_argument("events", nargs="*", metavar="EVENT")
+    parser.add_argument("--registry", default=os.path.join(ROOT, "registry"))
+    parser.add_argument("--version")
+    parser.add_argument("--producer")
+    args = parser.parse_args()
+
+    artifacts = load(args.registry)
+    if args.producer:
+        ids = [a for a, (p, _) in artifacts.items() if p == args.producer]
+        if not ids:
+            sys.exit(f"registry-scala: no artifacts for producer '{args.producer}'")
+    elif args.events:
+        ids = [resolve(e, artifacts) for e in args.events]
+    else:
+        parser.error("name at least one EVENT, or --producer")
+
+    gen = Generator()
+    for artifact_id in ids:
+        producer, artifact = artifacts[artifact_id]
+        version = pick_version(artifact, args.version)
+        schema = version["schema"]
+        name = schema.get("title") or pascal(artifact_id.split("-")[-1]) + "Event"
+        header = (
+            f"/** `{artifact_id}` v{version['version']}, produced by {producer}\n"
+            f"  * (gluon `registry/{producer}/registry.json`). Generated by\n"
+            f"  * `bin/registry-scala`; delete fields this service doesn't use.\n"
+            f"  */"
+        )
+        gen.case_class(name, schema, header=header)
+
+    imports = [
+        "import io.circe.Codec",
+        "import io.circe.generic.semiauto.deriveCodec",
+        "import sttp.tapir.Schema",
+        "import sttp.tapir.Schema.annotations.{description, encodedExample}",
+    ]
+    if gen.uses_instant:
+        imports += ["", "import java.time.Instant"]
+    print("\n".join(imports))
+    for rendered in gen.classes:
+        print()
+        print(rendered)
+
+
+if __name__ == "__main__":
+    main()

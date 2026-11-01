@@ -70,6 +70,8 @@ refills itself from these files within about 30s of any restart.
    check their mirror against the producer's artifact. The check fails if the
    mirror requires a field the producer doesn't send, or a field's type or
    enum doesn't match. Extra producer fields a mirror ignores are fine.
+   To write or refresh a mirror, generate it from these files (see
+   "Writing a mirror" below) rather than typing it by hand.
 3. **gluon:** run `bin/registry-export`. It rewrites the producer's
    `registry.json` from the local registry.
 4. **Check the diff:** `git diff registry/` should show only the new
@@ -123,19 +125,42 @@ The sidecar's ConfigMap is rebuilt by `bin/k8s-local-up`. To load a newly
 committed export without a full `k8s-local-up`, run `bin/registry-reload`
 (add `--wipe` if the export rewrote an existing version).
 
+## Writing a mirror
+
+`bin/registry-scala` prints Scala case classes for the events you name,
+straight from these files: tapir `@description`/`@encodedExample` on the
+event and each field, plus a companion with a circe `Codec` and tapir
+`Schema`. That's the same shape the producers use, so the consumer's
+AsyncAPI docs read the same as the producer's.
+
+```
+bin/registry-scala PaymentCaptured DispatchConfirmed   # event types or artifact ids
+bin/registry-scala --producer payment-service          # all of a producer's events
+```
+
+Name only the events the service produces or consumes, paste the output
+into the service, and delete any fields it doesn't need (a mirror may ignore
+producer fields). Then run `scalafmt`. Nested objects become their own case
+class, named `<Event><Field>` when the schema gives no title; rename them if
+you like. Unedited output derives back to the exact registry schema, checked
+for all 10 current artifacts. Nothing checks a pasted mirror stays current,
+so re-run it when the producer's contract changes.
+
 ## Scripts
 
 - `bin/registry-export [--url URL] [--group gluon] [--force] [DIR]`
 - `bin/registry-restore [--url URL] [--quiet] [DIR]`. Only creates
   artifacts the registry doesn't have, so it's safe to re-run.
+- `bin/registry-scala [--version N] EVENT... | --producer SERVICE`. Prints
+  Scala case classes for events; see "Writing a mirror" above.
 - `bin/registry-reload [--wipe | --configmap-only]`. Loads these files
   into the local cluster: rebuilds the sidecar's ConfigMap and waits for
   it to sync. `--wipe` then deletes the group's artifacts so the sidecar
   restores them from these files.
 
-`registry-export` and `registry-restore` are Python 3 stdlib only. All
-three default to the gluon-local in-cluster registry, or
-`$SCHEMA_REGISTRY_URL` if set.
+`registry-export`, `registry-restore` and `registry-scala` are Python 3
+stdlib only. The scripts that talk to a registry default to the
+gluon-local in-cluster one, or `$SCHEMA_REGISTRY_URL` if set.
 
 ## Browsing in the UI
 
