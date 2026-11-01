@@ -768,3 +768,53 @@ under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
       now assert no `receive` precedes a `send` (inventory has none).
       Live: order opens with `SEND order-events`, fulfilment with
       `SEND fulfilment-events`. Scratch service 89/89, spec validates.
+
+---
+
+## TD-20 — REST endpoints and payloads have no descriptions or examples
+
+Kafka events now carry tapir `@description`/`@encodedExample` (TD-19.4,
+`bin/registry-scala`), so each service's AsyncAPI docs explain every event
+and field. The synchronous REST side doesn't: every service's `/docs`
+(Swagger, via `purerest.docs.Docs`) lists bare paths and unexplained
+request/response schemas. No endpoint sets `.summary`/`.description`, no
+path/query parameter is described, error variants say only their status
+code, and no `*Request`/`*Response` case class carries an annotation. The
+styleguide's documentation-only exception (scala-fp.md §7) already covers
+"API and event case classes"; endpoint `.summary`/`.description`/`.example`
+are ordinary tapir builder calls, not annotations.
+
+**Convention (to settle in TD-20.1):**
+- Every endpoint: `.summary` (one line) and `.description` (behaviour,
+  idempotency, notable errors); a `.tag` per resource.
+- Every path/query parameter and header input: `.description`, plus
+  `.example` where the value has a format (ids, enums, dates).
+- Every request/response case class and field: `@description`; each class
+  an `@encodedExample` showing a realistic payload.
+- Every error variant: a description of when it happens, with an example
+  body.
+- The service owning an endpoint is authoritative. Client-side mirrors
+  (e.g. order-service's `InventoryClient`/`PaymentClient` DTOs) aren't in
+  any OpenAPI doc and need none.
+
+### Tasks
+- [ ] TD-20.1: purerest — write the convention up (README "Documenting
+      endpoints") and add a coverage check to purerestlib: given the
+      service's endpoints, list operations without summary/description and
+      schema properties without a description, so each service can assert
+      none in one test. Release it.
+- [ ] TD-20.2: pure-service-generator — apply the convention to the g8
+      template's placeholder CRUD endpoints and DTOs, add the coverage
+      test, bump purerestlib; scratch service green, `/docs` shows them.
+- [ ] TD-20.3: order-service — describe endpoints, parameters, DTOs, error
+      variants; coverage test.
+- [ ] TD-20.4: payment-service — same.
+- [ ] TD-20.5: fulfilment-service — same.
+- [ ] TD-20.6: inventory-service — same.
+- [ ] TD-20.7: catalog-service — same.
+- [ ] TD-20.8: cart-service — same.
+- [ ] TD-20.9: notification-service — same.
+- [ ] TD-20.10: user-service — same (auth endpoints: never a real
+      credential or token in an example).
+- [ ] TD-20.11: `docs/system-design.md` — note the REST documentation
+      convention next to the event one.
