@@ -1,4 +1,4 @@
--10# Technical debt
+-10I# Technical debt
 
 Cross-cutting technical gaps found while building — not derived from a
 user story, so they don't belong in `docs/user-stories.md`/`PLAN.md`, and
@@ -699,12 +699,34 @@ Related, same module: `/docs/asyncapi` without a trailing slash serves the
 HTML, but its relative `css/`/`js/` paths then resolve under `/docs/` and
 404, so the page renders unstyled and empty.
 
+Also inconsistent: consumed events render with no descriptions or
+examples, while produced events have both (v1 schema docs). Consumer
+authors can copy them from the producer's registry artifact; nothing
+checks the copies stay current, but it beats blank entries.
+
+**Decision (2026-11-01): move to AsyncAPI 3.0.** Spike: hand-converted
+order-service's spec to 3.0 (`send`/`receive` operations); validates with
+cli 6.2.2 (info only: 3.1.0 is latest) and renders with html-template
+3.5.6 as `RECEIVE payment-events` / `SEND order-events` badges, from the
+service's own perspective — no client-side inversion to explain. Residual
+quirk: the template hardcodes "Accepts one of the following messages"
+under `SEND` too. sttp-apispec has no 3.0 model (checked 0.11.9 and latest
+0.12.1, both 2.6.0 only), so the document is built by hand.
+
 ### Tasks
-- [ ] TD-19.1: purekafka — swap the mapping in `AsyncApiDoc` (produced →
-      `subscribe`, consumed → `publish`), keep the CDC note on the
-      produced side, update tests. Or move to AsyncAPI 3.0 `send`/`receive`
-      if tapir's apispec model supports it (check first; clearer badges).
+- [ ] TD-19.1: purekafka — emit AsyncAPI 3.0 from `AsyncApiDoc`: produced →
+      `send`, consumed → `receive` operations, messages under
+      `components.messages`, channels with `address`. Hand-built (small ADT
+      or circe `Json`) since apispec lacks 3.0; keep the CDC note on the
+      `send` side; validate in tests via the cli; update tests.
 - [ ] TD-19.2: purekafka — redirect `/docs/asyncapi` → `/docs/asyncapi/`.
 - [ ] TD-19.3: release purekafka / sbt-purekafka-docs; bump the six
       services with `AsyncApiChannels` (order, payment, fulfilment,
       notification, user, inventory); check each live `/docs/asyncapi/`.
+- [ ] TD-19.4: the six services — add descriptions/examples to consumed
+      event schemas, copied from the producer's registry artifact.
+- [ ] TD-19.5: pure-service-generator — bump the g8 template to the new
+      purekafka / sbt-purekafka-docs; update `AsyncApiChannelsExampleSuite`
+      for the 3.0 shape; give the example consumed `ExampleEvent` a
+      description and example, with a comment pointing authors at the
+      registry as the source to copy from.
