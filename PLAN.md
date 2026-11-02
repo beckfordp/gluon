@@ -1081,6 +1081,57 @@ sent emails, and drives real operator cancel and expiry; the mock tabs
 remain only as an offline prototype; all new endpoints and the live flow
 are verified.
 
+### Catalogue management (prototype 2026-11-02)
+
+**Design (agreed 2026-11-02):** catalog-service owns all product copy and
+media references. `description` stays the short card tagline; a new
+`longDescription` paragraph feeds a storefront product overlay. Images are
+**not** stored in the frontend or Postgres: the catalogue holds
+`imageUrl` + `imageAlt`, pointing at Unsplash for now (sized per use via
+URL params, e.g. `?w=`); object storage (MinIO + presigned upload) is a
+later, separate decision. The list endpoint returns card fields only; the
+overlay reads `GET /catalogs/{id}`.
+
+- [x] ADM-11 — gshop Catalogue prototype: Inventory section merged into a
+      collapsible Catalogue section; real catalogue/stock reads and real
+      stock ±1, simulated add/edit/retire with validation and storefront
+      preview — done 2026-11-02 (`ee949c2`, `catalogueMock.ts`)
+- [ ] ADM-12 — catalog-service: product copy and media fields — Flyway
+      migration adding `long_description`, `image_url`, `image_alt`
+      (nullable); create/update/response DTOs, validation (https URL,
+      length limits), REST docs; list omits `longDescription`
+- [ ] ADM-13 — seed: move the Unsplash photo ids from gshop
+      `watchImages.ts` into `seed-watches.sh` (`imageUrl`/`imageAlt` per
+      watch), write a long description per watch, and backfill existing
+      rows idempotently
+- [ ] ADM-14 — catalog-service: enforce unique SKU (409) and invalidate
+      cached list pages on every write
+- [ ] ADM-15 — catalog-service: retire instead of hard delete — `status
+      active|retired`, status change via PATCH, list `status` filter
+      (storefront defaults to active); orders keep referencing retired SKUs
+- [ ] ADM-16 — catalog-service: gate writes with the ADR 0024 dev operator
+      token; seed script sends it
+- [ ] ADM-17 — product creation creates its stock record: decide gshop
+      orchestration (catalog POST then inventory POST) vs a catalog outbox
+      event consumed by inventory, then implement
+- [ ] ADM-18 — catalog-service: admin search — `q` (name/SKU) and
+      `status` query params with total count
+- [ ] ADM-19 — gshop: real-wire the Catalogue section (tagline, long
+      description, image URL/alt, retire/restore, operator token);
+      storefront renders `imageUrl` with a placeholder fallback; remove
+      `catalogueMock.ts` and `watchImages.ts`. After ADM-12..18
+- [ ] ADM-20 — gshop storefront: product overlay on picture click — large
+      image, name, price, long description from `GET /catalogs/{id}`;
+      accessible dialog (focus trap, Esc, return focus). After ADM-12/13
+- [ ] ADM-21 — verification: `bin/verify-catalogue-admin` live script
+      (create with stock, edit copy/image, retire hides from storefront,
+      restore, unauthorised write 401, duplicate SKU 409)
+
+**Exit criteria:** an operator can add, edit, retire and restock products
+from the Admin console against real services; product images and copy
+come from catalog-service; the storefront overlay shows the long
+description.
+
 ---
 
 **Deferred, not numbered above** — still undecided (see

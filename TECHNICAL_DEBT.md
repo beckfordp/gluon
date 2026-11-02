@@ -1012,3 +1012,32 @@ the task before cancelling; that is a workaround, not a fix.
       record the result.
 - [ ] TD-23.3: drop the wait-for-task workaround from `bin/verify-admin-demo`
       once fixed.
+
+## TD-24 — Inventory reserved counter drifts from the reservation ledger (negative `quantityReserved`)
+
+Seen 2026-11-02 in the Catalogue prototype (ADM-11): `watch-mido-commander`
+shows `quantityAvailable 8`, `quantityReserved -2`, while its
+`order_reservations` ledger holds 62 `active`, 106 `released` and 4
+`shipped` lines. A reserved count must never be negative, and the counter
+should equal the sum of `active` ledger quantities — here it is off by 64.
+
+Likely causes, unconfirmed:
+- **Lost update via the admin stock adjust.** `PUT /inventorys/{id}` takes
+  absolute `quantityAvailable` *and* `quantityReserved`; gshop sends the
+  reserved value read at page load, so any reserve/release between load and
+  click is overwritten.
+- **Stale ledger lines.** The 62 `active` lines date from 2026-10-31 test
+  runs whose orders may since have been cancelled/expired without a release
+  reaching inventory (or from before release-on-cancel landed).
+- **Counter decremented without a matching active line** (double release
+  on redelivery), which would explain the negative value.
+
+### Tasks
+- [ ] TD-24.1: inventory-service — reconcile: compare each SKU's
+      `quantity_reserved` with the sum of its `active` ledger lines and with
+      order status; find which cause(s) apply and record them here.
+- [ ] TD-24.2: make the stock adjust a relative/available-only operation
+      (or optimistic-lock it on `updated_at`) so it can never overwrite
+      `quantityReserved`; DB check `quantity_reserved >= 0`.
+- [ ] TD-24.3: derive or verify the counter from the ledger (single source
+      of truth), and repair existing drift with a one-off script.
