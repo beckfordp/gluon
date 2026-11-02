@@ -17,7 +17,7 @@ flowchart LR
     DISPATCHED -->|"PaymentFailed"| PAYMENT_FAILED
     AUTHORIZED -->|"DispatchFailed + release"| DISPATCH_FAILED
     AUTHORIZED -->|"PATCH/PUT cancel"| CANCELLED
-    AUTHORIZED -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no producer)"| CANCELLED
+    AUTHORIZED -->|"PaymentAuthorizationExpired<br/>US-20.1 sweep"| CANCELLED
 
     CONFIRMED --> END
     PAYMENT_FAILED --> END
@@ -25,7 +25,7 @@ flowchart LR
     DISPATCH_FAILED --> END
 
     LEGACY["pending · reserved · reservation_failed<br/>(legacy load-only; never written by current code)"]
-    NOTE["solid = built transition · dashed = US-20 — not yet built<br/>Checkout failures never create an order: 400 invalid / unknown payment method,<br/>402 declined, 409 out of stock, 503 upstream down (any reservation is released).<br/>PaymentCaptured/PaymentFailed are accepted from authorized or dispatched."]
+    NOTE["All transitions shown are built.<br/>Checkout failures never create an order: 400 invalid / unknown payment method,<br/>402 declined, 409 out of stock, 503 upstream down (any reservation is released).<br/>PaymentCaptured/PaymentFailed are accepted from authorized or dispatched."]
 
     classDef built fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef terminal fill:#eef2ff,stroke:#4f46e5,stroke-width:2px

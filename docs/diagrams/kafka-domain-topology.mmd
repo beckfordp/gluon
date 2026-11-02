@@ -18,7 +18,7 @@ flowchart LR
         UE[("user-events")]
     end
 
-    SWEEP["auth-expiry sweep<br/>US-20 — not yet built<br/>(no producer)"]
+    SWEEP["auth-expiry sweep<br/>US-20.1 — built"]
 
     G -->|"POST /orders<br/>GET/PATCH/PUT/DELETE /orders/{id}"| O
     G -->|"POST /payments/methods"| P
@@ -34,6 +34,9 @@ flowchart LR
     F -->|"DispatchConfirmed · DispatchFailed<br/>(outbox/Debezium)"| FE
     U -->|"UserRegistered<br/>(outbox/Debezium)"| UE
 
+    OE -->|"OrderCancelled (void)"| P
+    OE -->|"OrderCancelled (release)"| I
+    OE -->|"OrderCancelled (abort)"| F
     OE -->|"OrderConfirmed · OrderPaymentFailed · OrderCancelled"| N
     PE -->|"PaymentCaptured · PaymentFailed"| O
     PE -->|"PaymentAuthorized"| F
@@ -43,12 +46,10 @@ flowchart LR
     FE -->|"DispatchConfirmed · DispatchFailed"| N
     UE -->|"UserRegistered"| N
 
-    SWEEP -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no producer)"| PE
-    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built<br/>(order consumer built; no producer)"| O
-    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no consumer)"| I
-    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no consumer)"| F
+    SWEEP -->|"PaymentAuthorizationExpired<br/>(outbox/Debezium)"| PE
+    PE -->|"PaymentAuthorizationExpired"| O
 
-    NOTE["Solid = built; dashed = US-20 — not yet built.<br/>Order events are per-outcome (TD-15); order-service learns authorize synchronously, not from PaymentAuthorized.<br/>inventory-service publishes and consumes nothing; inventory-events is kept with no event types.<br/>Dispatch outcomes stay on fulfilment-events and are not mirrored into order-events.<br/>catalog-service and cart-service publish nothing and are omitted."]
+    NOTE["All edges shown are built.<br/>Order events are per-outcome (TD-15); order-service learns authorize synchronously, not from PaymentAuthorized.<br/>inventory-service publishes nothing (inventory-events has no event types) but consumes OrderCancelled to release reservations.<br/>OrderCancelled is US-9's shared fan-out: payment void, inventory release, fulfilment abort, notification copy.<br/>Dispatch outcomes stay on fulfilment-events and are not mirrored into order-events.<br/>catalog-service and cart-service publish nothing and are omitted."]
 
     classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef topic fill:#fff5ad,stroke:#FACC15,stroke-width:2px
@@ -56,5 +57,5 @@ flowchart LR
     classDef note fill:#f4f4f4,stroke:#999999
     class O,I,P,F,N,U service
     class OE,IE,PE,FE,UE topic
-    class SWEEP notbuilt
+    class SWEEP service
     class NOTE note

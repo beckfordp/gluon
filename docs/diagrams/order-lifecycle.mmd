@@ -14,8 +14,8 @@ flowchart LR
     AUTHORIZED -->|"DispatchConfirmed (fulfilment-events)<br/>'Your order has shipped' email"| DISPATCHED
     AUTHORIZED -->|"DispatchFailed + release inventory<br/>'We couldn't ship your order' email"| DISPATCH_FAILED
     AUTHORIZED -->|"PaymentFailed (capture_failed)<br/>order_reconciliation row; no release<br/>'We couldn't take your payment' + OrderPaymentFailed email"| PAYMENT_FAILED
-    AUTHORIZED -->|"PATCH/PUT /orders/id with status=cancelled<br/>publishes OrderCancelled; no release<br/>'Your order was cancelled' email"| CANCELLED
-    AUTHORIZED -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no producer; order consumer built)<br/>intended: release inventory + OrderCancelled"| CANCELLED
+    AUTHORIZED -->|"PATCH/PUT /orders/id with status=cancelled<br/>OrderCancelled {reason: customer}<br/>payment void + stock release + fulfilment abort<br/>'Your order was cancelled' email"| CANCELLED
+    AUTHORIZED -->|"PaymentAuthorizationExpired (US-20.1 sweep)<br/>OrderCancelled {reason: auth_expired}<br/>payment void + stock release + fulfilment abort<br/>expiry cancellation email"| CANCELLED
 
     DISPATCHED -->|"PaymentCaptured<br/>receipt email + OrderConfirmed email"| CONFIRMED
     DISPATCHED -->|"PaymentFailed (capture_failed)<br/>order_reconciliation row; no release"| PAYMENT_FAILED
@@ -26,7 +26,7 @@ flowchart LR
     DISPATCH_FAILED --> END
 
     LEGACY["pending · reserved · reservation_failed<br/>(legacy load-only; never written by current code)"]
-    NOTE["solid = built transition · dashed = US-20 — not yet built<br/>Checkout failures return 400/402/409/503, create no order row and send no email (ADR 0018).<br/>Capture outcome may overtake DispatchConfirmed: PaymentCaptured/PaymentFailed are accepted from authorized or dispatched.<br/>Customer cancellation does not release inventory — known gap."]
+    NOTE["All transitions shown are built.<br/>Checkout failures return 400/402/409/503, create no order row and send no email (ADR 0018).<br/>Capture outcome may overtake DispatchConfirmed: PaymentCaptured/PaymentFailed are accepted from authorized or dispatched.<br/>Customer cancellation and authorization expiry share the same OrderCancelled fan-out (US-9)."]
 
     classDef built fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef terminal fill:#eef2ff,stroke:#4f46e5,stroke-width:2px

@@ -142,22 +142,30 @@ Shared contract:
 - [x] US-9.1: `PATCH`/`PUT /orders/{id}` with `status: cancelled`;
       `authorized → cancelled`; publishes `OrderCancelled` via the outbox
       (order-service) — built (`order-review-fixes_20261029`)
-- [ ] US-9.2: add `reason` to `OrderCancelled` (registry artifact, producer
-      and mirrors) (order-service, payment-service, notification-service)
-- [ ] US-9.3: consume the cancellation event, void the authorization, and
-      make a later capture a no-op (payment-service)
-- [ ] US-9.4: consume the cancellation event, release reservations
-      (idempotent) (inventory-service)
-- [ ] US-9.5: consume the cancellation event, abort a
+- [x] US-9.2: add `reason` to `OrderCancelled` (registry artifact, producer
+      and mirrors) (order-service, payment-service, inventory-service,
+      fulfilment-service, notification-service) — done 2026-11-02
+      (`cancel-reason_20261102`; optional in the schema for
+      BACKWARD_TRANSITIVE, always sent)
+- [x] US-9.3: consume the cancellation event, void the authorization, and
+      make a later capture a no-op (payment-service) — done 2026-11-02
+      (`auth-expiry-sweep_20261102`)
+- [x] US-9.4: consume the cancellation event, release reservations
+      (idempotent) (inventory-service) — done 2026-11-02
+      (`order-cancelled-release_20261102`)
+- [x] US-9.5: consume the cancellation event, abort a
       `PENDING`/`PICKING`/`PACKED` task; `DISPATCHED` stays final
-      (fulfilment-service)
+      (fulfilment-service) — done 2026-11-02 (`order-cancelled-abort_20261102`;
+      terminal `CANCELLED` state)
 - [ ] US-9.6: failed compensation steps set a reconciliation flag (all
       services)
 - [ ] US-9.7: cancellation is idempotent — repeat requests and a cancel
       racing auth expiry produce one transition and one event (order-service)
 - [ ] US-9.8: gshop shows a Cancel action on Order History while the order
       is `authorized`, and the `cancelled` status after (gshop)
-- [ ] US-9.9: notification copy per cancellation reason (notification-service)
+- [x] US-9.9: notification copy per cancellation reason (notification-service)
+      — done 2026-11-02 (`cancellation-copy_20261102`; neutral fallback for
+      old messages)
 
 ## US-10 — Recover from a stale dispatch *(US-9 trigger, epic, placeholder only)*
 As a customer, if my order never reaches `DISPATCHED` within a reasonable
@@ -368,11 +376,11 @@ notification) live there. This story covers detection and the sweep only.
   precedent (`TECHNICAL_DEBT.md`'s TD-3).
 
 ### Tasks
-- [ ] US-20.1: background sweep for expired authorizations, publish `PaymentAuthorizationExpired {orderId}` (payment-service) — mechanism TBD
-- [x] US-20.2: order-service consumes `PaymentAuthorizationExpired`, status -> `cancelled`, publishes `OrderCancelled` (order-service) — built (`payment-kafka-contracts_20261026`); `Cancelled` status/migration already existed
-- [ ] US-20.3: expiry-triggered release verified through US-9.4 (inventory-service)
-- [ ] US-20.4: expiry-triggered fulfilment abort verified through US-9.5 (fulfilment-service)
-- [ ] US-20.5: expiry-specific cancellation copy through US-9.9 (notification-service)
+- [x] US-20.1: background sweep for expired authorizations, publish `PaymentAuthorizationExpired {orderId}` (payment-service) — done 2026-11-02 (`auth-expiry-sweep_20261102`; in-process fs2 scheduler, 30s default/5s local)
+- [x] US-20.2: order-service consumes `PaymentAuthorizationExpired`, status -> `cancelled`, publishes `OrderCancelled` (order-service) — built (`payment-kafka-contracts_20261026`); reason added 2026-11-02 (`cancel-reason_20261102`); `Cancelled` status/migration already existed
+- [x] US-20.3: expiry-triggered release verified through US-9.4 (inventory-service) — done 2026-11-02 (`verify-auth-expiry.sh`)
+- [x] US-20.4: expiry-triggered fulfilment abort verified through US-9.5 (fulfilment-service) — done 2026-11-02 (`verify-auth-expiry.sh`)
+- [x] US-20.5: expiry-specific cancellation copy through US-9.9 (notification-service) — done 2026-11-02 (`cancellation-copy_20261102`; live-verified by `verify-auth-expiry.sh`)
 - [x] US-20.6: Order History renders the `cancelled` status — the generic status formatter already does (gshop)
 
 ## US-21 — Cancel while fulfilment is in progress *(US-9 trigger)*

@@ -536,3 +536,18 @@ own line. See each repo's own `git log` for full detail either way.
   — is tracked once under US-9. `system-design.md`'s contracts and PLAN
   Journey 5 follow it; the acceptance matrix scopes the built-but-not-
   reachable tasks until a gshop cancellation journey exists.
+
+### Added
+- **Checkout Journey 5 — authorization expiry (US-20), plus US-9's shared
+  cancellation path.** payment-service now runs an in-process sweep over
+  `{authorized, expires_at <= now}`: each due payment moves to `voided`
+  (`authorization_expired`) and writes `PaymentAuthorizationExpired` through
+  the outbox in one transaction. `OrderCancelled` gains an optional `reason`
+  (`customer`/`auth_expired`; registry v2) and now fans out to payment (void,
+  US-9.3), inventory (release, US-9.4), fulfilment (abort to the new terminal
+  `CANCELLED` state, US-9.5) and notification (per-reason copy, US-9.9).
+  gshop's fulfilment queue renders `CANCELLED`. `verify-auth-expiry.sh`
+  proves the full path live: payment voided, order cancelled with
+  `reason: auth_expired`, inventory released, task cancelled, expiry email,
+  and no duplicate event on a second tick. `system-design.md`, the diagrams
+  and the acceptance out-of-scope matrix updated.

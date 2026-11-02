@@ -13,3 +13,6 @@ env:
     value: payment
   - name: KAFKA_BOOTSTRAP_SERVERS
     value: kafka:9092
+  # US-20.1: short sweep interval so verify-auth-expiry.sh need not wait 30s.
+  - name: PAYMENT_EXPIRY_SWEEP_INTERVAL
+    value: 5s

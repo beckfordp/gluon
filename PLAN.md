@@ -592,6 +592,14 @@ start pick/pack, and what Journey 5's expiry sweep scans for; Journey 3's
 `DispatchConfirmed` is what Journey 4 captures against. So: **1 → 3 → 4**,
 with **5** startable right after **1**, in parallel with **3**/**4**.
 
+Cancel-order stories: **Journey 6** builds US-9's shared cancellation path
+(customer cancel before dispatch), which Journey 5's expiry fan-out depends
+on. **Journey 7** adds the US-21 race (cancel while pick/pack runs) on top
+of it; **Journey 8** adds US-22's operator identity. **US-23 (cancel after
+dispatch / returns) is out of scope for now** — after dispatch there is a
+return + refund, not a cancellation. US-10 (stale dispatch) remains a
+placeholder trigger until its detection/cancel policy is refined.
+
 ## Checkout Journey 1 — Checkout form, addresses, payment method, authorize (US-11–US-14, ADR 0011)
 
 **Repos:** `payment-service`, `inventory-service`, `order-service`, `gshop`.
@@ -805,7 +813,7 @@ Checkout Journey 1's US-14.3 and `user-stories.md`'s US-15.
 
 ---
 
-## Checkout Journey 5 — Authorization expiry (US-20)
+## Checkout Journey 5 — Authorization expiry (US-20) — DONE 2026-11-02
 
 **Repos:** `payment-service`, `order-service`, `inventory-service`,
 `fulfilment-service`, `notification-service`, `gshop`.
@@ -816,19 +824,21 @@ shared cancellation path (US-9.2–9.5) — expiry adds detection and a
 reason, not a second set of compensation consumers. Independent of
 Journeys 3/4 — can run in parallel with either.
 
-- [ ] US-20.1 — background sweep for expired authorizations, publish
-      `PaymentAuthorizationExpired {orderId}` (payment-service) —
-      mechanism (CronJob vs. in-process scheduler) not yet decided, see
-      `user-stories.md`
+- [x] US-20.1 — background sweep for expired authorizations, publish
+      `PaymentAuthorizationExpired {orderId}` (payment-service) — done
+      2026-11-02 (`auth-expiry-sweep_20261102`; in-process fs2 scheduler,
+      tx + outbox, 30s default/5s local)
 - [x] US-20.2 — order-service consumes `PaymentAuthorizationExpired`,
       status -> `cancelled`, publishes `OrderCancelled` — built
-      (`payment-kafka-contracts_20261026`)
-- [ ] US-20.3 — expiry-triggered release verified through US-9.4
-      (inventory-service)
-- [ ] US-20.4 — expiry-triggered fulfilment abort verified through US-9.5
-      (fulfilment-service)
-- [ ] US-20.5 — expiry-specific cancellation copy through US-9.9
-      (notification-service)
+      (`payment-kafka-contracts_20261026`); reason added 2026-11-02
+      (`cancel-reason_20261102`)
+- [x] US-20.3 — expiry-triggered release verified through US-9.4
+      (inventory-service) — done 2026-11-02 (`verify-auth-expiry.sh`)
+- [x] US-20.4 — expiry-triggered fulfilment abort verified through US-9.5
+      (fulfilment-service) — done 2026-11-02 (`verify-auth-expiry.sh`)
+- [x] US-20.5 — expiry-specific cancellation copy through US-9.9
+      (notification-service) — done 2026-11-02
+      (`cancellation-copy_20261102`; live-verified)
 - [x] US-20.6 — Order History renders `cancelled` via the generic status
       formatter (gshop)
 
@@ -836,12 +846,138 @@ Journeys 3/4 — can run in parallel with either.
 `expiresAt`, seeded directly in payment-service's own test DB — proves the
 sweep's query/publish logic without waiting out a real expiry window.
 
-**Exit criteria:** verified end-to-end against the real local cluster —
-`system-design.md`'s `PaymentAuthorizationExpired` payload contract updated
-(done 2026-10-26, ahead of the code). Cancellation now routes through US-9's
-shared epic rather than a separate expiry-only compensation path; US-9 was
-refined 2026-11-02 to reconcile them.
+**Exit criteria:** met 2026-11-02 — `scripts/verify-auth-expiry.sh` proves
+the real path end-to-end: payment `voided` (`authorization_expired`), one
+`PaymentAuthorizationExpired` outbox row, order `cancelled` with
+`reason: auth_expired`, inventory released, fulfilment task `CANCELLED`, and
+the expiry email logged; a second sweep tick publishes nothing.
+`system-design.md`'s contracts, registry (v2 with optional `reason`) and
+diagrams updated. gshop's fulfilment queue renders `CANCELLED`.
+Cancellation routes through US-9's shared epic; US-9 was refined 2026-11-02
+to reconcile them.
 
+---
+
+## Checkout Journey 6 — Customer cancellation shared path (US-9)
+
+**Repos:** `order-service`, `payment-service`, `inventory-service`,
+`fulfilment-service`, `notification-service`, `gshop`.
+
+**Depends on:** Journey 1's `PaymentAuthorized` event (the hold a void
+releases) and Journey 3's fulfilment task states (the task an abort stops).
+US-9.2–9.5 and 9.9 landed with Journey 5 on 2026-11-02; this journey now owns
+US-9.6–9.8 (reconciliation flags, idempotency hardening, gshop Cancel action).
+
+- [x] US-9.1 — `PATCH`/`PUT /orders/{id}` with `status: cancelled`;
+      `authorized → cancelled`; publishes `OrderCancelled` via the outbox
+      (order-service) — built (`order-review-fixes_20261029`)
+- [x] US-9.2 — add `reason` (`customer` / `auth_expired` / `stale` /
+      `operator`) to `OrderCancelled`: registry artifact, producer and
+      consumer mirrors (order-service, payment-service, inventory-service,
+      fulfilment-service, notification-service) — done 2026-11-02 as a
+      Journey 5 prerequisite (`cancel-reason_20261102`)
+- [x] US-9.3 — consume `OrderCancelled`, void the authorization, make a
+      later capture a no-op (payment-service) — done 2026-11-02
+      (`auth-expiry-sweep_20261102`)
+- [x] US-9.4 — consume `OrderCancelled`, release reservations idempotently
+      (inventory-service) — done 2026-11-02
+      (`order-cancelled-release_20261102`)
+- [x] US-9.5 — consume `OrderCancelled`, abort a `PENDING`/`PICKING`/
+      `PACKED` task; `DISPATCHED` stays final (fulfilment-service) — done
+      2026-11-02 (`order-cancelled-abort_20261102`)
+- [ ] US-9.6 — failed compensation steps set a reconciliation flag (all
+      services)
+- [ ] US-9.7 — cancellation is idempotent: repeat requests and a cancel
+      racing auth expiry produce one transition and one event
+      (order-service)
+- [ ] US-9.8 — gshop shows a Cancel action on Order History while the order
+      is `authorized`, and the `cancelled` status after (gshop)
+- [x] US-9.9 — notification copy per cancellation reason
+      (notification-service) — done 2026-11-02
+      (`cancellation-copy_20261102`)
+
+**Stub / fan-out:** synthetic `OrderCancelled` events, one per reason, drive
+payment-service's void, inventory-service's release and fulfilment-service's
+abort independently of a live checkout; a pair of racing cancellation
+events proves US-9.7's single-transition rule without a real race window.
+
+**Exit criteria:** customer cancel verified end-to-end against the real
+local cluster — money hold voided, stock released, a non-dispatched
+fulfilment task aborted, and the cancellation email using the customer
+copy. Repeat and racing cancels produce one transition and one event;
+failed compensation leaves a reconciliation flag, not only a log line.
+`system-design.md`'s `OrderCancelled` contract and the registry artifact
+carry `reason`.
+
+---
+
+## Checkout Journey 7 — Cancel while fulfilment is in progress (US-21)
+
+**Repos:** `order-service`, `payment-service`, `inventory-service`,
+`fulfilment-service`, `gshop`.
+
+**Depends on:** Journey 6's shared cancellation path; Journey 3's
+dispatch state machine and Journey 4's capture outcome, whose side effects
+must stay mutually exclusive with cancellation.
+
+- [x] US-21.1 — order-service rejects cancel once `dispatched`/`confirmed`
+      with `409` (order-service) — the status guard and generic "past
+      cancelling" `409` already exist (`OrderLifecycle`); keep it
+- [ ] US-21.2 — payment-service makes void and capture mutually exclusive
+      via the existing conditional `authorized → voided|captured` update;
+      a capture arriving after void is a no-op (payment-service)
+- [ ] US-21.3 — fulfilment-service treats `DISPATCHED` as final; an abort
+      arriving after dispatch is a no-op (fulfilment-service)
+- [ ] US-21.4 — any side that loses the race records a reconciliation flag
+      (all services)
+- [ ] US-21.5 — gshop keeps Cancel enabled for `authorized` (the only
+      observable status pre-dispatch) and surfaces the `409` (gshop)
+
+**Stub / fan-out:** for each service, deliver a synthetic cancel and a
+synthetic `DispatchConfirmed` in both orders and assert the loser is a
+no-op — no capture after void, no abort after dispatch, no release for a
+shipped order. The order-service pair proves whichever transition commits
+first wins deterministically.
+
+**Exit criteria:** a cancel racing dispatch never produces both outcomes:
+exactly one of `cancelled` / `dispatched` wins, the losing side is a no-op
+everywhere, cancel after dispatch returns `409`, and any loser that cannot
+no-op cleanly is flagged for reconciliation. `system-design.md` records
+the race rule.
+
+---
+
+## Checkout Journey 8 — Operator-initiated cancellation (US-22)
+
+**Repos:** `user-service`, `order-service`, `notification-service`,
+`gshop`.
+
+**Depends on:** Journey 6's shared cancellation path, plus an operator
+identity/role model — not built. user-service issues customer tokens only;
+US-22 is the reason to add operator auth, not a v1 prerequisite of the
+customer cancel path.
+
+- [ ] Refine US-22 first: decide the operator auth/role model (user-service
+      tokens vs. a separate operator identity), who may cancel which
+      orders, and the actor/audit fields the event and notification carry —
+      the story is placeholder-only and not buildable as written
+- [ ] Reuse US-9's cancel path with `reason: operator`, recording the
+      operator's actor identity in the audit trail (order-service,
+      user-service)
+- [ ] Notification copy for `operator` cancellations, including why
+      (notification-service)
+- [ ] Operator cancel action on the admin/fulfilment screen, eligible
+      orders only — explicitly no bulk/incident cancellation (gshop)
+
+**Stub / fan-out:** a synthetic operator token/role exercises the path
+without a real operator directory; tests assert customer tokens are
+rejected, the actor is recorded, and `reason: operator` reaches the event
+and email.
+
+**Exit criteria:** an operator can cancel only an eligible order, the
+cancel reaches the same compensation fan-out as a customer cancel, the
+actor and reason are auditable, and no bulk path exists. Deferred until
+the story is refined.
 
 ---
 
@@ -1481,7 +1617,10 @@ tracks in that repo's own `conductor/tracks.md`.
       through), warns if inventory changed and serves the report. Full suite
       36 green. Acceptance 3–6 each got a `/conductor:review` pass before
       archive (3–5 retroactively).*
-- [ ] ACC-6.3 — add US-20 feature when Checkout Journey 5 lands
+- [ ] ACC-6.3 — add US-20 feature now Journey 5 has landed; blocked on a
+      way for Playwright to seed a past `expiresAt` (no DB seeding exists in
+      the suite). The other US-9/US-20 tasks are recorded out of scope with
+      `verify-auth-expiry.sh` as the proof.
 
 **Exit criteria:** every done US-N story is either covered or explicitly
 marked out of scope in the matrix.
