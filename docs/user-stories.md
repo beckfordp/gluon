@@ -157,10 +157,16 @@ Shared contract:
       `PENDING`/`PICKING`/`PACKED` task; `DISPATCHED` stays final
       (fulfilment-service) — done 2026-11-02 (`order-cancelled-abort_20261102`;
       terminal `CANCELLED` state)
-- [ ] US-9.6: failed compensation steps set a reconciliation flag (all
-      services)
-- [ ] US-9.7: cancellation is idempotent — repeat requests and a cancel
-      racing auth expiry produce one transition and one event (order-service)
+- [x] US-9.6: failed compensation steps set a reconciliation flag (all
+      services) — done 2026-11-02 (`j7-*_20261102` tracks): terminal race
+      losers and contradictions are flagged in per-service reconciliation
+      tables; transient gateway/DB failures stay on the DLQ retry path and
+      are deliberately not flagged (a later success would make the flag lie)
+- [x] US-9.7: cancellation is idempotent — repeat requests and a cancel
+      racing auth expiry produce one transition and one event
+      (order-service) — done 2026-11-02 (`j8-operator-cancel_20261102`):
+      repeat cancel → `200`, one event; cancel vs expiry → one winner and
+      one `OrderCancelled`
 - [x] US-9.8: gshop shows a Cancel action on Order History while the order
       is `authorized`, and the `cancelled` status after (gshop) — done
       2026-11-02 (`f1d3116`; real `PATCH /orders/{id}`, local status update,
@@ -410,15 +416,23 @@ the shared compensation (US-9).
 - [x] US-21.1: order-service rejects cancel once `dispatched`/`confirmed`
       with `409` (order-service) — the status guard and generic "past
       cancelling" `409` already exist (`OrderLifecycle`); keep it
-- [ ] US-21.2: payment-service makes void and capture mutually exclusive via
+- [x] US-21.2: payment-service makes void and capture mutually exclusive via
       the existing conditional `authorized → voided|captured` update; a
-      capture arriving after void is a no-op (payment-service)
-- [ ] US-21.3: fulfilment-service treats `DISPATCHED` as final; an abort
-      arriving after dispatch is a no-op (fulfilment-service)
-- [ ] US-21.4: any side that loses the race records a reconciliation flag
-      (all services)
-- [ ] US-21.5: gshop keeps Cancel enabled for `authorized` (the only
-      observable status pre-dispatch) and surfaces the `409` (gshop)
+      capture arriving after void is a no-op (payment-service) — done
+      2026-11-02 (`j7-payment-race_20261102`; net-new: loser classification
+      and reconciliation)
+- [x] US-21.3: fulfilment-service treats `DISPATCHED` as final; an abort
+      arriving after dispatch is a no-op (fulfilment-service) — done
+      2026-11-02 (`j7-dispatch-final_20261102`)
+- [x] US-21.4: any side that loses the race records a reconciliation flag
+      (all services) — done 2026-11-02: `order_reconciliation`,
+      `payment_reconciliation`, `fulfilment_reconciliation`,
+      `inventory_reconciliation`; inventory also gains a `shipped` ledger
+      state so a cancel never releases shipped stock
+      (`j7-shipped-guard_20261102`)
+- [x] US-21.5: gshop keeps Cancel enabled for `authorized` (the only
+      observable status pre-dispatch) and surfaces the `409` (gshop) — done
+      2026-11-02 (`j7-cancel-polish_20261102`; 409 now points at returns)
 
 ## US-22 — Operator-initiated cancellation *(US-9 trigger)*
 As a support operator, I can cancel an eligible order on a customer's

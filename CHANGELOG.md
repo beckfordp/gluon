@@ -574,3 +574,25 @@ own line. See each repo's own `git log` for full detail either way.
   (`customerId`/`orderId` filters) exposes the history for the Admin console.
   The transport is still the logging stub; Kubernetes/Helm wiring and
   readiness gating remain ADM-6.
+- **Checkout Journey 7 — cancel vs dispatch race (US-21), plus US-9.6/9.7.**
+  Every side now has one arbiter and records a terminal loser: order-service
+  flags contradictory `DispatchConfirmed`/payment outcomes in
+  `order_reconciliation`; payment-service classifies void-after-capture,
+  capture-after-void, capture-after-failed and dispatch-after-expired in a new
+  `payment_reconciliation`; fulfilment-service carries the rejected state and
+  flags `cancel_after_dispatch` in `fulfilment_reconciliation`;
+  inventory-service gains a `shipped` ledger state (dispatch consumes the
+  reservation without returning stock) and a new `DispatchConfirmed`
+  consumer, flagging cancel-after-dispatch and dispatch-after-release in
+  `inventory_reconciliation`. Repeat cancellation is now an idempotent `200`,
+  and cancel racing auth expiry produces one transition/event (US-9.7).
+  Reconciliation rows are minimal durable flags for now; the open/resolved
+  operator workflow is ADM-4/ADM-9.
+- **Checkout Journey 8 — operator cancellation backend (US-22).**
+  order-service accepts a config-gated dev operator token
+  (`Authorization: Bearer`, ADR 0024), records `reason: operator`, and writes
+  `order_cancellation_audit` in the same transaction as the status change and
+  outbox row. `OrderCancelled` registers v3 with an optional typed
+  `actor {type, id}` (customer/operator/system); notification-service mirrors
+  and logs the actor while keeping generic customer copy. gshop’s operator UI
+  is deferred to ADM-7.

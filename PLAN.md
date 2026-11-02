@@ -885,11 +885,14 @@ US-9.6–9.8 (reconciliation flags, idempotency hardening, gshop Cancel action).
 - [x] US-9.5 — consume `OrderCancelled`, abort a `PENDING`/`PICKING`/
       `PACKED` task; `DISPATCHED` stays final (fulfilment-service) — done
       2026-11-02 (`order-cancelled-abort_20261102`)
-- [ ] US-9.6 — failed compensation steps set a reconciliation flag (all
-      services)
-- [ ] US-9.7 — cancellation is idempotent: repeat requests and a cancel
+- [x] US-9.6 — failed compensation steps set a reconciliation flag (all
+      services) — done 2026-11-02 across the J7 tracks: terminal race losers
+      and contradictions are flagged per service; transient failures stay on
+      the DLQ path
+- [x] US-9.7 — cancellation is idempotent: repeat requests and a cancel
       racing auth expiry produce one transition and one event
-      (order-service)
+      (order-service) — done 2026-11-02 (`j8-operator-cancel_20261102`:
+      repeat cancel → 200, one event)
 - [x] US-9.8 — gshop shows a Cancel action on Order History while the order
       is `authorized`, and the `cancelled` status after (gshop) — done
       2026-11-02 (`f1d3116`; real `PATCH /orders/{id}`, local status update,
@@ -925,15 +928,19 @@ must stay mutually exclusive with cancellation.
 - [x] US-21.1 — order-service rejects cancel once `dispatched`/`confirmed`
       with `409` (order-service) — the status guard and generic "past
       cancelling" `409` already exist (`OrderLifecycle`); keep it
-- [ ] US-21.2 — payment-service makes void and capture mutually exclusive
+- [x] US-21.2 — payment-service makes void and capture mutually exclusive
       via the existing conditional `authorized → voided|captured` update;
-      a capture arriving after void is a no-op (payment-service)
-- [ ] US-21.3 — fulfilment-service treats `DISPATCHED` as final; an abort
-      arriving after dispatch is a no-op (fulfilment-service)
-- [ ] US-21.4 — any side that loses the race records a reconciliation flag
-      (all services)
-- [ ] US-21.5 — gshop keeps Cancel enabled for `authorized` (the only
-      observable status pre-dispatch) and surfaces the `409` (gshop)
+      a capture arriving after void is a no-op (payment-service) — done
+      2026-11-02 (`j7-payment-race_20261102`)
+- [x] US-21.3 — fulfilment-service treats `DISPATCHED` as final; an abort
+      arriving after dispatch is a no-op (fulfilment-service) — done
+      2026-11-02 (`j7-dispatch-final_20261102`)
+- [x] US-21.4 — any side that loses the race records a reconciliation flag
+      (all services) — done 2026-11-02: four reconciliation tables;
+      inventory `shipped` state (`j7-shipped-guard_20261102`)
+- [x] US-21.5 — gshop keeps Cancel enabled for `authorized` (the only
+      observable status pre-dispatch) and surfaces the `409` (gshop) — done
+      2026-11-02 (`j7-cancel-polish_20261102`; returns hint added)
 
 **Stub / fan-out:** for each service, deliver a synthetic cancel and a
 synthetic `DispatchConfirmed` in both orders and assert the loser is a
@@ -951,35 +958,36 @@ the race rule.
 
 ## Checkout Journey 8 — Operator-initiated cancellation (US-22)
 
-**Repos:** `user-service`, `order-service`, `notification-service`,
-`gshop`.
+**Repos:** `order-service`, `notification-service` (backend); `gshop` via
+ADM-7.
 
-**Depends on:** Journey 6's shared cancellation path, plus an operator
-identity/role model — not built. user-service issues customer tokens only;
-US-22 is the reason to add operator auth, not a v1 prerequisite of the
-customer cancel path.
+**Depends on:** Journey 6's shared cancellation path. The operator model was
+refined on 2026-11-02: a config-gated **dev-only token** in order-service
+(ADR 0024), same eligibility as customer cancel, typed `actor` on
+`OrderCancelled` v3, durable `order_cancellation_audit`. No user-service role
+model.
 
-- [ ] Refine US-22 first: decide the operator auth/role model (user-service
-      tokens vs. a separate operator identity), who may cancel which
-      orders, and the actor/audit fields the event and notification carry —
-      the story is placeholder-only and not buildable as written
-- [ ] Reuse US-9's cancel path with `reason: operator`, recording the
-      operator's actor identity in the audit trail (order-service,
-      user-service)
-- [ ] Notification copy for `operator` cancellations, including why
-      (notification-service)
-- [ ] Operator cancel action on the admin/fulfilment screen, eligible
-      orders only — explicitly no bulk/incident cancellation (gshop)
+- [x] Refine US-22: dev-only operator token, same eligibility (`authorized`
+      only), typed actor, backend first (ADR 0024) — 2026-11-02
+- [x] Reuse US-9's cancel path with `reason: operator`, recording the actor
+      in `order_cancellation_audit` in the same transaction
+      (order-service) — 2026-11-02 (`j8-operator-cancel_20261102`)
+- [x] Mirror/log the actor in notification (customer copy stays generic
+      “support team”) (notification-service) — 2026-11-02
+      (`j8-operator-actor_20261102`)
+- [ ] Operator cancel action on the admin screen, eligible orders only —
+      **deferred to ADM-7**; explicitly no bulk/incident cancellation
+      (gshop)
 
-**Stub / fan-out:** a synthetic operator token/role exercises the path
-without a real operator directory; tests assert customer tokens are
-rejected, the actor is recorded, and `reason: operator` reaches the event
-and email.
+**Stub / fan-out:** a configured dev token exercises the path without a real
+operator directory; tests assert an invalid token is rejected (401), the
+actor/audit are recorded, and `reason: operator` reaches the event and email.
+The customer PATCH remains unauthenticated (ADR 0024 caveat).
 
-**Exit criteria:** an operator can cancel only an eligible order, the
-cancel reaches the same compensation fan-out as a customer cancel, the
-actor and reason are auditable, and no bulk path exists. Deferred until
-the story is refined.
+**Exit criteria:** backend met 2026-11-02 — operator can cancel only an
+eligible order, the cancel reaches the same compensation fan-out, the actor
+and reason are auditable, and no bulk path exists. The gshop operator action
+is verified under ADM-7/ADM-9.
 
 ---
 
@@ -1012,20 +1020,26 @@ read models and triggers the real console needs.
       customerId→email, and decide how payment/fulfilment emails (which
       carry only `orderId`) are attributed to a customer — order lookup or
       event-contract enrichment
-- [ ] ADM-4 — order-service: admin-wide order list, operator identity/audit
-      fields, and `reason: operator` on cancellation (with US-22)
+- [ ] ADM-4 — order-service: admin-wide order list, plus the reconciliation
+      queue workflow: expose open reconciliation flags across services
+      (order/payment/fulfilment/inventory), show them in the admin order
+      view, and add a resolve action (`open`/`resolved`, operator id, note,
+      timestamp) with alerting. Operator identity/audit and
+      `reason: operator` landed with US-22 on 2026-11-02; the current flags
+      are minimal (`reason`, `created_at`) by design.
 - [ ] ADM-5 — payment-service: dev/admin trigger to expire one
       authorization early (or use the ADR 0022 fault-injection API), so the
       console can demonstrate the sweep without SQL
 - [ ] ADM-6 — local infra: notification Postgres deployment/service and
       Helm values; migrations and readiness
 - [ ] ADM-7 — gshop: real-wire the Orders tab (admin order list, ledger,
-      operator cancel, expiry trigger) once ADM-1/4/5 land
+      operator cancel using the ADR 0024 dev token, expiry trigger,
+      reconciliation queue) once ADM-1/4/5 land
 - [ ] ADM-8 — gshop: real-wire the Customers tab (customer orders and email
       history) once ADM-2/3 land
 - [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
-      script covering ledger release, email history, operator cancel and
-      simulated expiry
+      script covering ledger release, email history, operator cancel,
+      simulated expiry and reconciliation flag visibility/resolution
 - [x] DEMO-1 — `bin/seed-demo-data`: idempotent API-driven demo customers
       (Ada/Grace/Alan) and six orders across authorized+PENDING,
       authorized+PICKING, confirmed, cancelled, payment_failed and
