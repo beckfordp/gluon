@@ -558,3 +558,19 @@ own line. See each repo's own `git log` for full detail either way.
   Order History gains a real Cancel action for authorized orders (US-9.8).
   The backend read models and trigger needed to real-wire the console are
   tracked as ADM-1–9 in `PLAN.md`.
+- **Admin console groundwork (ADM-1, DEMO-1) and legacy cleanup (TD-21/22).**
+  inventory-service exposes `GET /inventorys/order-reservations` (filterable
+  by `orderId`/`status`) over the reservation ledger; `bin/seed-demo-data`
+  creates idempotent demo customers and orders across every lifecycle state.
+  Legacy order statuses and the retired inventory-events plumbing are
+  removed across order-service, inventory-service, gshop and the acceptance
+  suite.
+- **notification-service sent-email audit (ADM-2).** Postgres + Flyway are
+  back in the service, backing a `sent_email` audit table keyed by the
+  envelope `eventId`: every send is recorded `pending → sent|failed`, a
+  redelivery of an already-sent event is skipped, and a failed/pending row
+  can be retried. `EmailClient` now carries the full message (event id, type,
+  reason, recipient/customer/order attribution) and `GET /emails`
+  (`customerId`/`orderId` filters) exposes the history for the Admin console.
+  The transport is still the logging stub; Kubernetes/Helm wiring and
+  readiness gating remain ADM-6.

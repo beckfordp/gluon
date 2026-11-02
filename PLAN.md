@@ -1001,12 +1001,13 @@ read models and triggers the real console needs.
       `order_id, order_item_id, line_no, sku, quantity, status, created_at,
       released_at` (the ledger has no customer identity; join via
       order-service) — done 2026-11-02 (`admin-ledger_20261102`)
-- [ ] ADM-2 — notification-service: add Postgres + Flyway and a
+- [x] ADM-2 — notification-service: add Postgres + Flyway and a
       `sent_email` audit table (`source_event_id` unique for idempotency,
       event type, reason, recipient key, subject, body, status
       `pending|sent|failed`, timestamps); thread the envelope `eventId`
       through `EmailClient`; expose `GET /emails?customerId=&orderId=`.
-      This is an email audit/send queue, not a Kafka outbox
+      This is an email audit/send queue, not a Kafka outbox — done
+      2026-11-02 (`sent-email-audit_20261102`)
 - [ ] ADM-3 — recipient resolution: user-service `GET /users/{id}` for
       customerId→email, and decide how payment/fulfilment emails (which
       carry only `orderId`) are attributed to a customer — order lookup or
