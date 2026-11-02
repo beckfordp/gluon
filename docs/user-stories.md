@@ -161,8 +161,10 @@ Shared contract:
       services)
 - [ ] US-9.7: cancellation is idempotent — repeat requests and a cancel
       racing auth expiry produce one transition and one event (order-service)
-- [ ] US-9.8: gshop shows a Cancel action on Order History while the order
-      is `authorized`, and the `cancelled` status after (gshop)
+- [x] US-9.8: gshop shows a Cancel action on Order History while the order
+      is `authorized`, and the `cancelled` status after (gshop) — done
+      2026-11-02 (`f1d3116`; real `PATCH /orders/{id}`, local status update,
+      409 handling)
 - [x] US-9.9: notification copy per cancellation reason (notification-service)
       — done 2026-11-02 (`cancellation-copy_20261102`; neutral fallback for
       old messages)

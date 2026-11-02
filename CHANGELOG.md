@@ -551,3 +551,10 @@ own line. See each repo's own `git log` for full detail either way.
   `reason: auth_expired`, inventory released, task cancelled, expiry email,
   and no duplicate event on a second tick. `system-design.md`, the diagrams
   and the acceptance out-of-scope matrix updated.
+- **gshop admin workflow-demo prototype and real customer cancellation.**
+  Admin gains a mock-backed Orders/Customers console showing reservation
+  ledger state, operator cancellation, simulated authorization expiry and
+  per-customer email history; Order processing gains state tabs with counts.
+  Order History gains a real Cancel action for authorized orders (US-9.8).
+  The backend read models and trigger needed to real-wire the console are
+  tracked as ADM-1–9 in `PLAN.md`.

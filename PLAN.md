@@ -890,8 +890,10 @@ US-9.6–9.8 (reconciliation flags, idempotency hardening, gshop Cancel action).
 - [ ] US-9.7 — cancellation is idempotent: repeat requests and a cancel
       racing auth expiry produce one transition and one event
       (order-service)
-- [ ] US-9.8 — gshop shows a Cancel action on Order History while the order
-      is `authorized`, and the `cancelled` status after (gshop)
+- [x] US-9.8 — gshop shows a Cancel action on Order History while the order
+      is `authorized`, and the `cancelled` status after (gshop) — done
+      2026-11-02 (`f1d3116`; real `PATCH /orders/{id}`, local status update,
+      409 handling)
 - [x] US-9.9 — notification copy per cancellation reason
       (notification-service) — done 2026-11-02
       (`cancellation-copy_20261102`)
@@ -978,6 +980,61 @@ and email.
 cancel reaches the same compensation fan-out as a customer cancel, the
 actor and reason are auditable, and no bulk path exists. Deferred until
 the story is refined.
+
+---
+
+## Admin workflow console (prototype approved 2026-11-02)
+
+**Repos:** `gshop`, `inventory-service`, `notification-service`,
+`order-service`, `user-service`, `payment-service`, and gluon's local infra.
+
+**Depends on:** the approved mock prototype (`f1d3116`) and Journey 5's
+cancellation fan-out. Operator auth/roles are US-22; this section adds the
+read models and triggers the real console needs.
+
+- [x] ADM-0 — gshop mock prototype: Orders/Customers tabs, operator
+      cancel, simulated expiry, reservation ledger and per-customer email
+      history; real customer Cancel in Order History (US-9.8) — done
+      2026-11-02 (`f1d3116`)
+- [ ] ADM-1 — inventory-service: `GET /inventorys/order-reservations`
+      read endpoint with `orderId`/`status` filters, returning the ledger's
+      `order_id, order_item_id, line_no, sku, quantity, status, created_at,
+      released_at` (the ledger has no customer identity; join via
+      order-service)
+- [ ] ADM-2 — notification-service: add Postgres + Flyway and a
+      `sent_email` audit table (`source_event_id` unique for idempotency,
+      event type, reason, recipient key, subject, body, status
+      `pending|sent|failed`, timestamps); thread the envelope `eventId`
+      through `EmailClient`; expose `GET /emails?customerId=&orderId=`.
+      This is an email audit/send queue, not a Kafka outbox
+- [ ] ADM-3 — recipient resolution: user-service `GET /users/{id}` for
+      customerId→email, and decide how payment/fulfilment emails (which
+      carry only `orderId`) are attributed to a customer — order lookup or
+      event-contract enrichment
+- [ ] ADM-4 — order-service: admin-wide order list, operator identity/audit
+      fields, and `reason: operator` on cancellation (with US-22)
+- [ ] ADM-5 — payment-service: dev/admin trigger to expire one
+      authorization early (or use the ADR 0022 fault-injection API), so the
+      console can demonstrate the sweep without SQL
+- [ ] ADM-6 — local infra: notification Postgres deployment/service and
+      Helm values; migrations and readiness
+- [ ] ADM-7 — gshop: real-wire the Orders tab (admin order list, ledger,
+      operator cancel, expiry trigger) once ADM-1/4/5 land
+- [ ] ADM-8 — gshop: real-wire the Customers tab (customer orders and email
+      history) once ADM-2/3 land
+- [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
+      script covering ledger release, email history, operator cancel and
+      simulated expiry
+
+**Stub / fan-out:** the mock store (`workflowDemo.ts`) stays as the
+offline/UI-test path while each real endpoint lands; its shapes mirror the
+ledger table and notification copy so real wiring is a gateway swap, not a
+redesign.
+
+**Exit criteria:** the Admin console reads real orders, ledger lines and
+sent emails, and drives real operator cancel and expiry; the mock tabs
+remain only as an offline prototype; all new endpoints and the live flow
+are verified.
 
 ---
 
