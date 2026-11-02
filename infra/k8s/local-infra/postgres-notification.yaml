@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-postgres
+  namespace: gluon-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-postgres
+  template:
+    metadata:
+      labels:
+        app: notification-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: "notification"
+            - name: POSTGRES_USER
+              value: "notification"
+            - name: POSTGRES_PASSWORD
+              value: "notification"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "notification"]
+            initialDelaySeconds: 2
+            periodSeconds: 2
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-postgres
+  namespace: gluon-local
+spec:
+  selector:
+    app: notification-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

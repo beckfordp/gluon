@@ -3,9 +3,19 @@ image:
   tag: latest
 
 env:
+  # Sent-email audit store (ADM-2); Flyway migrates on startup and
+  # /health/ready gates on it (ADM-6).
+  - name: POSTGRES_HOST
+    value: notification-postgres
+  - name: POSTGRES_DB
+    value: notification
+  - name: POSTGRES_USER
+    value: notification
+  - name: POSTGRES_PASSWORD
+    value: notification
   - name: KAFKA_BOOTSTRAP_SERVERS
     value: kafka:9092
-  # Recipient resolution (ADM-3/ADR 0025). Postgres/deployment stays ADM-6.
+  # Recipient resolution (ADM-3/ADR 0025).
   - name: USER_SERVICE_URL
     value: http://user-service:8080
   - name: ORDER_SERVICE_URL

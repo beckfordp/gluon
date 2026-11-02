@@ -617,5 +617,15 @@ own line. See each repo's own `git log` for full detail either way.
   Alertmanager (null receiver; `localhost:9093`). First-wins means a resolved
   flag is terminal per order. The gshop queue UI is ADM-7; ADR 0026 records
   the design. Anonymous-customer email remains a gap, tracked as ADM-10.
-
-
+- **Expiry trigger, notification Postgres and the real admin console
+  (ADM-5..8).** payment-service adds a dev-token-gated
+  `POST /payments/authorizations/{orderId}/expire` that pulls one hold's
+  expiry to now and runs the real sweep, so the console demonstrates
+  `auth_expired` cancellation without SQL. The local cluster gains
+  `notification-postgres` (Helm env, exporter target; shared infra now 7
+  Postgres, 4.56 Gi) and notification `/health/ready` is gated on it. gshop's
+  mock "Workflow demo" is replaced by a real-wired Operations console: admin
+  order list, four-service reconciliation queue with resolve + note, order
+  detail (fulfilment state, reservation ledger, flags, emails), Journey 8
+  operator cancel and expire-now, and a Customers tab with email history
+  (guest checkouts labelled via user-service 404).

@@ -59,6 +59,7 @@ scrape_configs:
           - catalog-postgres:5432/catalog
           - fulfilment-postgres:5432/fulfilment
           - inventory-postgres:5432/inventory
+          - notification-postgres:5432/notification
           - order-postgres:5432/order
           - payment-postgres:5432/payment
           - user-postgres:5432/user

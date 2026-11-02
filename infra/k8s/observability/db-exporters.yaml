@@ -1,6 +1,6 @@
 # Postgres and Redis exporters (PLAN.md PERF-3.1), one multi-target
-# exporter each rather than one per instance (6 Postgres + 3 Redis would be
-# 9 pods). Prometheus passes the instance as ?target= (config/prometheus.yml)
+# exporter each rather than one per instance (7 Postgres + 3 Redis would be
+# 10 pods). Prometheus passes the instance as ?target= (config/prometheus.yml)
 # and, for Postgres, the matching auth module.
 #
 # Credentials are local-infra's own dev defaults (user = password = db name,
@@ -23,6 +23,10 @@ data:
       inventory:
         type: userpass
         userpass: {username: inventory, password: inventory}
+        options: {sslmode: disable}
+      notification:
+        type: userpass
+        userpass: {username: notification, password: notification}
         options: {sslmode: disable}
       order:
         type: userpass

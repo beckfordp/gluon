@@ -342,6 +342,18 @@ the four services, ADM-4):
 - Path validation differs by owner: UUID order ids in order/fulfilment,
   a non-blank string in payment, UUID text in inventory.
 
+**`POST /payments/authorizations/{orderId}/expire`** (caller: the Admin
+console; callee: payment-service, ADM-5, **built 2026-11-02**,
+`expiry-trigger_20261102`):
+- Dev/demo only: `Authorization: Bearer <dev operator token>` is required
+  (401 when absent/mismatched, and always 401 when no token is configured).
+- Pulls the authorized payment's `expires_at` to now, then runs one
+  US-20.1 sweep tick: the void and `PaymentAuthorizationExpired` outbox row
+  are the normal sweep path, so order cancellation/release/email follow
+  through the existing fan-out.
+- `200`: the payment (`PaymentResponse`, normally `status: voided`). `404`:
+  the order has no payment. `409`: the payment is not `authorized`.
+
 No contract documented yet for any other cross-service REST call — add one
 here, in this same format, whenever a new one is built.
 

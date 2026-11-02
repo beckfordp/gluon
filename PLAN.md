@@ -975,9 +975,9 @@ model.
 - [x] Mirror/log the actor in notification (customer copy stays generic
       “support team”) (notification-service) — 2026-11-02
       (`j8-operator-actor_20261102`)
-- [ ] Operator cancel action on the admin screen, eligible orders only —
-      **deferred to ADM-7**; explicitly no bulk/incident cancellation
-      (gshop)
+- [x] Operator cancel action on the admin screen, eligible orders only —
+      explicitly no bulk/incident cancellation (gshop) — done 2026-11-02
+      under ADM-7 (`admin-console_20261102`)
 
 **Stub / fan-out:** a configured dev token exercises the path without a real
 operator directory; tests assert an invalid token is rejected (401), the
@@ -1032,16 +1032,22 @@ read models and triggers the real console needs.
       operator token, OTel counter + Prometheus rule + Alertmanager. The
       gshop queue display/resolve UI lands in ADM-7; first-wins flags are
       terminal per order (documented).
-- [ ] ADM-5 — payment-service: dev/admin trigger to expire one
+- [x] ADM-5 — payment-service: dev/admin trigger to expire one
       authorization early (or use the ADR 0022 fault-injection API), so the
-      console can demonstrate the sweep without SQL
-- [ ] ADM-6 — local infra: notification Postgres deployment/service and
-      Helm values; migrations and readiness
-- [ ] ADM-7 — gshop: real-wire the Orders tab (admin order list, ledger,
+      console can demonstrate the sweep without SQL — done 2026-11-02
+      (`expiry-trigger_20261102`): token-gated
+      `POST /payments/authorizations/{orderId}/expire` runs the real sweep
+- [x] ADM-6 — local infra: notification Postgres deployment/service and
+      Helm values; migrations and readiness — done 2026-11-02
+      (`notification-postgres_20261102`): `notification-postgres` manifest,
+      Helm env, exporter target; `/health/ready` gated on Postgres
+- [x] ADM-7 — gshop: real-wire the Orders tab (admin order list, ledger,
       operator cancel using the ADR 0024 dev token, expiry trigger,
-      reconciliation queue) once ADM-1/4/5 land
-- [ ] ADM-8 — gshop: real-wire the Customers tab (customer orders and email
-      history) once ADM-2/3 land
+      reconciliation queue) once ADM-1/4/5 land — done 2026-11-02
+      (`admin-console_20261102`; mock prototype removed)
+- [x] ADM-8 — gshop: real-wire the Customers tab (customer orders and email
+      history) once ADM-2/3 land — done 2026-11-02
+      (`admin-console_20261102`; guests labelled via user-service 404)
 - [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
       script covering ledger release, email history, operator cancel,
       simulated expiry and reconciliation flag visibility/resolution
