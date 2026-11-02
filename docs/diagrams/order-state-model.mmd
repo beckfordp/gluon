@@ -24,14 +24,11 @@ flowchart LR
     CANCELLED --> END
     DISPATCH_FAILED --> END
 
-    LEGACY["pending · reserved · reservation_failed<br/>(legacy load-only; never written by current code)"]
     NOTE["All transitions shown are built.<br/>Checkout failures never create an order: 400 invalid / unknown payment method,<br/>402 declined, 409 out of stock, 503 upstream down (any reservation is released).<br/>PaymentCaptured/PaymentFailed are accepted from authorized or dispatched."]
 
     classDef built fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef terminal fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
-    classDef legacy fill:#f4f4f4,stroke:#999999,stroke-dasharray:5 4
     classDef note fill:#f4f4f4,stroke:#999999
     class AUTHORIZED,DISPATCHED built
     class CONFIRMED,PAYMENT_FAILED,CANCELLED,DISPATCH_FAILED terminal
-    class LEGACY legacy
     class NOTE note

@@ -32,7 +32,7 @@ library test fixtures only and are not reused.
 | catalog-service | new (generator) | Postgres | cache-aside (list) | — |
 | cart-service | new (generator scaffold, reworked to Redis-native — no Postgres) | Redis only | primary store | — |
 | order-service | US-3.1 done (checkout creates an order + line items, atomic transaction); `OrderStatus` hardened (`authorized`/`confirmed`/`payment_failed`/`cancelled`/`dispatched`/`dispatch_failed`) + `order_items` schema/FK done; US-4.2 done, superseded by TD-7.3's bulk reserve; US-5.2 done, then retired under ADR 0018 (`StockEventConsumer` removed 2026-10-27); US-8.1 done (order history read endpoint + Redis cache). US-11.1 (**done 2026-10-27**) adds a required shipping address to `POST /orders`; US-14.2 + TD-7.3 (**done 2026-10-27**, `checkout-journey1_20261027`): whole-order reserve, then a synchronous `PaymentClient[F]` call to `POST /payments/authorize`, resilience-wrapped like `InventoryClient`; **ADR 0018**: the order is persisted as `authorized` only after authorize succeeds — failed checkouts create no row and release their reservations; US-17/18 extend `OrderStatus` with `Dispatched`/`DispatchFailed` (**done 2026-10-28**); US-19 capture outcomes (**done 2026-10-28**, `capture-outcome_20261028`) move `authorized`/`dispatched` → `confirmed`/`payment_failed`, the failure path writing an `order_reconciliation` row and deliberately not releasing inventory; customer cancellation and US-20 auth expiry share one path (**built 2026-11-02**, `cancel-reason_20261102`): `PATCH`/`PUT /orders/{id}` and the `PaymentAuthorizationExpired` consumer both move `authorized`→`cancelled` and publish `OrderCancelled` with a `reason` (`customer`/`auth_expired`); the compensation fan-out is payment/inventory/fulfilment's US-9.3–9.5 consumers | Postgres | cache-aside (order history, US-8.1; TTL 60s) | consumes `payment-events` (`PaymentCaptured`/`PaymentAuthorizationExpired` + capture-decline `PaymentFailed` — **not** `PaymentAuthorized`, learned synchronously instead), `fulfilment-events` (`DispatchConfirmed` and `DispatchFailed` — **built 2026-10-28**, US-17.4/18.3; authorized→dispatched/dispatch_failed only); publishes `order-events` (`OrderConfirmed`/`OrderPaymentFailed`/`OrderCancelled`; `OrderStatusChanged` and `OrderReserved` retired) — one topic per domain + shared envelope, [ADR 0009](./adr/0009-one-kafka-topic-per-domain.md), migrated 2026-10-11 |
-| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique; the per-item endpoint was **removed 2026-10-27, TD-7.5**); US-5.1 done then **retired** with the stock events (TD-7.5). Bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release are the only reservation surface. US-9.4 (**built 2026-11-02**, `order-cancelled-release_20261102`) consumes `order-events: OrderCancelled` and releases reservations — covers auth expiry and customer cancel | Postgres | — | publishes **nothing** (TD-7.5; `inventory-events` has no event types — the `StockReserved`/`StockReservationFailed` artifacts were deleted); consumes `order-events: OrderCancelled` (**built 2026-11-02**, US-9.4) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
+| inventory-service | US-4.1 done (reserve-stock endpoint, atomic conditional UPDATE, sku now unique; the per-item endpoint was **removed 2026-10-27, TD-7.5**); US-5.1 done then **retired** with the stock events (TD-7.5). Bulk all-or-nothing `POST /inventorys/order-reservations` + ledger-backed release are the only reservation surface. US-9.4 (**built 2026-11-02**, `order-cancelled-release_20261102`) consumes `order-events: OrderCancelled` and releases reservations — covers auth expiry and customer cancel | Postgres | — | publishes **nothing** and has no event topic/outbox (TD-7.5, TD-22); consumes `order-events: OrderCancelled` (**built 2026-11-02**, US-9.4) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | payment-service | US-6.1 done 2026-10-02 (consumed `OrderReserved`, created+settled a `Payment` via `PaymentStore`, published `PaymentSettled`/`PaymentFailed`) — **superseded 2026-10-27** by US-14/19/20 (ADR 0011): authorization is a synchronous REST call. US-18.2 (**done 2026-10-28**, `void-authorization_20261028`) consumes `fulfilment-events: DispatchFailed` and voids the held authorization (`Voided` status). US-13.1/13.2 + US-14.1 (**done 2026-10-27**, `checkout-authorize_20261027`) add a `PaymentMethod` store, the gshop-facing `POST /payments/methods`, and `POST /payments/authorize` via `PaymentGatewayClient[F]`'s `simulated` interpreter (PureConfig-driven, per-card-token outcome); the `OrderReserved` consumer and `PaymentSettled` are retired (Rework 7). Capture is async on `fulfilment-events: DispatchConfirmed` (**done 2026-10-28**, `capture-on-dispatch_20261028`: US-19.1); an in-process fixed-delay sweep (**built 2026-11-02**, `auth-expiry-sweep_20261102`: US-20.1) moves due `Authorized` rows to `Voided` (`authorization_expired`) and publishes `PaymentAuthorizationExpired` atomically via the outbox; there is no void REST endpoint, void is an internal gateway call | Postgres | idempotency via `UNIQUE(order_id)` + the conditional `authorized → captured\|voided\|failed` update (US-19.1, done 2026-10-28); no Redis keys | consumes `fulfilment-events` (`DispatchConfirmed` built 2026-10-28 — US-19.1; `DispatchFailed` built 2026-10-28 — US-18.2) and `order-events: OrderCancelled` to void (**built 2026-11-02**, US-9.3); publishes `payment-events` (`PaymentAuthorized` on authorize-success — built 2026-10-27; `PaymentCaptured`/`PaymentFailed` on capture — built 2026-10-28, US-19.1; `PaymentAuthorizationExpired` from the sweep — **built 2026-11-02**, US-20.1) — one topic per domain + shared envelope, ADR 0009, migrated 2026-10-11 |
 | notification-service | US-7.1 done (consumes `OrderConfirmed`/`OrderPaymentFailed`/`OrderCancelled`, sends the matching email); US-16.4 (**done 2026-10-28**, `welcome-email_20261028`) consumes `UserRegistered`; US-17.5/18.4 (**done 2026-10-28**, `fulfilment-emails_20261028`) consume `DispatchConfirmed`/`DispatchFailed` and send the shipped / dispatch-failed emails (stub recipient = orderId); US-19.4 (**done 2026-10-28**, `payment-emails_20261028`) consumes `PaymentCaptured`/`PaymentFailed` and sends the receipt / payment-problem emails (same stub recipient); the `OrderCancelled` consumer and cancellation email exist; per-reason copy (**built 2026-11-02**, `cancellation-copy_20261102`: US-9.9) distinguishes customer/auth_expired/stale/operator, with a neutral fallback for old messages | — | — | consumes `order-events` (`OrderConfirmed`/`OrderPaymentFailed`/`OrderCancelled`), `user-events` (`UserRegistered`), `fulfilment-events` (`DispatchConfirmed`/`DispatchFailed`), `payment-events` (`PaymentCaptured`/`PaymentFailed` — **built 2026-10-28**) |
 | user-service | US-16.1–16.3 (**done 2026-10-28**, `signup-login_20261028`) — `POST /auth/signup`, `POST /auth/login`; PBKDF2 password hashes, opaque 1h access / 30d refresh tokens stored hashed | Postgres (`user`) | — | publishes `user-events` (`UserRegistered`, outbox + Debezium); consumes none |
@@ -106,8 +106,7 @@ endpoint above):
   this on a retry racing its own compensation.
 - `400`: `{"error": "string"}` — empty `items`, non-positive `quantity`,
   duplicate `orderItemId`.
-- Publishes nothing — the `inventory-events` stock-reservation events are
-  retired (see "Payload contracts").
+- Publishes nothing; inventory has no event topic (TD-22).
 
 **`POST /inventorys/order-reservations/{orderId}/release`** (caller:
 order-service — checkout compensation per ADR 0018, later dispatch failure
@@ -276,12 +275,6 @@ topic subscription to filter event types for it.
   `OrderConfirmed`/`OrderPaymentFailed`/`OrderCancelled` (per-outcome split,
   TD-15; checkout failures publish nothing under ADR 0018).
   `OrderStatusChanged` is **retired** (TD-15).
-- **`inventory-events`** — producer: inventory-service, but it publishes
-  nothing. `StockReserved`/`StockReservationFailed` were retired 2026-10-27
-  (TD-7.5) and their registry artifacts deleted — reservation is
-  synchronous and all-or-nothing, and their only consumer (order-service's
-  `StockEventConsumer`) had nothing left to do under ADR 0018. Topic kept
-  for future inventory events.
 - **`payment-events`** — producer: payment-service. Event types:
   `PaymentAuthorized` (built 2026-10-27 — async side effect of the
   synchronous `POST /payments/authorize` succeeding; a decline stays purely
@@ -310,8 +303,7 @@ topic subscription to filter event types for it.
 
 Partition key: each domain's natural entity id — `orderId` for
 `order-events`, `payment-events`, and `fulfilment-events`; `userId` for
-`user-events`. `inventory-events` has no events today (the old `orderItemId`
-key retired with TD-7.5). Retired 2026-10-11: the
+`user-events`. Retired 2026-10-11: the
 six old per-event-type topics (`order.reserved`, `order.status-changed`,
 `inventory.stock-reserved`, `inventory.stock-reservation-failed`,
 `payment.settled`, `payment.failed`) — no producer or consumer anywhere
@@ -370,11 +362,9 @@ keeps its own identical copy of the case class:
 }
 ```
 **`correlationId`** is the domain entity id: `orderId` for `order-events`,
-`payment-events` and `fulfilment-events`, `userId` for `user-events`. The
-old `orderItemId` divergence on `inventory-events` (inventory-service
-deliberately didn't know `orderId`) is moot since TD-7.5 (2026-10-27) —
-the bulk reserve is keyed by `orderId` and inventory-service publishes no
-events.
+`payment-events` and `fulfilment-events`, `userId` for `user-events`.
+inventory-service publishes no events; it consumes `order-events` and its
+bulk reserve is keyed by `orderId`.
 
 A consumer with an `eventType` it doesn't recognize on a topic it
 subscribes to (e.g. payment-service seeing a hypothetical future
@@ -391,28 +381,9 @@ Each live contract names its registry entry as `registry/<producer>/registry.jso
 notes. Update both in the same gluon commit. Retired contracts have no
 registry entry and are kept here for history only.
 
-**`StockReserved`** / **`StockReservationFailed`** — **RETIRED (TD-7,
-2026-10-27)**: no longer published once inventory-service's bulk reserve
-landed; registry artifacts `inventory-events-StockReserved` /
-`inventory-events-StockReservationFailed` were deleted in TD-7.5
-(2026-10-27). Historical shape (same payload for both; producer: inventory-service;
-consumer: order-service):
-```json
-{
-  "orderItemId": "string (UUID) — order-service's order_items.id, echoed verbatim from the former POST /inventorys/reservations request; opaque to inventory-service",
-  "sku": "string",
-  "quantity": "int — the amount just reserved (success) or that failed to reserve (failure)",
-  "timestamp": "string (ISO-8601 instant)"
-}
-```
-Correlation is by `orderItemId`, not `sku` — sku-only correlation couldn't
-tell apart two different orders (or two line items in the same order)
-reserving the same sku concurrently (see "Open design questions" below).
-
-`StockReservationFailed` is only published for a genuine stock outcome
-(insufficient stock) — not for a caller-input error (unknown sku,
-non-positive quantity), which inventory-service rejects synchronously via
-its HTTP response instead.
+**`StockReserved`** / **`StockReservationFailed`** — **RETIRED (TD-7.5);
+topic, outbox and connector removed by TD-22.** Historical only; no payload
+contract remains.
 
 **`OrderReserved`** — **RETIRED (ADR 0018, 2026-10-27)**: with no
 `pending` orders the transition that published it never happens, and it
@@ -495,8 +466,7 @@ Rework 4. order-service and payment-service write a row to their own
 `outbox_events` table in the same Postgres transaction as the state change;
 a Debezium connector routes it onto the domain topic. There is no direct
 producer call and no hand-rolled retry to reason about. inventory-service
-no longer writes outbox rows at all (TD-7.5, publishes nothing); its table
-and connector remain inert.
+publishes nothing and has no outbox/connector (TD-22).
 
 **`PaymentFailed`** (producer: payment-service, capture-decline only;
 consumers: order-service; notification-service **built 2026-10-28**,

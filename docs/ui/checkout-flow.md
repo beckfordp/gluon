@@ -1,6 +1,6 @@
 # Checkout Flow — UI Spec (Reserve → Pay)
 
-> **Superseded 2026-10-26.** This draft predates gshop and the synchronous
+> **Superseded — legacy design record (pre-ADR-0018) 2026-10-26.** This draft predates gshop and the synchronous
 > authorize decision. Checkout now collects shipping/billing address and a
 > payment method, then calls `POST /orders` once; reservation and
 > authorization are both synchronous and the response is final
@@ -54,7 +54,7 @@ check passed).
   re-reservation — a failed order is terminal; the customer starts a new
   checkout).
 - This screen is NOT the US-10 timeout placeholder — it's a real, already-
-  built backend outcome (`OrderStatus.ReservationFailed`, live today).
+  built backend outcome (`OrderStatus.ReservationFailed`, **retired by TD-21** — historical only).
 
 ### 3. Payment
 Shown once polling observes `status: Reserved`. Out of scope for this spec's

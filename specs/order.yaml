@@ -9,6 +9,6 @@ fields:
     visibility: create-only
   - name: status
     type: String
-    example: "pending"
+    example: "authorized"
     visibility: server-defaulted
-    default: "pending"
+    default: "authorized"

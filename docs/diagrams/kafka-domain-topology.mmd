@@ -12,7 +12,6 @@ flowchart LR
 
     subgraph topics["Kafka domain topics<br/>(one topic per domain + shared envelope)"]
         OE[("order-events")]
-        IE[("inventory-events<br/>(no event types)")]
         PE[("payment-events")]
         FE[("fulfilment-events")]
         UE[("user-events")]
@@ -49,13 +48,13 @@ flowchart LR
     SWEEP -->|"PaymentAuthorizationExpired<br/>(outbox/Debezium)"| PE
     PE -->|"PaymentAuthorizationExpired"| O
 
-    NOTE["All edges shown are built.<br/>Order events are per-outcome (TD-15); order-service learns authorize synchronously, not from PaymentAuthorized.<br/>inventory-service publishes nothing (inventory-events has no event types) but consumes OrderCancelled to release reservations.<br/>OrderCancelled is US-9's shared fan-out: payment void, inventory release, fulfilment abort, notification copy.<br/>Dispatch outcomes stay on fulfilment-events and are not mirrored into order-events.<br/>catalog-service and cart-service publish nothing and are omitted."]
+    NOTE["All edges shown are built.<br/>Order events are per-outcome (TD-15); order-service learns authorize synchronously, not from PaymentAuthorized.<br/>inventory-service publishes nothing (no event topic, TD-22) but consumes OrderCancelled to release reservations.<br/>OrderCancelled is US-9's shared fan-out: payment void, inventory release, fulfilment abort, notification copy.<br/>Dispatch outcomes stay on fulfilment-events and are not mirrored into order-events.<br/>catalog-service and cart-service publish nothing and are omitted."]
 
     classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef topic fill:#fff5ad,stroke:#FACC15,stroke-width:2px
     classDef notbuilt fill:#fff7ed,stroke:#b45309,stroke-width:2px,stroke-dasharray:5 4
     classDef note fill:#f4f4f4,stroke:#999999
     class O,I,P,F,N,U service
-    class OE,IE,PE,FE,UE topic
+    class OE,PE,FE,UE topic
     class SWEEP service
     class NOTE note

@@ -30,3 +30,4 @@ target/
 .bsp/
 .metals/
 .bloop/
+.seed-demo-data.state.json

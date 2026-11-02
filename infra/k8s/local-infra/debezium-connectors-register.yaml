@@ -1,4 +1,4 @@
-# Registers the three per-service outbox connectors against the Kafka
+# Registers the four per-service outbox connectors against the Kafka
 # Connect worker (kafka-connect.yaml) via its REST API - Debezium has no
 # manifest-based way to declare a connector, only POST /connectors, so a
 # one-shot Job does it instead. Re-running `kubectl apply` won't
@@ -28,28 +28,6 @@ data:
       "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
       "transforms.outbox.route.by.field": "aggregate_id",
       "transforms.outbox.route.topic.replacement": "order-events",
-      "transforms.outbox.table.field.event.key": "aggregate_id",
-      "transforms.outbox.table.field.event.payload": "payload",
-      "transforms.outbox.table.expand.json.payload": "false",
-      "transforms.outbox.table.fields.additional.placement": "trace_parent:header,correlation_id:header"
-    }
-  inventory-outbox-connector.json: |
-    {
-      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-      "database.hostname": "inventory-postgres",
-      "database.port": "5432",
-      "database.user": "inventory",
-      "database.password": "inventory",
-      "database.dbname": "inventory",
-      "topic.prefix": "inventory-outbox",
-      "plugin.name": "pgoutput",
-      "slot.name": "debezium_inventory",
-      "publication.autocreate.mode": "filtered",
-      "table.include.list": "public.outbox_events",
-      "transforms": "outbox",
-      "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
-      "transforms.outbox.route.by.field": "aggregate_id",
-      "transforms.outbox.route.topic.replacement": "inventory-events",
       "transforms.outbox.table.field.event.key": "aggregate_id",
       "transforms.outbox.table.field.event.payload": "payload",
       "transforms.outbox.table.expand.json.payload": "false",
@@ -178,6 +156,17 @@ spec:
                   "http://kafka-connect:8083/connectors/$name/config"
                 echo
               done
+
+              # TD-22: inventory no longer publishes; remove its retired
+              # connector from existing clusters. 404 means already gone.
+              echo "Removing retired inventory-outbox-connector..."
+              code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                -X DELETE \
+                "http://kafka-connect:8083/connectors/inventory-outbox-connector")
+              if [ "$code" != "204" ] && [ "$code" != "404" ]; then
+                echo "FAIL: deleting inventory-outbox-connector returned $code" >&2
+                exit 1
+              fi
           volumeMounts:
             - name: connectors
               mountPath: /connectors

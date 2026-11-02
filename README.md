@@ -41,6 +41,19 @@ gluon/
 order-service · inventory-service · payment-service · notification-service ·
 catalog-service · cart-service · user-service
 
+## Demo data (local only)
+
+`bin/seed-demo-data` creates three demo customers (`ada.demo@example.com`,
+`grace.demo@example.com`, `alan.demo@example.com`, password
+`demo-password-1`) and six orders across the live states (authorized with
+PENDING/PICKING fulfilment, confirmed, cancelled, payment_failed,
+dispatch_failed). It uses only public APIs, keeps a local state manifest for
+idempotent reruns, and supports `--reset`.
+
+Prerequisite: `services/catalog-service/scripts/seed-watches.sh` (seeds the
+catalog and inventory stock). **Demo only — never run against a shared or
+production environment.**
+
 ## Frontend applications
 
 `gshop` — the first frontend app, walking the shopping workflow (browse
@@ -79,10 +92,10 @@ field model; generate the bare scaffold and rework it, see its backlog).
 `Boolean`/`Instant` — no enum type. Convention: spec it as `String`, then add
 a backlog item (in that repo's own backlog file) to harden it into a real
 Scala enum + Postgres check/enum type post-generation, with the actual value
-set spelled out. Applied to `order.status` ({pending, reserved,
-reservation_failed, confirmed, payment_failed}, `order-service`'s
-`OrderStatus`) and `payment.status` ({pending, settled, failed},
-`payment-service`'s `PaymentStatus`) — both done.
+set spelled out. Applied to `order.status` (`{authorized, confirmed,
+payment_failed, cancelled, dispatched, dispatch_failed}`, `order-service`'s
+`OrderStatus`) and `payment.status` (`{pending, authorized, captured, failed,
+voided}`, `payment-service`'s `PaymentStatus`) — both done.
 
 **Nested/collection fields:** also not codegen-able (flat scalars only) — a
 `lineItems: List[...]`-shaped field can't be spec'd at all. Convention: leave

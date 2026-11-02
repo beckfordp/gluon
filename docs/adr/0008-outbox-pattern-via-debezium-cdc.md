@@ -177,3 +177,12 @@ level** instead (connector lag, task health — see ADR 0010's own scope).
 `purekafka`'s consumer-side resilience/observability (stream supervision,
 DLQ, trace extraction from headers) is unaffected — consumption doesn't
 change under this ADR.
+
+## Amendment — 2026-11-02 (TD-22)
+
+inventory-service no longer publishes events. TD-7.5 retired its stock
+events, and TD-22 removed the now-inert `outbox_events` table, Debezium
+connector, cleanup CronJob and `inventory-events` topic. The outbox pattern
+now applies to four producing services: order-service, payment-service,
+fulfilment-service and user-service. The original decision text above is
+kept as history.

@@ -51,7 +51,7 @@ flowchart LR
     K -->|"consumes<br/>(fan-out in kafka diagram)"| N
     SWEEP -->|"PaymentAuthorizationExpired"| K
 
-    NOTE["All edges shown are built.<br/>Event types and the full consumer fan-out are in kafka-domain-topology.svg.<br/>inventory-service publishes nothing, so inventory-events has no event types.<br/>Checkout failures create no order row and publish nothing (ADR 0018).<br/>Capture PaymentFailed writes order_reconciliation and does not release inventory;<br/>DispatchFailed releases inventory. Dispatch outcomes are not mirrored into order-events.<br/>OrderCancelled (US-9) fans out to payment (void), inventory (release), fulfilment (abort) and notification."]
+    NOTE["All edges shown are built.<br/>Event types and the full consumer fan-out are in kafka-domain-topology.svg.<br/>inventory-service publishes nothing and has no event topic (TD-22).<br/>Checkout failures create no order row and publish nothing (ADR 0018).<br/>Capture PaymentFailed writes order_reconciliation and does not release inventory;<br/>DispatchFailed releases inventory. Dispatch outcomes are not mirrored into order-events.<br/>OrderCancelled (US-9) fans out to payment (void), inventory (release), fulfilment (abort) and notification."]
 
     classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef store fill:#eef2ff,stroke:#4f46e5,stroke-width:2px

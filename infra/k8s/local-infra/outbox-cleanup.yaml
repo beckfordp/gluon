@@ -42,43 +42,6 @@ spec:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: inventory-outbox-cleanup
-  namespace: gluon-local
-spec:
-  schedule: "0 * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          restartPolicy: OnFailure
-          containers:
-            - name: cleanup
-              image: postgres:16-alpine
-              # Laptop budget (gluon PLAN.md, PERF-2.3): memory request = limit.
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 64Mi
-                limits:
-                  cpu: 100m
-                  memory: 64Mi
-              env:
-                - name: PGPASSWORD
-                  value: "inventory"
-              command:
-                - psql
-                - -h
-                - inventory-postgres
-                - -U
-                - inventory
-                - -d
-                - inventory
-                - -c
-                - "DELETE FROM outbox_events WHERE created_at < now() - interval '1 hour'"
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
   name: payment-outbox-cleanup
   namespace: gluon-local
 spec:

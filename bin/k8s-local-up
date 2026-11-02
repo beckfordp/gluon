@@ -63,6 +63,14 @@ kubectl wait --for=condition=complete job/debezium-connector-register -n "$NAMES
   echo "WARN: connector registration didn't complete in time — check 'kubectl logs job/debezium-connector-register -n $NAMESPACE'" >&2
 }
 
+# TD-22: inventory-service publishes nothing. The connector is deleted by the
+# register Job; prune the retired CronJob/topic from existing clusters too.
+echo "== Removing retired inventory-events plumbing =="
+kubectl delete cronjob inventory-outbox-cleanup -n "$NAMESPACE" --ignore-not-found
+kubectl exec -n "$NAMESPACE" deploy/kafka -- \
+  /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+  --delete --topic inventory-events --if-exists >/dev/null 2>&1 || true
+
 for svc in "${SERVICES[@]}"; do
   SERVICE_DIR="$GLUON_DIR/services/$svc"
   VALUES_FILE="$GLUON_DIR/environments/local/$svc.values.yaml"

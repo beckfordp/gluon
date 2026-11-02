@@ -25,14 +25,11 @@ flowchart LR
     CANCELLED --> END
     DISPATCH_FAILED --> END
 
-    LEGACY["pending · reserved · reservation_failed<br/>(legacy load-only; never written by current code)"]
     NOTE["All transitions shown are built.<br/>Checkout failures return 400/402/409/503, create no order row and send no email (ADR 0018).<br/>Capture outcome may overtake DispatchConfirmed: PaymentCaptured/PaymentFailed are accepted from authorized or dispatched.<br/>Customer cancellation and authorization expiry share the same OrderCancelled fan-out (US-9)."]
 
     classDef built fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef terminal fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
-    classDef legacy fill:#f4f4f4,stroke:#999999,stroke-dasharray:5 4
     classDef note fill:#f4f4f4,stroke:#999999
     class AUTHORIZED,DISPATCHED built
     class CONFIRMED,PAYMENT_FAILED,CANCELLED,DISPATCH_FAILED terminal
-    class LEGACY legacy
     class NOTE note

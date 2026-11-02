@@ -1025,6 +1025,11 @@ read models and triggers the real console needs.
 - [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
       script covering ledger release, email history, operator cancel and
       simulated expiry
+- [x] DEMO-1 — `bin/seed-demo-data`: idempotent API-driven demo customers
+      (Ada/Grace/Alan) and six orders across authorized+PENDING,
+      authorized+PICKING, confirmed, cancelled, payment_failed and
+      dispatch_failed; `--reset` recreates them. Demo-only, never
+      production.
 
 **Stub / fan-out:** the mock store (`workflowDemo.ts`) stays as the
 offline/UI-test path while each real endpoint lands; its shapes mirror the
@@ -1319,7 +1324,7 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
 - [ ] PERF-5.3 — Tempo in `local-infra`; Grafana data source with
       trace → Kibana link by `trace_id` and exemplars on latency panels
 - [ ] PERF-5.4 — write the active `traceparent` into `outbox_events.trace_parent`
-      in all five producing services (order, payment, inventory,
+      in all four producing services (order, payment,
       fulfilment, user); shared helper in purekafka so it's one call
 - [ ] PERF-5.5 — every Kafka consumer wraps handling in
       `KafkaTracing.traced` so the consumer span joins the producer's trace

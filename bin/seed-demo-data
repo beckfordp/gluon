@@ -1,0 +1,357 @@
+#!/usr/bin/env bash
+# DEMO ONLY. Seeds gshop's demo customers and orders through the services'
+# public APIs, the same style as catalog-service's scripts/seed-watches.sh.
+# Never run this against a shared/production environment.
+#
+# Creates three customers and six orders covering the live order states:
+# authorized+PENDING, authorized+PICKING, confirmed, cancelled,
+# payment_failed and dispatch_failed. Requires the catalog seed (which also
+# backfills inventory stock) and local fulfilment simulation.
+#
+# Usage: ./bin/seed-demo-data [--reset]
+#   --reset  release/delete the orders recorded in the state manifest, then
+#            recreate them (payment/fulfilment leftovers are noted).
+#
+# State is kept in .seed-demo-data.state.json at the repo root (gitignored)
+# because order-service's history list is Redis-cached and cannot be used for
+# existence checks immediately after seeding.
+set -euo pipefail
+
+GLUON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STATE_FILE="$GLUON_DIR/.seed-demo-data.state.json"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+USER_URL="${USER_URL:-http://user-service.gluon-local.svc.cluster.local:8080}"
+CATALOG_URL="${CATALOG_URL:-http://catalog-service.gluon-local.svc.cluster.local:8080}"
+INVENTORY_URL="${INVENTORY_URL:-http://inventory-service.gluon-local.svc.cluster.local:8080}"
+PAYMENT_URL="${PAYMENT_URL:-http://payment-service.gluon-local.svc.cluster.local:8080}"
+ORDER_URL="${ORDER_URL:-http://order-service.gluon-local.svc.cluster.local:8080}"
+FULFILMENT_URL="${FULFILMENT_URL:-http://fulfilment-service.gluon-local.svc.cluster.local:8080}"
+
+PASSWORD="demo-password-1"
+ADDRESS='{"line1":"1 Demo Street","city":"London","postalCode":"EC1A 1BB","country":"GB"}'
+
+RESET=0
+for arg in "$@"; do
+  case "$arg" in
+    --reset) RESET=1 ;;
+    -h|--help)
+      sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) echo "Unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+
+init_state() {
+  [ -f "$STATE_FILE" ] || echo '{"customers":{},"orders":{}}' > "$STATE_FILE"
+}
+
+state_get() { # kind key
+  python3 - "$STATE_FILE" "$1" "$2" <<'PY'
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+except (OSError, json.JSONDecodeError):
+    data = {}
+print(data.get(sys.argv[2], {}).get(sys.argv[3], ""))
+PY
+}
+
+state_set() { # kind key value
+  python3 - "$STATE_FILE" "$1" "$2" "$3" <<'PY'
+import json, sys
+path, kind, key, value = sys.argv[1:5]
+try:
+    data = json.load(open(path))
+except (OSError, json.JSONDecodeError):
+    data = {}
+data.setdefault(kind, {})[key] = value
+tmp = path + ".tmp"
+with open(tmp, "w") as f:
+    json.dump(data, f, indent=2, sort_keys=True)
+    f.write("\n")
+import os
+os.replace(tmp, path)
+PY
+}
+
+post_json() { # url body outfile
+  curl -sS -o "$3" -w '%{http_code}' -X POST "$1" \
+    -H 'Content-Type: application/json' -d "$2"
+}
+
+get_json() { # url outfile
+  curl -sS -o "$2" -w '%{http_code}' "$1"
+}
+
+json_field() { # file key
+  python3 - "$1" "$2" <<'PY'
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))
+except (OSError, json.JSONDecodeError):
+    print("")
+PY
+}
+
+fail() { echo "FAIL: $1" >&2; exit 1; }
+
+ensure_customer() { # name email -> userId on stdout
+  local name="$1" email="$2" id status
+  id="$(state_get customers "$name")"
+  if [ -n "$id" ]; then echo "$id"; return; fi
+
+  status="$(post_json "$USER_URL/auth/signup" \
+    "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}" "$TMP_DIR/signup.json")"
+  case "$status" in
+    201) id="$(json_field "$TMP_DIR/signup.json" userId)" ;;
+    409)
+      status="$(post_json "$USER_URL/auth/login" \
+        "{\"email\":\"$email\",\"password\":\"$PASSWORD\"}" "$TMP_DIR/login.json")"
+      [ "$status" = "200" ] || fail "login failed for $email (HTTP $status)"
+      id="$(json_field "$TMP_DIR/login.json" userId)"
+      ;;
+    *) fail "signup failed for $email (HTTP $status)" ;;
+  esac
+  [ -n "$id" ] || fail "no userId returned for $email"
+  state_set customers "$name" "$id"
+  echo "$id"
+}
+
+ensure_payment_method() { # customer card -> paymentMethodId
+  local customer="$1" card="$2" status
+  status="$(post_json "$PAYMENT_URL/payments/methods" \
+    "{\"customerId\":\"$customer\",\"cardNumber\":\"$card\",\"expiry\":\"12/30\",\"billingAddress\":$ADDRESS}" \
+    "$TMP_DIR/pm.json")"
+  [ "$status" = "201" ] || fail "payment method failed (HTTP $status)"
+  json_field "$TMP_DIR/pm.json" id
+}
+
+ensure_order() { # key customer card sku name priceCents -> orderId
+  local key="$1" customer="$2" card="$3" sku="$4" name="$5" price="$6"
+  local existing status pm id
+  existing="$(state_get orders "$key")"
+  if [ -n "$existing" ]; then
+    status="$(curl -sS -o /dev/null -w '%{http_code}' "$ORDER_URL/orders/$existing")"
+    if [ "$status" = "200" ]; then
+      echo "$existing"
+      return
+    fi
+  fi
+
+  pm="$(ensure_payment_method "$customer" "$card")"
+  local body
+  body="$(python3 - "$customer" "$sku" "$name" "$price" "$pm" "$ADDRESS" <<'PY'
+import json, sys
+customer, sku, name, price, pm, address = sys.argv[1:7]
+print(json.dumps({
+    "customerId": customer,
+    "items": [{"sku": sku, "productName": name,
+               "unitPriceCents": int(price), "quantity": 1}],
+    "shippingAddress": json.loads(address),
+    "paymentMethodId": pm,
+}))
+PY
+)"
+  status="$(post_json "$ORDER_URL/orders" "$body" "$TMP_DIR/order.json")"
+  [ "$status" = "201" ] || {
+    cat "$TMP_DIR/order.json" >&2
+    fail "order $key failed (HTTP $status)"
+  }
+  id="$(json_field "$TMP_DIR/order.json" id)"
+  [ -n "$id" ] || fail "no order id for $key"
+  state_set orders "$key" "$id"
+  echo "$id"
+}
+
+wait_for_task() { # orderId
+  local id="$1" body
+  for _ in $(seq 1 40); do
+    body="$(curl -sf "$FULFILMENT_URL/fulfilment-tasks?state=PENDING" || true)"
+    echo "$body" | grep -q "$id" && return 0
+    sleep 1
+  done
+  fail "no PENDING fulfilment task for $id"
+}
+
+advance() { # orderId [body]
+  local id="$1" body="${2:-}" status
+  [ -n "$body" ] || body='{}'
+  status="$(post_json "$FULFILMENT_URL/fulfilment-tasks/$id/simulate-next" "$body" "$TMP_DIR/next.json")"
+  [ "$status" = "200" ] || {
+    cat "$TMP_DIR/next.json" >&2
+    fail "simulate-next failed for $id (HTTP $status); is FULFILMENT_SIMULATION_ENABLED=true?"
+  }
+}
+
+order_status() {
+  curl -sf "$ORDER_URL/orders/$1" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("status",""))'
+}
+
+wait_for_status() { # orderId expected
+  local id="$1" expected="$2" current
+  for _ in $(seq 1 40); do
+    current="$(order_status "$id" || true)"
+    [ "$current" = "$expected" ] && return 0
+    sleep 1
+  done
+  fail "order $id never became $expected (is '${current:-unknown}')"
+}
+
+cancel_order() {
+  curl -sS -o "$TMP_DIR/cancel.json" -w '%{http_code}' -X PATCH \
+    "$ORDER_URL/orders/$1" -H 'Content-Type: application/json' \
+    -d '{"status":"cancelled"}'
+}
+
+release_order() {
+  curl -s -o /dev/null -X POST \
+    "$INVENTORY_URL/inventorys/order-reservations/$1/release" || true
+}
+
+reset_state() {
+  [ -f "$STATE_FILE" ] || return 0
+  local ids id status
+  ids="$(python3 - "$STATE_FILE" <<'PY'
+import json, sys
+try:
+    print("\n".join(json.load(open(sys.argv[1])).get("orders", {}).values()))
+except (OSError, json.JSONDecodeError):
+    pass
+PY
+)"
+  for id in $ids; do
+    [ -n "$id" ] || continue
+    status="$(order_status "$id" || true)"
+    case "$status" in
+      authorized) [ "$(cancel_order "$id")" = "200" ] || true ;;
+    esac
+    release_order "$id"
+    curl -s -o /dev/null -X DELETE "$ORDER_URL/orders/$id" || true
+  done
+  rm -f "$STATE_FILE"
+  echo "Reset recorded orders. Payment rows/fulfilment tasks are left behind (no delete/event on hard delete)."
+}
+
+echo "== DEMO ONLY: seeding gshop customers and orders =="
+echo "This writes real local-cluster data (customers, payments, orders, stock)."
+init_state
+
+if [ "$RESET" -eq 1 ]; then
+  reset_state
+fi
+
+# Pick six stocked SKUs from the catalog/inventory seed.
+curl -sf "$INVENTORY_URL/inventorys" > "$TMP_DIR/inventory.json" || fail "inventory list failed"
+curl -sf "$CATALOG_URL/catalogs?limit=100" > "$TMP_DIR/catalog.json" || fail "catalog list failed (run catalog-service scripts/seed-watches.sh first)"
+python3 - "$TMP_DIR/inventory.json" "$TMP_DIR/catalog.json" <<'PY' > "$TMP_DIR/skus.tsv"
+import json, sys
+inventory = json.load(open(sys.argv[1]))
+catalog = {c["sku"]: c for c in json.load(open(sys.argv[2]))}
+chosen = []
+for item in inventory:
+    sku = item.get("sku")
+    if sku in catalog and item.get("quantityAvailable", 0) > 0 and sku not in [c[0] for c in chosen]:
+        chosen.append((sku, catalog[sku]["name"], catalog[sku]["priceCents"]))
+    if len(chosen) == 6:
+        break
+if len(chosen) < 6:
+    sys.exit("need at least 6 stocked catalog SKUs; run catalog-service scripts/seed-watches.sh")
+for sku, name, price in chosen:
+    print(f"{sku}\t{name}\t{price}")
+PY
+
+SKUS=(); NAMES=(); PRICES=()
+while IFS=$'\t' read -r sku name price; do
+  [ -n "$sku" ] || continue
+  SKUS+=("$sku"); NAMES+=("$name"); PRICES+=("$price")
+done < "$TMP_DIR/skus.tsv"
+[ "${#SKUS[@]}" -eq 6 ] || fail "not enough stocked SKUs"
+SKU1="${SKUS[0]}"; NAME1="${NAMES[0]}"; PRICE1="${PRICES[0]}"
+SKU2="${SKUS[1]}"; NAME2="${NAMES[1]}"; PRICE2="${PRICES[1]}"
+SKU3="${SKUS[2]}"; NAME3="${NAMES[2]}"; PRICE3="${PRICES[2]}"
+SKU4="${SKUS[3]}"; NAME4="${NAMES[3]}"; PRICE4="${PRICES[3]}"
+SKU5="${SKUS[4]}"; NAME5="${NAMES[4]}"; PRICE5="${PRICES[4]}"
+SKU6="${SKUS[5]}"; NAME6="${NAMES[5]}"; PRICE6="${PRICES[5]}"
+
+ADA="$(ensure_customer ada ada.demo@example.com)"
+GRACE="$(ensure_customer grace grace.demo@example.com)"
+ALAN="$(ensure_customer alan alan.demo@example.com)"
+echo "Customers: ada=$ADA grace=$GRACE alan=$ALAN"
+
+APPROVE="4242424242424242"
+CAPTURE_DECLINE="5555555555554444"
+
+is_existing() { [ -n "$1" ] && [ "$2" = "$1" ]; }
+
+PREV="$(state_get orders ada-authorized)"
+AUTHORIZED="$(ensure_order ada-authorized "$ADA" "$APPROVE" "$SKU1" "$NAME1" "$PRICE1")"
+if is_existing "$PREV" "$AUTHORIZED"; then
+  echo "  ada-authorized: already seeded"
+else
+  wait_for_task "$AUTHORIZED"
+  echo "  ada-authorized: authorized + PENDING"
+fi
+
+PREV="$(state_get orders grace-picking)"
+PICKING="$(ensure_order grace-picking "$GRACE" "$APPROVE" "$SKU2" "$NAME2" "$PRICE2")"
+if is_existing "$PREV" "$PICKING"; then
+  echo "  grace-picking: already seeded"
+else
+  wait_for_task "$PICKING"
+  advance "$PICKING"
+  echo "  grace-picking: authorized + PICKING"
+fi
+
+PREV="$(state_get orders alan-confirmed)"
+CONFIRMED="$(ensure_order alan-confirmed "$ALAN" "$APPROVE" "$SKU3" "$NAME3" "$PRICE3")"
+if is_existing "$PREV" "$CONFIRMED"; then
+  echo "  alan-confirmed: already seeded"
+else
+  wait_for_task "$CONFIRMED"
+  advance "$CONFIRMED"; advance "$CONFIRMED"; advance "$CONFIRMED"
+  wait_for_status "$CONFIRMED" confirmed
+  echo "  alan-confirmed: confirmed"
+fi
+
+PREV="$(state_get orders ada-cancelled)"
+CANCELLED="$(ensure_order ada-cancelled "$ADA" "$APPROVE" "$SKU4" "$NAME4" "$PRICE4")"
+if is_existing "$PREV" "$CANCELLED"; then
+  echo "  ada-cancelled: already seeded"
+else
+  wait_for_task "$CANCELLED"
+  [ "$(cancel_order "$CANCELLED")" = "200" ] || fail "cancel failed for $CANCELLED"
+  wait_for_status "$CANCELLED" cancelled
+  echo "  ada-cancelled: cancelled"
+fi
+
+PREV="$(state_get orders grace-payment-failed)"
+PAYMENT_FAILED="$(ensure_order grace-payment-failed "$GRACE" "$CAPTURE_DECLINE" "$SKU5" "$NAME5" "$PRICE5")"
+if is_existing "$PREV" "$PAYMENT_FAILED"; then
+  echo "  grace-payment-failed: already seeded"
+else
+  wait_for_task "$PAYMENT_FAILED"
+  advance "$PAYMENT_FAILED"; advance "$PAYMENT_FAILED"; advance "$PAYMENT_FAILED"
+  wait_for_status "$PAYMENT_FAILED" payment_failed
+  echo "  grace-payment-failed: payment_failed"
+fi
+
+PREV="$(state_get orders alan-dispatch-failed)"
+DISPATCH_FAILED="$(ensure_order alan-dispatch-failed "$ALAN" "$APPROVE" "$SKU6" "$NAME6" "$PRICE6")"
+if is_existing "$PREV" "$DISPATCH_FAILED"; then
+  echo "  alan-dispatch-failed: already seeded"
+else
+  wait_for_task "$DISPATCH_FAILED"
+  advance "$DISPATCH_FAILED" '{"forceFailure":true,"reason":"Demo warehouse failure"}'
+  wait_for_status "$DISPATCH_FAILED" dispatch_failed
+  echo "  alan-dispatch-failed: dispatch_failed"
+fi
+
+echo
+echo "Demo data ready. Sign in in gshop with:"
+echo "  ada.demo@example.com / demo-password-1"
+echo "  grace.demo@example.com / demo-password-1"
+echo "  alan.demo@example.com / demo-password-1"
+echo "Orders: $AUTHORIZED $PICKING $CONFIRMED $CANCELLED $PAYMENT_FAILED $DISPATCH_FAILED"
+echo "Rerun skips orders recorded in $STATE_FILE; use --reset to recreate them."
