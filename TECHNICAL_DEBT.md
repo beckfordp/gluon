@@ -865,3 +865,120 @@ are ordinary tapir builder calls, not annotations.
       convention next to the event one. The REST contracts section now
       points at purerest's "Documenting endpoints", the per-service docs
       test and `scripts/verify-rest-docs.sh`.
+
+---
+
+## TD-21 — Retire the legacy order states `pending` / `reserved` / `reservation_failed`
+
+ADR 0018 made order creation synchronous: reserve and authorize happen before
+any order row exists, and every new order is persisted as `authorized`.
+`pending`, `reserved` and `reservation_failed` are still accepted by
+`OrderStatus`, the gshop `OrderStatus` union and the `order_status_check`
+constraint, and they still appear in comments, examples and docs — but
+nothing writes them. They are read-only compatibility baggage from before
+ADR 0018.
+
+### Tasks
+- [ ] TD-21.1: order-service — remove `Pending`, `Reserved` and
+      `ReservationFailed` from `OrderStatus`, `fromString`, lifecycle tests
+      and every transition/doc example; keep only the states current code
+      produces.
+- [ ] TD-21.2: order-service migration — decide and implement the data path
+      for any existing legacy rows (delete them, or map to `cancelled` with a
+      documented reason), then add `V13__retire_legacy_order_statuses.sql`
+      to narrow `order_status_check` to the remaining values (do not edit the
+      historical V2/V6/V8/V9/V10/V11 migrations). Sequence the migration
+      before/with the enum removal so legacy rows cannot fail to decode.
+      Prove no current code path can write a retired value.
+- [ ] TD-21.3: cross-repo reference audit — search every service repo and
+      gshop for `pending`, `reserved`, `reservation_failed` in code comments,
+      Scaladoc, tapir `@description`/`@encodedExample` annotations, generated
+      OpenAPI/AsyncAPI docs/tests, READMEs, product/tech-stack docs and
+      scripts. Replace current-state references with legitimate states;
+      keep genuinely historical records (CHANGELOG, archived tracks, git
+      history) only where clearly marked as legacy.
+
+      Audit snapshot 2026-11-02 (live sources only; excludes `target/`,
+      `archive/`, `.git/` and the generated registry):
+      - **order-service**: `OrderStatus.scala`; `OrderStatusSuite`,
+        `OrderLifecycleSuite`, `OrderStoreSuite`,
+        `OrderStorePostgresSuite`, `PaymentEventConsumerSuite`,
+        `MigrationsSuite`, `OrderHistoryCacheSuite`; `README.md` example
+        body uses `reserved`; `conductor/product.md` describes the old
+        status set; old migrations V2/V6/V8/V9/V10/V11 keep the values
+        historically.
+      - **notification-service**: `conductor/product.md` still describes the
+        retired `OrderStatusChanged` contract and `reservation_failed`.
+      - **gshop**: `services/orderClient.ts` `OrderStatus` union;
+        `lib/format.test.ts` and Order History/Confirmation tests; any
+        fixtures/examples using the retired values.
+      - **docs**: `system-design.md` legacy note, `order-lifecycle.mmd` /
+        `order-state-model.mmd` legacy note, PLAN/user-story historical
+        mentions (keep only where clearly historical).
+      - **Do not touch** `payment-service`'s `pending` payment status or
+        `fulfilment-service`'s `PENDING` fulfilment state — those are live
+        states in their own domains, not the retired order states.
+- [ ] TD-21.4: gshop — drop the three values from the `OrderStatus` union and
+      any fixtures/formatting tests; confirm Order History/status rendering
+      only ever sees live states. Update the acceptance out-of-scope/coverage
+      entries if they reference the retired values.
+- [ ] TD-21.5: docs/diagrams — remove the legacy-state note from the order
+      state/lifecycle diagrams and `system-design.md`; re-render the SVGs.
+- [ ] TD-21.6: verification — a repo-wide search shows no live reference to
+      the retired states; all service suites, gshop tests, schema registry
+      checks and the local E2E scripts pass; a fresh migration proves the
+      narrowed constraint.
+
+---
+
+## TD-22 — Retire the `inventory-events` producer plumbing
+
+TD-7.5 retired the `StockReserved`/`StockReservationFailed` artifacts; the
+`inventory-events` topic has had no event types since, and inventory-service
+publishes nothing. The remaining producer infrastructure is inert:
+`inventory.outbox_events` is never written, the Debezium
+`inventory-outbox-connector` streams an empty table, and the
+`inventory-outbox-cleanup` CronJob cleans an unused table.
+
+There is no current consumer or foreseeable product need: the reservation
+ledger is the source of truth and is queried directly, there is no inventory
+cache to invalidate, and admin/notification flows are driven by
+`order-events`. A future inventory event (low-stock alert, analytics, live
+admin dashboard) should reintroduce a domain topic only with a concrete
+consumer, not keep dormant plumbing around. Retire it.
+
+### Tasks
+- [ ] TD-22.1: infra — remove `inventory-outbox-connector` from
+      `infra/k8s/local-infra/debezium-connectors-register.yaml` and remove
+      the `inventory-outbox-cleanup` CronJob from `outbox-cleanup.yaml`;
+      update `bin/k8s-local-up`'s connector expectations and delete the
+      local connector plus the `inventory-events` topic.
+- [ ] TD-22.2: inventory-service — add a Flyway migration dropping the
+      unused `outbox_events` table; remove the `MigrationsSuite` outbox
+      assertions and stale outbox/`StockReserved` references in its README
+      and conductor product docs. Keep the `OrderCancelled` consumer and
+      its own DLQ — that is a different path.
+- [ ] TD-22.3: contracts/docs — remove `inventory-events` from
+      `system-design.md`'s topic list and service row, the Kafka topology
+      and fulfilment-topology diagrams, and ADR 0008/TD-3.3's
+      outbox-service lists. The registry already has no inventory
+      artifacts.
+- [ ] TD-22.4: acceptance/precheck — drop `inventory-outbox-connector`
+      from `tests/acceptance/src/precheck.ts`; update the README's "five
+      connectors" wording; delete or replace
+      `services/inventory-service/scripts/verify-stock-events-retired.sh`
+      with a check that the connector/topic/table are absent.
+- [ ] TD-22.5: verification — a repo-wide search shows no live
+      `inventory-events`/`inventory-outbox-connector` references; service
+      suites, acceptance precheck and the local E2E scripts pass; the
+      inventory migrations still apply cleanly.
+
+Audit snapshot 2026-11-02 (live sources only; excludes `target/`, `archive/`
+and `.git/`): `infra/k8s/local-infra/debezium-connectors-register.yaml`,
+`infra/k8s/local-infra/outbox-cleanup.yaml`,
+`services/inventory-service/src/main/resources/db/migration/V3__create_outbox_events.sql`,
+`services/inventory-service/src/test/scala/inventoryservice/MigrationsSuite.scala`,
+`services/inventory-service/scripts/verify-stock-events-retired.sh`,
+`tests/acceptance/src/precheck.ts`, `tests/acceptance/README.md`,
+`docs/system-design.md`, `docs/diagrams/kafka-domain-topology.mmd`,
+`docs/diagrams/order-fulfillment-topology.mmd`.
