@@ -1,25 +1,38 @@
-stateDiagram-v2
-    [*] --> AUTHORIZED: POST /orders 201<br/>(reserve + authorize both sync,<br/>order persisted only on success)
+flowchart LR
+    START(("POST /orders 201"))
+    AUTHORIZED(["authorized"])
+    DISPATCHED(["dispatched"])
+    CONFIRMED(["confirmed"])
+    PAYMENT_FAILED(["payment_failed"])
+    CANCELLED(["cancelled"])
+    DISPATCH_FAILED(["dispatch_failed"])
+    END(("end"))
 
-    note left of AUTHORIZED
-        Failed checkouts return 400/402/409/503,
-        create no order and send no email —
-        the customer sees the reason in-session.
-        ("item out of stock" / "payment failed"
-        checkout emails removed)
-    end note
+    START -->|"reserve + authorize both sync;<br/>order persisted only on success"| AUTHORIZED
 
-    AUTHORIZED --> DISPATCHING: PaymentAuthorized event
-    DISPATCHING --> DISPATCHED: DispatchConfirmed<br/>("your order shipped" email)
-    DISPATCHING --> DISPATCH_FAILED: DispatchFailed
-    DISPATCHING --> AUTH_EXPIRED: PaymentAuthorizationExpired<br/>(background sweep)
+    AUTHORIZED -->|"PaymentCaptured<br/>receipt email + OrderConfirmed<br/>'Your order is confirmed' email"| CONFIRMED
+    AUTHORIZED -->|"DispatchConfirmed (fulfilment-events)<br/>'Your order has shipped' email"| DISPATCHED
+    AUTHORIZED -->|"DispatchFailed + release inventory<br/>'We couldn't ship your order' email"| DISPATCH_FAILED
+    AUTHORIZED -->|"PaymentFailed (capture_failed)<br/>order_reconciliation row; no release<br/>'We couldn't take your payment' + OrderPaymentFailed email"| PAYMENT_FAILED
+    AUTHORIZED -->|"PATCH/PUT /orders/id with status=cancelled<br/>publishes OrderCancelled; no release<br/>'Your order was cancelled' email"| CANCELLED
+    AUTHORIZED -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no producer; order consumer built)<br/>intended: release inventory + OrderCancelled"| CANCELLED
 
-    DISPATCHED --> CONFIRMED: PaymentCaptured
-    DISPATCHED --> PAYMENT_FAILED: PaymentFailed<br/>(capture_failed, manual reconciliation)
+    DISPATCHED -->|"PaymentCaptured<br/>receipt email + OrderConfirmed email"| CONFIRMED
+    DISPATCHED -->|"PaymentFailed (capture_failed)<br/>order_reconciliation row; no release"| PAYMENT_FAILED
 
-    AUTH_EXPIRED --> CANCELLED: release stock, notify
-    DISPATCH_FAILED --> CANCELLED: void authorization,<br/>release stock, notify
+    CONFIRMED --> END
+    PAYMENT_FAILED --> END
+    CANCELLED --> END
+    DISPATCH_FAILED --> END
 
-    PAYMENT_FAILED --> [*]: "payment problem on dispatch" email
-    CONFIRMED --> [*]: receipt email
-    CANCELLED --> [*]: cancellation email
+    LEGACY["pending · reserved · reservation_failed<br/>(legacy load-only; never written by current code)"]
+    NOTE["solid = built transition · dashed = US-20 — not yet built<br/>Checkout failures return 400/402/409/503, create no order row and send no email (ADR 0018).<br/>Capture outcome may overtake DispatchConfirmed: PaymentCaptured/PaymentFailed are accepted from authorized or dispatched.<br/>Customer cancellation does not release inventory — known gap."]
+
+    classDef built fill:#ffffff,stroke:#28253D,stroke-width:2px
+    classDef terminal fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    classDef legacy fill:#f4f4f4,stroke:#999999,stroke-dasharray:5 4
+    classDef note fill:#f4f4f4,stroke:#999999
+    class AUTHORIZED,DISPATCHED built
+    class CONFIRMED,PAYMENT_FAILED,CANCELLED,DISPATCH_FAILED terminal
+    class LEGACY legacy
+    class NOTE note

@@ -518,3 +518,12 @@ own line. See each repo's own `git log` for full detail either way.
 - `docs/system-design.md`'s REST contracts section now points at the
   documentation convention, the per-service `Docs.undocumented` test and
   `scripts/verify-rest-docs.sh` (TD-20.11).
+
+## 2026-11-02
+
+### Changed
+- All `docs/diagrams` refreshed to the current design — per-outcome order
+  events, cancellation, capture/void, built fulfilment/user services, and
+  the US-20 expiry path marked not yet built; `environment-pipeline` rebuilt
+  from a new Mermaid source per ADR 0016. `docs/system-design.md` updated to
+  match (event names, state model, consumers, environments).

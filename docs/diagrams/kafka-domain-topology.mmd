@@ -1,50 +1,60 @@
 flowchart LR
-    G["gshop<br/>(checkout form)"]
+    G["gshop<br/>(storefront + admin)"]
 
     subgraph services["Services"]
         O["order-service"]
         I["inventory-service"]
         P["payment-service"]
-        F["fulfilment-service<br/>(not yet built)"]
+        F["fulfilment-service"]
         N["notification-service"]
-        U["user-service<br/>(not yet built)"]
+        U["user-service"]
     end
 
     subgraph topics["Kafka domain topics<br/>(one topic per domain + shared envelope)"]
         OE[("order-events")]
-        IE[("inventory-events")]
+        IE[("inventory-events<br/>(no event types)")]
         PE[("payment-events")]
         FE[("fulfilment-events")]
         UE[("user-events")]
     end
 
+    SWEEP["auth-expiry sweep<br/>US-20 — not yet built<br/>(no producer)"]
+
+    G -->|"POST /orders<br/>GET/PATCH/PUT/DELETE /orders/{id}"| O
     G -->|"POST /payments/methods"| P
-    G -->|"POST /orders"| O
-    O -->|"POST /inventorys/reservations<br/>(per item, sync)"| I
+    G -->|"POST /auth/signup · POST /auth/login"| U
+    G -->|"admin stock: GET/PATCH /inventorys"| I
+    G -->|"operator queue: /fulfilment-tasks"| F
+    O -->|"POST /inventorys/order-reservations<br/>(bulk, sync) + /{orderId}/release"| I
     O -->|"POST /payments/authorize<br/>(sync)"| P
+    F -->|"GET /orders/{id}<br/>(snapshot)"| O
 
-    O -->|"publishes OrderReserved,<br/>OrderStatusChanged"| OE
-    I -->|"publishes StockReserved,<br/>StockReservationFailed"| IE
-    P -->|"publishes PaymentAuthorized, PaymentCaptured,<br/>PaymentFailed, PaymentAuthorizationExpired"| PE
-    F -->|"publishes DispatchConfirmed, DispatchFailed"| FE
-    U -->|"publishes UserRegistered"| UE
+    O -->|"OrderConfirmed · OrderPaymentFailed · OrderCancelled<br/>(outbox/Debezium)"| OE
+    P -->|"PaymentAuthorized · PaymentCaptured · PaymentFailed<br/>(outbox/Debezium)"| PE
+    F -->|"DispatchConfirmed · DispatchFailed<br/>(outbox/Debezium)"| FE
+    U -->|"UserRegistered<br/>(outbox/Debezium)"| UE
 
-    IE -->|"StockReserved, StockReservationFailed<br/>(retired when TD-7 lands)"| O
-    OE -->|"OrderStatusChanged"| N
-    PE -->|"PaymentCaptured, PaymentFailed,<br/>PaymentAuthorizationExpired"| O
-    PE -->|"PaymentAuthorized,<br/>PaymentAuthorizationExpired"| F
-    PE -->|"PaymentCaptured, PaymentFailed,<br/>PaymentAuthorizationExpired"| N
-    PE -->|"PaymentAuthorizationExpired<br/>(release reservations)"| I
-    FE -->|"DispatchConfirmed, DispatchFailed"| O
-    FE -->|"DispatchConfirmed, DispatchFailed"| P
-    FE -->|"DispatchConfirmed, DispatchFailed"| N
+    OE -->|"OrderConfirmed · OrderPaymentFailed · OrderCancelled"| N
+    PE -->|"PaymentCaptured · PaymentFailed"| O
+    PE -->|"PaymentAuthorized"| F
+    PE -->|"PaymentCaptured · PaymentFailed"| N
+    FE -->|"DispatchConfirmed · DispatchFailed"| O
+    FE -->|"DispatchConfirmed · DispatchFailed"| P
+    FE -->|"DispatchConfirmed · DispatchFailed"| N
     UE -->|"UserRegistered"| N
 
-    NOTE["OrderReserved is still published but has no consumer —<br/>order-service learns authorization synchronously.<br/>catalog-service/cart-service publish nothing and are omitted."]
+    SWEEP -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no producer)"| PE
+    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built<br/>(order consumer built; no producer)"| O
+    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no consumer)"| I
+    PE -.->|"PaymentAuthorizationExpired<br/>US-20 — not yet built (no consumer)"| F
+
+    NOTE["Solid = built; dashed = US-20 — not yet built.<br/>Order events are per-outcome (TD-15); order-service learns authorize synchronously, not from PaymentAuthorized.<br/>inventory-service publishes and consumes nothing; inventory-events is kept with no event types.<br/>Dispatch outcomes stay on fulfilment-events and are not mirrored into order-events.<br/>catalog-service and cart-service publish nothing and are omitted."]
 
     classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef topic fill:#fff5ad,stroke:#FACC15,stroke-width:2px
+    classDef notbuilt fill:#fff7ed,stroke:#b45309,stroke-width:2px,stroke-dasharray:5 4
     classDef note fill:#f4f4f4,stroke:#999999
     class O,I,P,F,N,U service
     class OE,IE,PE,FE,UE topic
+    class SWEEP notbuilt
     class NOTE note

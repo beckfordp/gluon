@@ -7,43 +7,59 @@ flowchart LR
         O["order-service"]
         I["inventory-service"]
         P["payment-service"]
-        F["fulfilment-service<br/>(not yet built)"]
+        F["fulfilment-service"]
         N["notification-service"]
-        U["user-service<br/>(not yet built)"]
+        U["user-service"]
     end
 
     subgraph stores["Stores"]
         CATDB[("catalog Postgres<br/>+ Redis cache")]
         CARTDB[("cart Redis<br/>(primary)")]
-        ODB[("order Postgres<br/>+ Redis history cache")]
-        IDB[("inventory Postgres")]
-        PDB[("payment Postgres<br/>+ Redis idempotency keys")]
+        ODB[("order Postgres<br/>+ Redis cache")]
+        IDB[("inventory Postgres<br/>(ledger)")]
+        PDB[("payment Postgres<br/>(UNIQUE order_id)")]
+        FDB[("fulfilment Postgres")]
+        UDB[("user Postgres")]
     end
 
-    K[("Kafka event bus<br/>domain topics + envelope")]
+    K[("Kafka event bus")]
+    SWEEP["US-20 expiry sweep<br/>(not built)"]
 
-    G -->|"browse catalog"| CAT
+    G -->|"browse"| CAT
     G -->|"cart"| CART
-    G -->|"POST /orders"| O
-    G -->|"POST /payments/methods"| P
-    O -->|"POST /inventorys/reservations<br/>(sync)"| I
-    O -->|"POST /payments/authorize<br/>(sync)"| P
+    G -->|"auth"| U
+    G -->|"orders"| O
+    G -->|"payment methods"| P
+    G -->|"admin stock"| I
+    G -->|"fulfilment queue"| F
+    O -->|"bulk reserve / release"| I
+    O -->|"authorize"| P
+    F -->|"order snapshot"| O
 
     CAT --- CATDB
     CART --- CARTDB
     O --- ODB
     I --- IDB
     P --- PDB
+    F --- FDB
+    U --- UDB
 
-    O -.->|"order-events"| K
-    I -.->|"inventory-events"| K
-    P -.->|"payment-events"| K
-    F -.->|"fulfilment-events"| K
-    U -.->|"user-events"| K
+    O -->|"order-events"| K
+    P -->|"payment-events"| K
+    F -->|"fulfilment-events"| K
+    U -->|"user-events"| K
+    K -->|"consumes<br/>(fan-out in kafka diagram)"| N
+    SWEEP -.->|"US-20 — not yet built"| K
+
+    NOTE["Solid = built; dashed = US-20 — not yet built (no producer).<br/>Event types and the full consumer fan-out are in kafka-domain-topology.svg.<br/>inventory-service publishes nothing, so inventory-events has no event types.<br/>Checkout failures create no order row and publish nothing (ADR 0018).<br/>Capture PaymentFailed writes order_reconciliation and does not release inventory;<br/>DispatchFailed releases inventory. Dispatch outcomes are not mirrored into order-events."]
 
     classDef service fill:#ffffff,stroke:#28253D,stroke-width:2px
     classDef store fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
     classDef bus fill:#fff5ad,stroke:#FACC15,stroke-width:2px
+    classDef notbuilt fill:#fff7ed,stroke:#b45309,stroke-width:2px,stroke-dasharray:5 4
+    classDef note fill:#f4f4f4,stroke:#999999
     class CAT,CART,O,I,P,F,N,U service
-    class CATDB,CARTDB,ODB,IDB,PDB store
+    class CATDB,CARTDB,ODB,IDB,PDB,FDB,UDB store
     class K bus
+    class SWEEP notbuilt
+    class NOTE note

@@ -1,0 +1,33 @@
+flowchart LR
+    REL["candidate release<br/>(container image tag)"]
+
+    subgraph LOCAL["local — populated"]
+        L["OrbStack + bare k8s manifests<br/>ephemeral Postgres / Redis / Kafka / Apicurio<br/>no real AWS · Prometheus + Grafana"]
+    end
+
+    subgraph DEV["dev — planned, not yet populated"]
+        D["shared bare-manifest cluster<br/>CI deploys on merge to main<br/>no managed AWS · Prometheus + Grafana"]
+    end
+
+    subgraph AWS["single AWS account — one namespace per environment (ADR 0004)"]
+        subgraph STG["staging — planned, first real AWS"]
+            S["minimal EKS node group<br/>RDS / ElastiCache / MSK<br/>SSM Parameter Store<br/>fuller observability<br/>Terraform stand-up (follow-up ADR)"]
+        end
+        subgraph PRD["prod — planned, ephemeral by default"]
+            PR["same real-AWS shape as staging<br/>demo-sized<br/>RDS / ElastiCache / MSK<br/>SSM Parameter Store<br/>fuller observability"]
+        end
+    end
+
+    REL -.->|"automated gates:<br/>tests + schemaRegistryCheck"| D
+    L -.->|"same bare-manifest shape"| D
+    D -.->|"gated stand-up"| S
+    S -.->|"gated stand-up"| PR
+
+    NOTE["Only local is populated today.<br/>dev/staging/prod are ADR 0016 designs: dev stays bare-manifest with no managed AWS;<br/>staging is the first real-AWS tier, stood up for a validation window;<br/>prod mirrors staging, demo-sized and ephemeral by default.<br/>Secrets: SSM Parameter Store. Backstage/Dependency-Track are org-wide, not per-tier."]
+
+    classDef built fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
+    classDef future fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,stroke-dasharray:5 4
+    classDef note fill:#f4f4f4,stroke:#999999
+    class L built
+    class D,S,PR future
+    class NOTE note

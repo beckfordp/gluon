@@ -14,7 +14,7 @@ sequenceDiagram
     I-->>O: 409 {failures: [B insufficient_stock, C unknown_sku]}
     Note over O,I: Nothing was reserved — no release needed
     O-->>G: 409 {error, reservationFailures [B, C]}
-    Note over O,N: No order row, no OrderStatusChanged, no email
+    Note over O,N: No order row, no order event, no email
     G->>G: show every failed line + Remove action
     C->>G: Remove B and C
     G->>K: DELETE /carts/{id}/items/{sku} (per removed line)
@@ -26,7 +26,7 @@ sequenceDiagram
     P-->>O: 402 {error, reason}
     O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 402 {error, paymentFailure {reason}}
-    Note over O,N: No order row, no email — customer fixes card<br/>and retries in-session (cart unchanged).<br/>Replaces the old "reservation stays held" gap.
+    Note over O,N: No order row, no email — customer fixes card<br/>and retries in-session (cart unchanged).
 
     Note over G,N: Scenario B2 — unknown paymentMethodId
     O->>P: POST /payments/authorize {..., paymentMethodId}
@@ -34,47 +34,63 @@ sequenceDiagram
     O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 400 {error: "Payment method not found"}
 
-    Note over G,N: Scenario B3 — payment-service unavailable
+    Note over G,N: Scenario B3 — payment-service unavailable (breaker open)
     G->>O: POST /orders {items, shippingAddress, paymentMethodId}
-    O->>O: PaymentClient circuit breaker already OPEN
+    O->>I: POST /inventorys/order-reservations {orderId, items[]}
+    I-->>O: 201 {orderId, items}
+    O-xP: POST /payments/authorize (breaker OPEN)
+    O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 503 {error: "Payment service unavailable"}
-    Note over O,I: Fail fast BEFORE reserving — no inventory calls,<br/>so a payment outage doesn't double inventory load
+    Note over O,I: Fail-fast before reserving is deferred (TD-9):<br/>the reserve happens first and is released here.
+
     Note over G,N: Scenario B3b — authorize call fails mid-request (timeout / 5xx)
     O-xP: POST /payments/authorize
     O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
     O-->>G: 503 {error: "Payment service unavailable"}
-    Note over O,P: If the authorize actually succeeded behind a timeout,<br/>the orphan hold lapses via Scenario C's sweep<br/>(order-service ignores the unknown orderId)
+    Note over O,P: If the authorize landed behind the timeout, the orphan hold<br/>is only recovered by the expiry sweep — US-20, not yet built.
 
     Note over G,N: Scenario B4 — persisting the order fails after a 200 authorize
     O->>O: persist order (transaction fails)
     O->>I: POST /inventorys/order-reservations/{orderId}/release<br/>(idempotent compensation)
-    O->>P: void authorization — no endpoint yet,<br/>until then the hold lapses via the sweep
+    O->>P: void authorization — no void endpoint yet —<br/>hold recovery is the US-20 sweep (not yet built)
     O-->>G: 500 {error}
 
     Note over G,N: Scenario C — authorization expires before dispatch
-    P->>P: sweep {status: AUTHORIZED, expiresAt < now}
-    P--)O: payment-events: PaymentAuthorizationExpired {orderId}
-    P--)I: payment-events: PaymentAuthorizationExpired {orderId}
-    P--)F: payment-events: PaymentAuthorizationExpired {orderId}
-    O->>O: status = CANCELLED
-    O--)N: order-events: OrderStatusChanged {status: cancelled}
-    I->>I: release reservations
-    F->>F: cancel in-flight pick/pack
-    N->>N: enqueue "auth expired" email
+    alt US-20 — not yet built (no producer)
+        P->>P: sweep {status: authorized, expiresAt < now}
+        P-->>O: payment-events: PaymentAuthorizationExpired {orderId}
+        P-->>I: payment-events: PaymentAuthorizationExpired {orderId}
+        P-->>F: payment-events: PaymentAuthorizationExpired {orderId}
+        O->>O: status = cancelled (consumer built)
+        O--)N: order-events: OrderCancelled {orderId}
+        I->>I: release reservations (US-20.3 — not built)
+        F->>F: cancel in-flight pick/pack (US-20.4 — not built)
+        N->>N: enqueue "Your order was cancelled" email
+    end
+    Note over P,N: US-20 — not yet built: payment-service has no sweep/producer —<br/>order-service consumes PaymentAuthorizationExpired (built), notification receives OrderCancelled,<br/>inventory/fulfilment consumers do not exist.
 
     Note over G,N: Scenario D — dispatch fails (warehouse exception)
     F--)O: fulfilment-events: DispatchFailed {orderId, reason}
     F--)P: fulfilment-events: DispatchFailed
-    O->>O: status = DISPATCH_FAILED
-    P->>P: void authorization
-    O->>I: release reservations
-    O--)N: order-events: OrderStatusChanged {status: dispatch_failed}
-    N->>N: enqueue "dispatch failed" email
+    F--)N: fulfilment-events: DispatchFailed
+    O->>O: status = dispatch_failed
+    O->>I: release reservations (idempotent)
+    P->>P: void authorization (publishes nothing)
+    N->>N: enqueue "We couldn't ship your order" email
+    Note over O,N: Notification consumes fulfilment-events directly —<br/>order-service does not publish a dispatch-failed order event.
 
     Note over G,N: Scenario E — capture fails after dispatch
     P->>P: capture fails (DispatchConfirmed consumed)
     P--)O: payment-events: PaymentFailed {orderId, reason: capture_failed}
-    O->>O: status = PAYMENT_FAILED
-    O--)N: order-events: OrderStatusChanged {status: payment_failed}
-    N->>N: enqueue "payment problem on dispatch" email
+    P--)N: payment-events: PaymentFailed {orderId, reason: capture_failed}
+    O->>O: status = payment_failed<br/>+ order_reconciliation row
+    O--)N: order-events: OrderPaymentFailed {orderId, reason: capture_failed}
+    N->>N: enqueue "We couldn't take your payment" email<br/>and "We couldn't process your payment" email
     Note over O,I: Items may already be shipped —<br/>manual reconciliation, no automatic release.
+
+    Note over G,N: Scenario F — customer cancels an authorized order
+    G->>O: PATCH /orders/{id} {"status": "cancelled"}
+    O->>O: status = cancelled (authorized only)
+    O--)N: order-events: OrderCancelled {orderId}
+    N->>N: enqueue "Your order was cancelled" email
+    Note over O,I: Inventory reservations are NOT released — known gap.

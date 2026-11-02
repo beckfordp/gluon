@@ -30,18 +30,22 @@ sequenceDiagram
     P->>P: authorize via simulated provider
     P-->>O: 200 {authId, expiresAt}
     P--)F: payment-events: PaymentAuthorized {orderId, authId, expiresAt}
-    O->>O: persist order + items (status = AUTHORIZED)<br/>in ONE transaction — first time the order exists
+    Note over O,P: authorize is synchronous — order-service uses the response<br/>and does not consume PaymentAuthorized, fulfilment-service does.
+    O->>O: persist order + items (status = authorized)<br/>in ONE transaction — first time the order exists
     O-->>G: 201 {status: authorized, shippingAddress, ...}
     G->>G: forget cart id (localStorage)<br/>cart expires in Redis by TTL
+    F->>O: GET /orders/{id} (snapshot items + shipping address)
     F->>F: PENDING → PICKING → PACKED → DISPATCHED
     F--)O: fulfilment-events: DispatchConfirmed {orderId, trackingNo, items}
     F--)P: fulfilment-events: DispatchConfirmed
     F--)N: fulfilment-events: DispatchConfirmed
-    O->>O: status = DISPATCHED
-    N->>N: enqueue "your order shipped" email
+    O->>O: status = dispatched
+    N->>N: enqueue "Your order has shipped" email
     P->>P: capture (idempotency check on orderId)
     P--)O: payment-events: PaymentCaptured {orderId, amountCents}
     P--)N: payment-events: PaymentCaptured
-    O->>O: status = CONFIRMED
+    O->>O: status = confirmed
+    O--)N: order-events: OrderConfirmed (outbox/Debezium)
+    N->>N: enqueue "Your order is confirmed" email
     N->>N: enqueue receipt email
-    C-->>G: poll/websocket status = CONFIRMED
+    C-->>G: poll/websocket status = confirmed
