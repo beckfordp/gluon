@@ -996,11 +996,11 @@ read models and triggers the real console needs.
       cancel, simulated expiry, reservation ledger and per-customer email
       history; real customer Cancel in Order History (US-9.8) — done
       2026-11-02 (`f1d3116`)
-- [ ] ADM-1 — inventory-service: `GET /inventorys/order-reservations`
+- [x] ADM-1 — inventory-service: `GET /inventorys/order-reservations`
       read endpoint with `orderId`/`status` filters, returning the ledger's
       `order_id, order_item_id, line_no, sku, quantity, status, created_at,
       released_at` (the ledger has no customer identity; join via
-      order-service)
+      order-service) — done 2026-11-02 (`admin-ledger_20261102`)
 - [ ] ADM-2 — notification-service: add Postgres + Flyway and a
       `sent_email` audit table (`source_event_id` unique for idempotency,
       event type, reason, recipient key, subject, body, status
@@ -1679,7 +1679,7 @@ tracks in that repo's own `conductor/tracks.md`.
       through), warns if inventory changed and serves the report. Full suite
       36 green. Acceptance 3–6 each got a `/conductor:review` pass before
       archive (3–5 retroactively).*
-- [ ] ACC-6.3 — add US-20 feature now Journey 5 has landed; blocked on a
+- [ ] ACC-6.3 — adWhere are d US-20 feature now Journey 5 has landed; blocked on a
       way for Playwright to seed a past `expiresAt` (no DB seeding exists in
       the suite). The other US-9/US-20 tasks are recorded out of scope with
       `verify-auth-expiry.sh` as the proof.

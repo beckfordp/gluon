@@ -124,6 +124,16 @@ Added `orderItemId` 2026-10-02 (was absent in the original US-4.1/US-4.2
 contract) to fix the correlation gap below — inventory-service treats it as
 an opaque string, no order-domain coupling implied, purely store-and-echo.
 
+**`GET /inventorys/order-reservations`** (caller: admin console; callee:
+inventory-service; ADM-1, **built 2026-11-02**):
+- Query: `orderId` (optional UUID), `status` (optional `active`/`released`).
+- `200`: ledger rows, order/line order:
+  `{"orderId": "string", "orderItemId": "string", "lineNo": "int",
+  "sku": "string", "quantity": "int", "status": "active | released",
+  "reservedAt": "instant", "releasedAt": "instant | null"}`.
+- `400`: `{"error": "string"}` for a non-UUID `orderId` or an unknown status.
+- Read-only; publishes nothing.
+
 **`Address`** (shared by shipping and billing, US-11/US-12):
 `{"line1": "string", "line2": "string | null", "city": "string", "postalCode": "string", "country": "string (ISO 3166-1 alpha-2)"}`.
 
