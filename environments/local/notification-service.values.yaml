@@ -5,3 +5,8 @@ image:
 env:
   - name: KAFKA_BOOTSTRAP_SERVERS
     value: kafka:9092
+  # Recipient resolution (ADM-3/ADR 0025). Postgres/deployment stays ADM-6.
+  - name: USER_SERVICE_URL
+    value: http://user-service:8080
+  - name: ORDER_SERVICE_URL
+    value: http://order-service:8080

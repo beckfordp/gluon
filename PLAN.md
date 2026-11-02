@@ -1016,10 +1016,12 @@ read models and triggers the real console needs.
       through `EmailClient`; expose `GET /emails?customerId=&orderId=`.
       This is an email audit/send queue, not a Kafka outbox — done
       2026-11-02 (`sent-email-audit_20261102`)
-- [ ] ADM-3 — recipient resolution: user-service `GET /users/{id}` for
+- [x] ADM-3 — recipient resolution: user-service `GET /users/{id}` for
       customerId→email, and decide how payment/fulfilment emails (which
       carry only `orderId`) are attributed to a customer — order lookup or
-      event-contract enrichment
+      event-contract enrichment — done 2026-11-02
+      (`user-lookup_20261102`, `recipient-resolution_20261102`); decided
+      order lookup at consume time, ADR 0025
 - [ ] ADM-4 — order-service: admin-wide order list, plus the reconciliation
       queue workflow: expose open reconciliation flags across services
       (order/payment/fulfilment/inventory), show them in the admin order

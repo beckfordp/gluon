@@ -596,3 +596,14 @@ own line. See each repo's own `git log` for full detail either way.
   `actor {type, id}` (customer/operator/system); notification-service mirrors
   and logs the actor while keeping generic customer copy. gshop’s operator UI
   is deferred to ADM-7.
+- **Recipient resolution (ADM-3).** user-service exposes unauthenticated
+  `GET /users/{id}` (`userId`/`email`/`createdAt`; 400 malformed, 404
+  unknown). notification-service resolves recipients at send time: a
+  `customerId` through user-service, an orderId-only payment/fulfilment event
+  through order-service `GET /orders/{id}` first. Resolved addresses land in
+  the new `sent_email.recipient_email`; transient lookup failures retry/DLQ,
+  while a permanently unknown customer is a terminal `unresolved` row that is
+  never sent. `EmailClient.send` now reports sent/already-sent/unresolved so
+  consumer logs stay truthful. No Kafka contract or registry change; ADR 0025
+  records the decision.
+

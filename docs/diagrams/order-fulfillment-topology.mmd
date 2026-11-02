@@ -35,6 +35,8 @@ flowchart LR
     O -->|"bulk reserve / release"| I
     O -->|"authorize"| P
     F -->|"order snapshot"| O
+    N -->|"customer lookup"| O
+    N -->|"email lookup"| U
 
     CAT --- CATDB
     CART --- CARTDB
