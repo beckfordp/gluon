@@ -1022,13 +1022,16 @@ read models and triggers the real console needs.
       event-contract enrichment — done 2026-11-02
       (`user-lookup_20261102`, `recipient-resolution_20261102`); decided
       order lookup at consume time, ADR 0025
-- [ ] ADM-4 — order-service: admin-wide order list, plus the reconciliation
+- [x] ADM-4 — order-service: admin-wide order list, plus the reconciliation
       queue workflow: expose open reconciliation flags across services
       (order/payment/fulfilment/inventory), show them in the admin order
       view, and add a resolve action (`open`/`resolved`, operator id, note,
-      timestamp) with alerting. Operator identity/audit and
-      `reason: operator` landed with US-22 on 2026-11-02; the current flags
-      are minimal (`reason`, `created_at`) by design.
+      timestamp) with alerting — done 2026-11-02
+      (`admin-orders_20261102`, three `reconciliation-workflow_20261102`
+      tracks; ADR 0026). Per-service `GET`/`PATCH /reconciliations`, dev
+      operator token, OTel counter + Prometheus rule + Alertmanager. The
+      gshop queue display/resolve UI lands in ADM-7; first-wins flags are
+      terminal per order (documented).
 - [ ] ADM-5 — payment-service: dev/admin trigger to expire one
       authorization early (or use the ADR 0022 fault-injection API), so the
       console can demonstrate the sweep without SQL
@@ -1042,6 +1045,13 @@ read models and triggers the real console needs.
 - [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
       script covering ledger release, email history, operator cancel,
       simulated expiry and reconciliation flag visibility/resolution
+- [ ] ADM-10 — guest email at checkout: anonymous gshop orders use a random
+      customerId with no user-service account, so ADM-3's resolver records a
+      terminal `unresolved` row and sends nothing (ADR 0025). Add an optional
+      guest `email` to `CreateOrderRequest`, persist it on the order, carry it
+      on the order-events contract (v-next) and use it as the notification
+      fallback when customerId resolution 404s. Decide gshop UX (opt-in field
+      vs required for anonymous checkout). Ordered after ADM-4.
 - [x] DEMO-1 — `bin/seed-demo-data`: idempotent API-driven demo customers
       (Ada/Grace/Alan) and six orders across authorized+PENDING,
       authorized+PICKING, confirmed, cancelled, payment_failed and

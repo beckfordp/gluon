@@ -17,8 +17,8 @@ limits (PLAN.md "Demo, not capacity"). Every container sets memory request
 | Gatling Job (one run at a time) | 1 Gi | `bin/run-perf`, `tests/performance/k8s/perf-job.yaml` |
 | **Total** | **≤ 11.31 Gi** of 12 Gi | |
 
-The observability stack's 2.97 Gi, all request = limit. That leaves 30 Mi of
-its 3 Gi: a new component means raising the budget or trimming another.
+The observability stack's 3 Gi, all request = limit. It sits exactly at its
+budget: a new component means raising the budget or trimming another.
 
 | Component | Memory |
 |---|---|
@@ -28,6 +28,7 @@ its 3 Gi: a new component means raising the budget or trimming another.
 | Grafana | 192 Mi |
 | Filebeat (DaemonSet) | 128 Mi |
 | cAdvisor (DaemonSet), kube-state-metrics, postgres-exporter, kafka-exporter | 64 Mi each |
+| Alertmanager (ADM-4) | 32 Mi |
 | redis-exporter | 32 Mi |
 | `kibana-setup` Job (one-shot, during `bin/obs up`) | 32 Mi |
 

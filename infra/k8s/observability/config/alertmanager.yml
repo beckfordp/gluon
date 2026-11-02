@@ -1,0 +1,16 @@
+# Minimal local Alertmanager (ADM-4). The null receiver intentionally drops
+# notifications: alerts are visible in the Prometheus and Alertmanager UIs,
+# which is what the local demo needs. Add a receiver (webhook/Slack/email)
+# when a real paging path exists.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: noop
+  group_by: [alertname, service, reason]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+
+receivers:
+  - name: noop

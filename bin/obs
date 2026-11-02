@@ -12,7 +12,7 @@
 #
 # OrbStack serves the stack's LoadBalancer services on localhost:
 #   Grafana http://localhost:3000, Kibana http://localhost:5601,
-#   Prometheus http://localhost:9092
+#   Prometheus http://localhost:9092, Alertmanager http://localhost:9093
 #
 # Exits 3 if the stack is up but over budget (bin/lib/obs-budget.sh): its
 # numbers are fine, but a Gatling run beside it would starve the node.
@@ -104,6 +104,7 @@ case "$cmd" in
     echo "  Grafana     http://localhost:3000"
     echo "  Kibana      http://localhost:5601"
     echo "  Prometheus  http://localhost:9092"
+    echo "  Alertmanager http://localhost:9093"
     echo "== Memory budget =="
     budget || { echo "WARN: over budget — no room for a Gatling run beside the stack" >&2; exit 3; }
     ;;

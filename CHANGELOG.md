@@ -606,4 +606,16 @@ own line. See each repo's own `git log` for full detail either way.
   never sent. `EmailClient.send` now reports sent/already-sent/unresolved so
   consumer logs stay truthful. No Kafka contract or registry change; ADR 0025
   records the decision.
+- **Admin order list and reconciliation queue (ADM-4).** order-service adds
+  unauthenticated `GET /admin/orders` (status/customer filters, newest first,
+  cache-free). All four reconciliation owners expose `GET /reconciliations`
+  and `PATCH /reconciliations/{orderId}`: open/resolved flags, operator
+  id/note/timestamp, idempotent first-resolver-wins semantics, gated by the
+  ADR 0024 dev token (copied to payment/fulfilment/inventory). Recording a
+  new flag increments `reconciliation.flags.recorded`; a Prometheus rule fires
+  `ReconciliationFlagRecorded` and the opt-in obs stack gains a minimal
+  Alertmanager (null receiver; `localhost:9093`). First-wins means a resolved
+  flag is terminal per order. The gshop queue UI is ADM-7; ADR 0026 records
+  the design. Anonymous-customer email remains a gap, tracked as ADM-10.
+
 

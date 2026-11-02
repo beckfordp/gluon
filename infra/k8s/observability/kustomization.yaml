@@ -15,6 +15,7 @@ labels:
     includeTemplates: true
 resources:
   - prometheus.yaml
+  - alertmanager.yaml
   - cadvisor.yaml
   - kube-state-metrics.yaml
   - db-exporters.yaml
@@ -26,6 +27,10 @@ configMapGenerator:
   - name: prometheus-config
     files:
       - config/prometheus.yml
+      - config/rules/reconciliation.yml
+  - name: alertmanager-config
+    files:
+      - config/alertmanager.yml
   - name: filebeat-config
     files:
       - config/filebeat.yml

@@ -1,0 +1,14 @@
+groups:
+  - name: gluon-reconciliation
+    rules:
+      # Fires on new inserts only (the counter increments when a first-wins
+      # flag row is actually written). The open queue depth comes from
+      # GET /reconciliations?status=open, not from this rule.
+      - alert: ReconciliationFlagRecorded
+        expr: sum by (service, reason) (increase(reconciliation_flags_recorded_total[5m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Manual reconciliation flag recorded"
+          description: "{{ $labels.service }} recorded {{ $value | humanize }} flag(s); reason={{ $labels.reason }}. Check GET /reconciliations?status=open and resolve with the dev operator token (ADR 0026)."

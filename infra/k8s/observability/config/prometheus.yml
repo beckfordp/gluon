@@ -2,6 +2,17 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+# ADM-4: the rule file is a key in the same prometheus-config ConfigMap (the
+# file's basename), so it lands at /etc/prometheus/reconciliation.yml without
+# a second mount.
+rule_files:
+  - /etc/prometheus/reconciliation.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
