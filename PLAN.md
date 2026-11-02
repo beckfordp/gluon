@@ -811,23 +811,26 @@ Checkout Journey 1's US-14.3 and `user-stories.md`'s US-15.
 `fulfilment-service`, `notification-service`, `gshop`.
 
 **Depends on:** Checkout Journey 1's `PaymentAuthorized` event (needs
-`Authorized` payments with a real `expiresAt` to scan for). Independent of
+`Authorized` payments with a real `expiresAt` to scan for), and on US-9's
+shared cancellation path (US-9.2–9.5) — expiry adds detection and a
+reason, not a second set of compensation consumers. Independent of
 Journeys 3/4 — can run in parallel with either.
 
 - [ ] US-20.1 — background sweep for expired authorizations, publish
       `PaymentAuthorizationExpired {orderId}` (payment-service) —
       mechanism (CronJob vs. in-process scheduler) not yet decided, see
       `user-stories.md`
-- [ ] US-20.2 — `OrderStatus` gains `Cancelled`; order-service consumes
-      `PaymentAuthorizationExpired`, status -> `Cancelled` (order-service)
-- [ ] US-20.3 — inventory-service consumes `PaymentAuthorizationExpired`,
-      releases reservations (inventory-service)
-- [ ] US-20.4 — fulfilment-service consumes `PaymentAuthorizationExpired`,
-      cancels any in-flight pick/pack task (fulfilment-service)
-- [ ] US-20.5 — notification-service consumes
-      `PaymentAuthorizationExpired`, sends "order cancelled — auth
-      expired" email (notification-service)
-- [ ] US-20.6 — Order History displays `Cancelled` (gshop)
+- [x] US-20.2 — order-service consumes `PaymentAuthorizationExpired`,
+      status -> `cancelled`, publishes `OrderCancelled` — built
+      (`payment-kafka-contracts_20261026`)
+- [ ] US-20.3 — expiry-triggered release verified through US-9.4
+      (inventory-service)
+- [ ] US-20.4 — expiry-triggered fulfilment abort verified through US-9.5
+      (fulfilment-service)
+- [ ] US-20.5 — expiry-specific cancellation copy through US-9.9
+      (notification-service)
+- [x] US-20.6 — Order History renders `cancelled` via the generic status
+      formatter (gshop)
 
 **Stub / fan-out:** a synthetic `Authorized` payment with an already-past
 `expiresAt`, seeded directly in payment-service's own test DB — proves the
@@ -835,9 +838,9 @@ sweep's query/publish logic without waiting out a real expiry window.
 
 **Exit criteria:** verified end-to-end against the real local cluster —
 `system-design.md`'s `PaymentAuthorizationExpired` payload contract updated
-(done 2026-10-26, ahead of the code). Reconciling this system-initiated
-`Cancelled` with US-9's customer-initiated cancel epic is explicitly
-deferred, not this journey's job.
+(done 2026-10-26, ahead of the code). Cancellation now routes through US-9's
+shared epic rather than a separate expiry-only compensation path; US-9 was
+refined 2026-11-02 to reconcile them.
 
 
 ---
@@ -1318,7 +1321,7 @@ fail a run.
 
 ## Acceptance Testing
 
-US-1 to US-20 have no automated acceptance tests. Each track proved its own
+US-1 to US-23 have no automated acceptance tests. Each track proved its own
 slice with `verify-*.sh`, but nothing re-checks the user journeys
 together, or traces them back to `user-stories.md`. This section builds a
 Playwright suite ([ADR 0020](./docs/adr/0020-playwright-acceptance-tests.md))

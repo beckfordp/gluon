@@ -527,3 +527,12 @@ own line. See each repo's own `git log` for full detail either way.
   the US-20 expiry path marked not yet built; `environment-pipeline` rebuilt
   from a new Mermaid source per ADR 0016. `docs/system-design.md` updated to
   match (event names, state model, consumers, environments).
+- Cancellation backlog reconciled: US-9 is now the epic for cancelled and
+  failed orders. US-20 (auth expiry) and US-10 (stale dispatch) are
+  triggers; US-18 and US-19 are linked failure outcomes; new US-21 (cancel
+  mid-fulfilment), US-22 (operator cancel) and US-23 (post-dispatch returns)
+  cover the remaining scenarios. Shared compensation — reasoned
+  `OrderCancelled`, then payment void / inventory release / fulfilment abort
+  — is tracked once under US-9. `system-design.md`'s contracts and PLAN
+  Journey 5 follow it; the acceptance matrix scopes the built-but-not-
+  reachable tasks until a gshop cancellation journey exists.

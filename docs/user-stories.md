@@ -75,15 +75,16 @@ fulfilled.
 As a customer, I receive an email when my order's status changes — confirmed,
 or failed at either the reservation or payment step — so I know what
 happened and, on failure, can decide whether to cancel it myself (see the
-cancel-order epic below; no automatic recovery happens).
+US-9 cancellation epic below).
 - New `notification-service`, Kafka consumer only, no database. Consumes
   `order.status-changed` (filtered to `reservation_failed`/`confirmed`/
   `payment_failed`) and sends the matching email for each.
 - Extended by US-16.4 (welcome email), US-17.5 (shipped), US-18.4 (dispatch
-  failed), US-19.4 (receipt / payment problem on dispatch), and US-20.5
-  (cancelled — auth expired) — each new status/event notification-service
-  needs to handle is tracked as its own task under the story that
-  introduces the event, not duplicated here.
+  failed), US-19.4 (receipt / payment problem on dispatch), and US-9.9
+  (cancelled, with copy per cancellation reason; US-20's expiry uses it too)
+  — each new status/event notification-service needs to handle is tracked as
+  its own task under the story that introduces the event, not duplicated
+  here.
 
 ### Tasks
 - [x] US-7.1: consume order.status-changed, send the matching email per status (reservation_failed / confirmed / payment_failed) (notification-service)
@@ -96,25 +97,75 @@ track them.
 ### Tasks
 - [x] US-8.1: order history read endpoint + Redis cache (order-service)
 
-## US-9 — Cancel an order *(epic, not yet refined)*
-As a customer, after my order fails (reservation or payment) or is still
-pending, I can cancel it, so stock reserved against it is released and I'm
-not left waiting on something that won't complete.
+## US-9 — Cancelled and failed orders *(epic, refined 2026-11-02)*
+As a customer, when an order can no longer complete — I cancel it, its
+payment authorization expires, or fulfilment fails or stalls — the order
+reaches a terminal state, its stock and payment hold are released or flagged
+for reconciliation, any in-flight fulfilment stops, and I'm told why, so
+nothing stays silently held for an order that won't ship.
 
-Deliberately out of scope for the walking skeleton — added 2026-10-02 as the
-resolution to the "no stock release on failure" gap found while reviewing
-the order lifecycle: rather than build automatic compensation, the
-customer's own cancel action (prompted by the US-7 failure emails) is the
-intended release path. Needs real refinement before it's buildable — at
-minimum: what "cancel" actually does to stock already reserved at
-inventory-service (no release endpoint exists there either), whether
-cancellation is allowed once payment has settled, and whether it's a new
-`OrderStatus` case or reuses an existing terminal one.
+Epic for every way an order ends without being fulfilled. Customer
+cancellation was the original scope; the same terminal outcome now has
+several triggers, so each trigger gets its own story and the shared
+cancellation mechanics live here. Trigger stories define *detection* and
+*reason* only — they do not add their own compensation consumers.
 
-## US-10 — Recover from a stale dispatch *(epic, placeholder only)*
+| Trigger | Initiated by | Story | State today |
+|---|---|---|---|
+| Customer cancels before dispatch | Customer | US-9 | API built; compensation missing |
+| Customer cancels while pick/pack runs | Customer | US-21 | Not built — races dispatch |
+| Customer cancels after dispatch | Customer | US-23 | Not a cancellation — returns/refunds (placeholder) |
+| Authorization expires before dispatch | System (payment sweep) | US-20 | order-service consumer built; producer + compensation missing |
+| Order never dispatches | System (stale sweep) | US-10 | Placeholder |
+| Warehouse can't dispatch | System (fulfilment) | US-18 | Built as `dispatch_failed`; voids + releases |
+| Capture fails after dispatch | System (payment) | US-19.3 | Built as `payment_failed`; manual reconciliation |
+| Support agent cancels | Operator | US-22 | Not built |
+| Checkout reserve/authorize fails | — | ADR 0018 | No order row; not a cancellation |
+| Crash mid-checkout | — | TD-8 | No order row; reservation TTL, not cancellation |
+
+Shared contract:
+- Terminal status `cancelled`, distinct from `dispatch_failed` and
+  `payment_failed` — those are failure outcomes with the same compensation
+  concerns, not cancellation statuses.
+- `OrderCancelled` gains a `reason` (`customer` / `auth_expired` / `stale` /
+  `operator`) so notification copy and audit can distinguish triggers.
+  Today's event carries no reason, and the cancellation email always says
+  the authorization expired — wrong for customer cancels.
+- Compensation fans out from the cancellation event: payment voids the hold,
+  inventory releases the reservation, fulfilment aborts a task that has not
+  dispatched. All steps idempotent; cancel only from `authorized`.
+- A failed compensation step is retried and then flagged for reconciliation
+  (same pattern as US-18.3/US-19.3), not left in logs.
+- After dispatch there is no cancellation — only returns/refunds (US-23).
+
+### Tasks
+- [x] US-9.1: `PATCH`/`PUT /orders/{id}` with `status: cancelled`;
+      `authorized → cancelled`; publishes `OrderCancelled` via the outbox
+      (order-service) — built (`order-review-fixes_20261029`)
+- [ ] US-9.2: add `reason` to `OrderCancelled` (registry artifact, producer
+      and mirrors) (order-service, payment-service, notification-service)
+- [ ] US-9.3: consume the cancellation event, void the authorization, and
+      make a later capture a no-op (payment-service)
+- [ ] US-9.4: consume the cancellation event, release reservations
+      (idempotent) (inventory-service)
+- [ ] US-9.5: consume the cancellation event, abort a
+      `PENDING`/`PICKING`/`PACKED` task; `DISPATCHED` stays final
+      (fulfilment-service)
+- [ ] US-9.6: failed compensation steps set a reconciliation flag (all
+      services)
+- [ ] US-9.7: cancellation is idempotent — repeat requests and a cancel
+      racing auth expiry produce one transition and one event (order-service)
+- [ ] US-9.8: gshop shows a Cancel action on Order History while the order
+      is `authorized`, and the `cancelled` status after (gshop)
+- [ ] US-9.9: notification copy per cancellation reason (notification-service)
+
+## US-10 — Recover from a stale dispatch *(US-9 trigger, epic, placeholder only)*
 As a customer, if my order never reaches `DISPATCHED` within a reasonable
 time, I'm told something went wrong instead of being left waiting
 indefinitely, so I'm not stuck on an order that will never resolve.
+
+A US-9 cancellation trigger: if recovery is to cancel, it uses US-9's shared
+cancellation path (reason `stale`) rather than adding its own compensation.
 
 Surfaced 2026-10-02, narrowed 2026-10-26: reservation and payment
 authorization are both synchronous at checkout now (see "Payment auth
@@ -124,8 +175,9 @@ US-17/18), which has no owner for "this has taken too long." Deliberately
 out of scope for the walking skeleton — placeholder only, needs real
 refinement before it's buildable — at minimum: what counts as "too long,"
 who/what detects it (a background sweep is the leading idea, not decided,
-same shape as US-20's expiry sweep), whether it auto-cancels/compensates
-or just notifies the customer, and how that interacts with US-9.
+same shape as US-20's expiry sweep), and whether it auto-cancels (via US-9)
+or just notifies the customer. An `authorized` order with no fulfilment task
+at all is caught by US-20's expiry sweep, not this one.
 
 ## US-11 — Shipping address
 As a customer, I provide a shipping address at checkout, so my order can be
@@ -254,6 +306,10 @@ dispatched, so it's actually shipped to me.
 As a customer, if my order can't actually be dispatched (a warehouse
 exception), my payment authorization is released and I'm told, so I'm not
 left holding a reservation and a payment hold for an order that won't ship.
+
+Part of US-9's failed-order scope: it reuses the same compensation (void the
+hold, release stock) but keeps its own terminal `dispatch_failed` status
+rather than `cancelled`.
 - fulfilment-service publishes `fulfilment-events: DispatchFailed {orderId,
   reason}` instead of `DispatchConfirmed`.
 - payment-service consumes it and voids the authorization — the first real
@@ -282,7 +338,8 @@ shipping.
   `Confirmed`; capture-failure -> status `PaymentFailed` again, with
   inventory release flagged for **manual reconciliation** rather than an
   automatic release (items may already be physically shipped by this
-  point).
+  point). A US-9 failed-order outcome but **not** a cancellation — the
+  cancellation epic must not release stock for goods already shipped.
 
 ### Tasks
 - [x] US-19.1: consume `DispatchConfirmed`, idempotency check, capture, publish `PaymentCaptured`/`PaymentFailed {reason: capture_failed}` (payment-service) — done 2026-10-28 (`capture-on-dispatch_20261028`)
@@ -291,31 +348,91 @@ shipping.
 - [x] US-19.4: notification-service sends receipt email on `PaymentCaptured`, "payment problem on dispatch" email on capture failure (notification-service) — done 2026-10-28 (`payment-emails_20261028`)
 - [x] US-19.5: Order History displays `Confirmed` (captured) and capture-failure `Payment failed` statuses (gshop) — done 2026-10-28 (`capture-history_20261028`)
 
-## US-20 — Authorization expiry
+## US-20 — Authorization expiry *(US-9 trigger — system-initiated)*
 As the system, if an order's payment authorization expires before it
 dispatches, the order is automatically cancelled and stock released, so
 nothing stays stuck holding an expired authorization indefinitely.
+
+One trigger of the US-9 epic; the shared cancellation mechanics (reason on
+`OrderCancelled`, payment void, inventory release, fulfilment abort,
+notification) live there. This story covers detection and the sweep only.
 - New background sweep in payment-service: periodically scans for
   `{status: Authorized, expiresAt < now}`, publishes `payment-events:
   PaymentAuthorizationExpired {orderId}`.
-- Consumed by order-service (status -> `Cancelled`), inventory-service
-  (release reservations), fulfilment-service (cancel any in-flight
-  pick/pack task).
+- order-service consumes it, moves the order to `cancelled`, and publishes
+  `order-events: OrderCancelled {reason: auth_expired}`. The rest of the
+  fan-out is US-9's shared path — inventory-service and fulfilment-service
+  do **not** get expiry-specific consumers.
 - Mechanism (scheduled CronJob vs. an in-process scheduler) not yet decided
   — same design question shape as the existing outbox-cleanup CronJob
   precedent (`TECHNICAL_DEBT.md`'s TD-3).
-- The `Cancelled` status reached this way is system-initiated (auth
-  expiry); US-9 above is customer-initiated cancellation — related but
-  distinct, worth reconciling once US-9 is actually picked up, not
-  decided here.
 
 ### Tasks
 - [ ] US-20.1: background sweep for expired authorizations, publish `PaymentAuthorizationExpired {orderId}` (payment-service) — mechanism TBD
-- [ ] US-20.2: `OrderStatus` gains `Cancelled`; order-service consumes `PaymentAuthorizationExpired`, status -> `Cancelled` (order-service)
-- [ ] US-20.3: inventory-service consumes `PaymentAuthorizationExpired`, releases reservations (inventory-service)
-- [ ] US-20.4: fulfilment-service consumes `PaymentAuthorizationExpired`, cancels any in-flight pick/pack task (fulfilment-service)
-- [ ] US-20.5: notification-service consumes `PaymentAuthorizationExpired`, sends "order cancelled — auth expired" email (notification-service)
-- [ ] US-20.6: Order History displays the `Cancelled` status (gshop)
+- [x] US-20.2: order-service consumes `PaymentAuthorizationExpired`, status -> `cancelled`, publishes `OrderCancelled` (order-service) — built (`payment-kafka-contracts_20261026`); `Cancelled` status/migration already existed
+- [ ] US-20.3: expiry-triggered release verified through US-9.4 (inventory-service)
+- [ ] US-20.4: expiry-triggered fulfilment abort verified through US-9.5 (fulfilment-service)
+- [ ] US-20.5: expiry-specific cancellation copy through US-9.9 (notification-service)
+- [x] US-20.6: Order History renders the `cancelled` status — the generic status formatter already does (gshop)
+
+## US-21 — Cancel while fulfilment is in progress *(US-9 trigger)*
+As a customer, I can cancel an order after pick/pack has started but before
+it dispatches, so I'm not forced to wait for something I no longer want —
+and if it has already dispatched, I'm told clearly instead of the cancel
+silently doing nothing.
+
+US-9's cancel endpoint only checks the order status, which stays
+`authorized` while fulfilment is `PENDING`/`PICKING`/`PACKED`;
+`DispatchConfirmed` can land at any moment. This story covers the race, not
+the shared compensation (US-9).
+- fulfilment-service aborts the task on cancellation (US-9.5); once
+  `DISPATCHED`, the task is final and order-service rejects the cancel.
+- Deterministic race: whichever of the cancellation and `DispatchConfirmed`
+  transitions order-service accepts first wins. The loser must be a no-op
+  everywhere — payment must not both void and capture, fulfilment must not
+  both abort and dispatch, inventory must not release stock for a shipped
+  order.
+- A lost race is not an error to the customer: cancel after dispatch returns
+  `409` and points at returns (US-23); dispatch arriving after cancellation
+  triggers reconciliation, not a shipped-but-cancelled order.
+
+### Tasks
+- [x] US-21.1: order-service rejects cancel once `dispatched`/`confirmed`
+      with `409` (order-service) — the status guard and generic "past
+      cancelling" `409` already exist (`OrderLifecycle`); keep it
+- [ ] US-21.2: payment-service makes void and capture mutually exclusive via
+      the existing conditional `authorized → voided|captured` update; a
+      capture arriving after void is a no-op (payment-service)
+- [ ] US-21.3: fulfilment-service treats `DISPATCHED` as final; an abort
+      arriving after dispatch is a no-op (fulfilment-service)
+- [ ] US-21.4: any side that loses the race records a reconciliation flag
+      (all services)
+- [ ] US-21.5: gshop keeps Cancel enabled for `authorized` (the only
+      observable status pre-dispatch) and surfaces the `409` (gshop)
+
+## US-22 — Operator-initiated cancellation *(US-9 trigger, placeholder)*
+As a support operator, I can cancel an eligible order on a customer's
+behalf, so issues can be resolved when the customer can't use their own
+account.
+
+- Reuses US-9's cancellation path and compensation; adds operator identity
+  and reason to the audit and notification.
+- No operator auth/role model exists yet (user-service issues customer
+  tokens only) — this story is the reason to add one, not a v1 requirement.
+- Explicitly not a bulk/incident cancellation tool.
+
+## US-23 — Cancel after dispatch / returns *(placeholder, out of US-9 scope)*
+As a customer, once my order has dispatched I can't cancel it — I need a
+returns/refund flow instead, so post-dispatch compensation isn't mistaken
+for cancellation.
+
+- Boundary story for US-9: after `dispatched`/`confirmed` the cancel
+  endpoint returns `409`; money has been (or will be) captured and the
+  goods are with the carrier. Reversing that is a return + refund, not an
+  `OrderStatus` change.
+- US-19.3's capture-failure reconciliation is the closest thing today; a
+  real returns flow is out of scope for v1.
+- Placeholder only; not refined.
 
 ## Open questions
 - ~~Auth/identity — no user-service yet~~ — **Resolved 2026-10-26** via
