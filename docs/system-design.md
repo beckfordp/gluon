@@ -12,7 +12,8 @@ Diagrams: [`diagrams/order-fulfillment-topology.svg`](./diagrams/order-fulfillme
 machine) or Preview to zoom. Regenerate/update if this doc's shape changes
 materially (they'll drift silently otherwise). All diagrams were regenerated
 2026-11-02 from the Mermaid sources kept beside them (`*.mmd`), after the
-ADR 0018/TD-7/TD-15 changes and the fulfilment/user-service build-out; the
+ADR 0018/TD-7/TD-15 changes, the fulfilment/user-service build-out and
+Checkout Journey 5's cancellation fan-out; the
 space-named SVGs map to `order-state-model.mmd`, `checkout-happy-path.mmd`
 and `checkout-alternative-paths.mmd`. `environment-pipeline.svg` now has an
 `environment-pipeline.mmd` source too; `kafka-domain-template.svg` remains
