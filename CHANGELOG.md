@@ -629,3 +629,17 @@ own line. See each repo's own `git log` for full detail either way.
   detail (fulfilment state, reservation ledger, flags, emails), Journey 8
   operator cancel and expire-now, and a Customers tab with email history
   (guest checkouts labelled via user-service 404).
+- **Guest checkout email and live admin verification (ADM-9/10).** gshop now
+  requires an email for a signed-out checkout; order-service accepts it as
+  optional `email` on `POST /orders` (validated, normalized, `V16`
+  `guest_email`) and returns `guestEmail` on order reads. notification-service
+  falls back to it when the customer has no account, through the existing
+  `GET /orders/{id}` lookup, so guest orders are emailed instead of recorded
+  `unresolved`; the `order-events` contract is unchanged (ADR 0025
+  addendum). The console labels guests by that address.
+  `bin/verify-admin-demo` exercises the whole console backend live: operator
+  cancel (bad-token 401, ledger release, fulfilment abort, `operator` email),
+  ADM-5 expiry on a guest order (email to the guest), a deterministic
+  capture-decline reconciliation flag resolved first-wins, and customer
+  email history. It surfaced TD-23: fulfilment drops an `OrderCancelled`
+  consumed before the task's `PaymentAuthorized`.

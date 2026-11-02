@@ -71,3 +71,15 @@ fulfilment mail.
   `recipientKey`.
 - Sends perform one or two extra HTTP calls; idempotency still comes from the
   existing `source_event_id` claim, so retries never double-send.
+
+## Addendum (2026-11-02, ADM-10): guest checkout email
+The anonymous-checkout gap above is closed without changing this decision.
+gshop requires an email for a signed-out checkout; `POST /orders` accepts it
+as optional `email`, order-service stores it (`order.guest_email`) and
+returns it as `guestEmail` on every order read. When the user lookup 404s,
+notification-service falls back to the order's `guestEmail` through the same
+`GET /orders/{id}` lookup (reusing it for orderId-only events). Enriching the
+`order-events` contract was rejected: it would carry PII on the bus, need a
+registry version per event type, and still not cover payment/fulfilment
+events, which only have the orderId. Pre-ADM-10 guest orders, and guest
+orders placed without an email by other clients, remain `unresolved`.

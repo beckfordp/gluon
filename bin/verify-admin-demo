@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# DEMO ONLY (ADM-9). Live end-to-end check of the Admin console's backend on
+# the local gluon-local cluster, through the same public APIs gshop's
+# Operations console calls. Never run against a shared/production cluster.
+#
+# Proves, with fresh throwaway orders:
+#   1. operator cancel (Journey 8): 401 without/with a bad token; with the dev
+#      token the order cancels, the reservation ledger releases, fulfilment
+#      aborts and an `operator` cancellation email is sent to the account's
+#      address;
+#   2. simulated expiry (ADM-5) on a guest order (ADM-10): the payment voids,
+#      the order cancels as `auth_expired`, the ledger releases and the email
+#      reaches the guest's checkout address;
+#   3. reconciliation (ADM-4): a capture-declined card dispatched through
+#      fulfilment's simulator flags the order; the flag is visible in the open
+#      queue, resolves with a note (401 without the token), and a repeat
+#      resolve is idempotent;
+#   4. customer email history: the signed-in customer's emails are listed.
+#
+# Requires: the cluster up with every service deployed at its ADM-10 version,
+# Debezium connectors registered, the catalog/inventory seed, and fulfilment
+# simulation enabled (environments/local defaults).
+#
+# Usage: bin/verify-admin-demo
+set -euo pipefail
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+svc() { echo "http://$1-service.gluon-local.svc.cluster.local:8080"; }
+ORDER_URL="${ORDER_URL:-$(svc order)}"
+PAYMENT_URL="${PAYMENT_URL:-$(svc payment)}"
+INVENTORY_URL="${INVENTORY_URL:-$(svc inventory)}"
+FULFILMENT_URL="${FULFILMENT_URL:-$(svc fulfilment)}"
+NOTIFICATION_URL="${NOTIFICATION_URL:-$(svc notification)}"
+USER_URL="${USER_URL:-$(svc user)}"
+CATALOG_URL="${CATALOG_URL:-$(svc catalog)}"
+TOKEN="${OPERATOR_TOKEN:-dev-operator-token}"
+WAIT_SECONDS="${WAIT_SECONDS:-60}"
+
+ADDRESS='{"line1":"1 Demo Street","city":"London","postalCode":"EC1A 1BB","country":"GB"}'
+FAILED=0
+
+ok() { echo "   OK: $1"; }
+bad() { echo "   FAIL: $1" >&2; FAILED=1; }
+die() { echo "FAIL: $1" >&2; exit 1; }
+
+# request METHOD URL [BODY] [AUTH] -> prints status, body in $TMP_DIR/body.json
+request() {
+  local method="$1" url="$2" body="${3:-}" auth="${4:-}"
+  local args=(-sS -o "$TMP_DIR/body.json" -w '%{http_code}' -X "$method" "$url")
+  [ -n "$body" ] && args+=(-H 'Content-Type: application/json' -d "$body")
+  [ -n "$auth" ] && args+=(-H "Authorization: $auth")
+  curl "${args[@]}"
+}
+
+# jq-free JSON access: py EXPR evaluates against `d` = the last body.
+py() {
+  python3 -c "import json,sys; d=json.load(open('$TMP_DIR/body.json')); print($1)"
+}
+
+expect_status() { # label expected actual
+  if [ "$3" = "$2" ]; then ok "$1 ($3)"; else bad "$1: expected $2, got $3 $(cat "$TMP_DIR/body.json" 2>/dev/null | head -c 300)"; fi
+}
+
+# until_true LABEL CHECK-COMMAND... : polls until the command succeeds.
+until_true() {
+  local label="$1"; shift
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while [ $SECONDS -lt $deadline ]; do
+    if "$@" >/dev/null 2>&1; then ok "$label"; return 0; fi
+    sleep 2
+  done
+  bad "$label (not within ${WAIT_SECONDS}s)"
+  return 1
+}
+
+order_status_is() { # orderId status
+  [ "$(request GET "$ORDER_URL/orders/$1")" = 200 ] && [ "$(py "d['status']")" = "$2" ]
+}
+
+ledger_all() { # orderId status
+  [ "$(request GET "$INVENTORY_URL/inventorys/order-reservations?orderId=$1")" = 200 ] &&
+    [ "$(py "len(d) > 0 and all(r['status'] == '$2' for r in d)")" = True ]
+}
+
+fulfilment_state_is() { # orderId state
+  [ "$(request GET "$FULFILMENT_URL/fulfilment-tasks")" = 200 ] &&
+    [ "$(py "next((t['state'] for t in d if t['orderId'] == '$1'), '')")" = "$2" ]
+}
+
+email_sent() { # orderId eventType reason address
+  [ "$(request GET "$NOTIFICATION_URL/emails?orderId=$1")" = 200 ] &&
+    [ "$(py "any(e['eventType'] == '$2' and e['reason'] == '$3' and e['status'] == 'sent' and e['recipientEmail'] == '$4' for e in d)")" = True ]
+}
+
+open_flag() { # orderId
+  [ "$(request GET "$ORDER_URL/reconciliations?status=open&orderId=$1")" = 200 ] &&
+    [ "$(py "len(d) == 1")" = True ]
+}
+
+# place_order CUSTOMER_ID CARD [EMAIL] -> echoes the new order id
+place_order() {
+  local customer="$1" card="$2" email="${3:-}"
+  local status
+  status="$(request POST "$PAYMENT_URL/payments/methods" \
+    "{\"customerId\":\"$customer\",\"cardNumber\":\"$card\",\"expiry\":\"12/30\",\"billingAddress\":$ADDRESS}")"
+  [ "$status" = 201 ] || die "payment method failed (HTTP $status): $(cat "$TMP_DIR/body.json")"
+  local method; method="$(py "d['id']")"
+  local email_field=""
+  [ -n "$email" ] && email_field=",\"email\":\"$email\""
+  status="$(request POST "$ORDER_URL/orders" \
+    "{\"customerId\":\"$customer\",\"items\":[{\"sku\":\"$SKU\",\"productName\":\"$PRODUCT\",\"unitPriceCents\":$PRICE,\"quantity\":1}],\"shippingAddress\":$ADDRESS,\"paymentMethodId\":\"$method\"$email_field}")"
+  [ "$status" = 201 ] || die "order failed (HTTP $status): $(cat "$TMP_DIR/body.json")"
+  py "d['id']"
+}
+
+echo "== Preflight =="
+for name in order payment inventory fulfilment notification user catalog; do
+  url="$(svc "$name")"
+  status="$(curl -s -o /dev/null -w '%{http_code}' "$url/health/ready" || true)"
+  [ "$status" = 200 ] || die "$name-service not ready at $url (HTTP $status) — is the cluster up?"
+done
+ok "all services ready"
+# The three orders need three units of one in-stock catalog item.
+[ "$(request GET "$INVENTORY_URL/inventorys")" = 200 ] || die "inventory list failed"
+cp "$TMP_DIR/body.json" "$TMP_DIR/inventory.json"
+[ "$(request GET "$CATALOG_URL/catalogs?limit=100")" = 200 ] || die "catalog list failed"
+read -r SKU PRICE PRODUCT < <(python3 - "$TMP_DIR/inventory.json" "$TMP_DIR/body.json" <<'PY'
+import json, sys
+stock = {i["sku"]: i["quantityAvailable"] for i in json.load(open(sys.argv[1]))}
+items = [c for c in json.load(open(sys.argv[2])) if stock.get(c["sku"], 0) >= 3]
+if items:
+    c = items[0]
+    print(c["sku"], c["priceCents"], c["name"])
+PY
+)
+[ -n "${SKU:-}" ] || die "no catalog item with 3+ units in stock — run the catalog seed"
+ok "using catalog item $SKU"
+
+echo "== 1. Operator cancel (Journey 8) =="
+EMAIL="admin-demo-$(date +%s)@example.com"
+status="$(request POST "$USER_URL/auth/signup" "{\"email\":\"$EMAIL\",\"password\":\"demo-password-1\"}")"
+[ "$status" = 201 ] || die "signup failed (HTTP $status)"
+CUSTOMER="$(py "d['userId']")"
+ORDER1="$(place_order "$CUSTOMER" "4242424242424242")"
+ok "order $ORDER1 authorized for $EMAIL"
+until_true "ledger reserved" ledger_all "$ORDER1" active || true
+# Workaround for TD-23: a cancel consumed before fulfilment has created the
+# task is dropped, so act only once the task exists (as an operator would).
+until_true "fulfilment task created" fulfilment_state_is "$ORDER1" PENDING || true
+expect_status "bad operator token" 401 \
+  "$(request PATCH "$ORDER_URL/orders/$ORDER1" '{"status":"cancelled"}' 'Bearer wrong-token')"
+order_status_is "$ORDER1" authorized && ok "bad token changed nothing" || bad "bad token changed the order"
+expect_status "operator cancel" 200 \
+  "$(request PATCH "$ORDER_URL/orders/$ORDER1" '{"status":"cancelled"}' "Bearer $TOKEN")"
+until_true "ledger released" ledger_all "$ORDER1" released || true
+until_true "fulfilment cancelled" fulfilment_state_is "$ORDER1" CANCELLED || true
+until_true "operator cancellation email sent to $EMAIL" \
+  email_sent "$ORDER1" OrderCancelled operator "$EMAIL" || true
+
+echo "== 2. Simulated expiry on a guest order (ADM-5, ADM-10) =="
+GUEST="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+GUEST_EMAIL="guest-$(date +%s)@example.com"
+ORDER2="$(place_order "$GUEST" "4242424242424242" "$GUEST_EMAIL")"
+[ "$(request GET "$ORDER_URL/orders/$ORDER2")" = 200 ] && [ "$(py "d.get('guestEmail')")" = "$GUEST_EMAIL" ] &&
+  ok "guest order $ORDER2 carries $GUEST_EMAIL" || bad "guest email not on the order"
+expect_status "expiry without token" 401 \
+  "$(request POST "$PAYMENT_URL/payments/authorizations/$ORDER2/expire")"
+expect_status "expiry trigger" 200 \
+  "$(request POST "$PAYMENT_URL/payments/authorizations/$ORDER2/expire" "" "Bearer $TOKEN")"
+[ "$(py "d['status']")" = voided ] && ok "payment voided" || bad "payment not voided"
+expect_status "repeat expiry" 409 \
+  "$(request POST "$PAYMENT_URL/payments/authorizations/$ORDER2/expire" "" "Bearer $TOKEN")"
+until_true "order cancelled by expiry" order_status_is "$ORDER2" cancelled || true
+until_true "ledger released" ledger_all "$ORDER2" released || true
+until_true "auth_expired email sent to the guest address" \
+  email_sent "$ORDER2" OrderCancelled auth_expired "$GUEST_EMAIL" || true
+
+echo "== 3. Reconciliation flag visibility and resolution (ADM-4) =="
+# 5555 5555 5555 4444 authorizes but declines at capture (payment-service
+# config), so dispatching it fails capture and flags the order.
+ORDER3="$(place_order "$CUSTOMER" "5555555555554444")"
+ok "order $ORDER3 authorized with the capture-decline card"
+until_true "fulfilment task created" fulfilment_state_is "$ORDER3" PENDING || true
+for step in 1 2 3; do
+  status="$(request POST "$FULFILMENT_URL/fulfilment-tasks/$ORDER3/simulate-next" '{}')"
+  [ "$status" = 200 ] || die "simulate-next failed (HTTP $status); is fulfilment simulation enabled?"
+done
+[ "$(py "d['state']")" = DISPATCHED ] && ok "dispatched" || bad "not dispatched: $(py "d['state']")"
+until_true "order payment_failed" order_status_is "$ORDER3" payment_failed || true
+until_true "open flag in the order queue" open_flag "$ORDER3" || true
+[ "$(request GET "$ORDER_URL/reconciliations?status=open")" = 200 ] &&
+  [ "$(py "any(r['orderId'] == '$ORDER3' for r in d)")" = True ] &&
+  ok "flag listed in the open queue" || bad "flag missing from the open queue"
+expect_status "resolve without token" 401 \
+  "$(request PATCH "$ORDER_URL/reconciliations/$ORDER3" '{"status":"resolved","note":"demo"}')"
+expect_status "resolve" 200 \
+  "$(request PATCH "$ORDER_URL/reconciliations/$ORDER3" '{"status":"resolved","note":"Refunded manually"}' "Bearer $TOKEN")"
+[ "$(py "d['status'] == 'resolved' and d['operatorId'] == 'dev-operator' and d['note'] == 'Refunded manually'")" = True ] &&
+  ok "resolved by dev-operator with note" || bad "unexpected resolution: $(cat "$TMP_DIR/body.json")"
+FIRST_RESOLVED_AT="$(py "d['resolvedAt']")"
+expect_status "repeat resolve" 200 \
+  "$(request PATCH "$ORDER_URL/reconciliations/$ORDER3" '{"status":"resolved","note":"second"}' "Bearer $TOKEN")"
+[ "$(py "d['resolvedAt'] == '$FIRST_RESOLVED_AT' and d['note'] == 'Refunded manually'")" = True ] &&
+  ok "first resolver wins" || bad "repeat resolve overwrote the first"
+
+echo "== 4. Customer views =="
+[ "$(request GET "$ORDER_URL/admin/orders?customerId=$CUSTOMER")" = 200 ] &&
+  [ "$(py "sorted(o['id'] for o in d) == sorted(['$ORDER1', '$ORDER3'])")" = True ] &&
+  ok "admin order list filters by customer" || bad "admin order list mismatch"
+[ "$(request GET "$USER_URL/users/$CUSTOMER")" = 200 ] && [ "$(py "d['email']")" = "$EMAIL" ] &&
+  ok "customer email resolves" || bad "user lookup mismatch"
+expect_status "guest has no account" 404 "$(request GET "$USER_URL/users/$GUEST")"
+[ "$(request GET "$NOTIFICATION_URL/emails?customerId=$CUSTOMER")" = 200 ] &&
+  [ "$(py "any(e['orderId'] == '$ORDER1' for e in d)")" = True ] &&
+  ok "customer email history lists the cancellation" || bad "customer email history missing"
+
+echo
+if [ "$FAILED" -eq 0 ]; then
+  echo "PASS: admin demo verified (orders $ORDER1, $ORDER2, $ORDER3)"
+else
+  echo "FAIL: see above" >&2
+  exit 1
+fi

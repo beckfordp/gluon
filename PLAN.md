@@ -1048,16 +1048,23 @@ read models and triggers the real console needs.
 - [x] ADM-8 — gshop: real-wire the Customers tab (customer orders and email
       history) once ADM-2/3 land — done 2026-11-02
       (`admin-console_20261102`; guests labelled via user-service 404)
-- [ ] ADM-9 — verification: per-endpoint tests plus a live admin demo
+- [x] ADM-9 — verification: per-endpoint tests plus a live admin demo
       script covering ledger release, email history, operator cancel,
-      simulated expiry and reconciliation flag visibility/resolution
-- [ ] ADM-10 — guest email at checkout: anonymous gshop orders use a random
+      simulated expiry and reconciliation flag visibility/resolution — done
+      2026-11-02: `bin/verify-admin-demo` passes on the local cluster; the
+      flag comes deterministically from the capture-decline card dispatched
+      via fulfilment's simulator. Found TD-23 (cancel-before-task race).
+- [x] ADM-10 — guest email at checkout: anonymous gshop orders use a random
       customerId with no user-service account, so ADM-3's resolver records a
       terminal `unresolved` row and sends nothing (ADR 0025). Add an optional
       guest `email` to `CreateOrderRequest`, persist it on the order, carry it
       on the order-events contract (v-next) and use it as the notification
       fallback when customerId resolution 404s. Decide gshop UX (opt-in field
-      vs required for anonymous checkout). Ordered after ADM-4.
+      vs required for anonymous checkout). Ordered after ADM-4. — done
+      2026-11-02 (`guest-email_20261102` ×2,
+      `guest-email-fallback_20261102`): gshop requires it for guests; order
+      stores/returns `guestEmail`; notification falls back to it via the
+      existing order lookup — no Kafka contract change (ADR 0025 addendum).
 - [x] DEMO-1 — `bin/seed-demo-data`: idempotent API-driven demo customers
       (Ada/Grace/Alan) and six orders across authorized+PENDING,
       authorized+PICKING, confirmed, cancelled, payment_failed and

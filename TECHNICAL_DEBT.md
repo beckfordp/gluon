@@ -982,3 +982,33 @@ and `.git/`): `infra/k8s/local-infra/debezium-connectors-register.yaml`,
 `tests/acceptance/src/precheck.ts`, `tests/acceptance/README.md`,
 `docs/system-design.md`, `docs/diagrams/kafka-domain-topology.mmd`,
 `docs/diagrams/order-fulfillment-topology.mmd`.
+
+## TD-23 — Fulfilment drops an `OrderCancelled` that beats `PaymentAuthorized`
+
+fulfilment-service creates its task from `payment-events: PaymentAuthorized`
+and aborts it on `order-events: OrderCancelled`. The two topics have no
+relative ordering. When the cancel is consumed first, the handler logs
+"OrderCancelled for an unknown fulfilment task - skipping", and the
+authorization then creates a live `PENDING` task for a cancelled order —
+dispatchable, which would capture against a voided hold (payment then flags
+`dispatch_after_*` for reconciliation, so it is caught, not silent).
+
+Seen 2026-11-02 by `bin/verify-admin-demo` (ADM-9): fulfilment had just been
+redeployed and replayed its backlog, so an operator cancel issued seconds
+after checkout landed before the task existed. Rare in steady state (a human
+cancel normally follows task creation by far more than consumer lag), but
+any consumer lag or restart opens the window. The demo script now waits for
+the task before cancelling; that is a workaround, not a fix.
+
+### Tasks
+- [ ] TD-23.1: fulfilment-service — record a cancellation tombstone for an
+      unknown order on `OrderCancelled` (same transaction as the consumer
+      offset's effect), and create the task directly as `CANCELLED` (or not at
+      all) when `PaymentAuthorized` arrives for a tombstoned order.
+      Idempotent under redelivery; test both arrival orders.
+- [ ] TD-23.2: audit inventory/payment `OrderCancelled` consumers for the
+      same cross-topic ordering assumption (payment: cancel before authorize
+      is impossible synchronously; inventory: reserve is synchronous) and
+      record the result.
+- [ ] TD-23.3: drop the wait-for-task workaround from `bin/verify-admin-demo`
+      once fixed.
