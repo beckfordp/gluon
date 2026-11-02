@@ -4,8 +4,25 @@ groups:
       # Fires on new inserts only (the counter increments when a first-wins
       # flag row is actually written). The open queue depth comes from
       # GET /reconciliations?status=open, not from this rule.
+      #
+      # OTel exports a (service, reason) series only once its first flag is
+      # recorded, so that series appears already at 1 and increase() sees no
+      # rise. The second branch catches a series that is present now but was
+      # absent 5m ago; it is guarded until Prometheus has 6m of history so a
+      # fresh Prometheus doesn't alert on every pre-existing counter.
       - alert: ReconciliationFlagRecorded
-        expr: sum by (service, reason) (increase(reconciliation_flags_recorded_total[5m])) > 0
+        expr: |
+          (sum by (service, reason) (increase(reconciliation_flags_recorded_total[5m])) > 0)
+          or
+          (
+            (
+              sum by (service, reason) (reconciliation_flags_recorded_total)
+              unless
+              sum by (service, reason) (reconciliation_flags_recorded_total offset 5m)
+            )
+            and on ()
+            (time() - max(process_start_time_seconds{job="prometheus"}) > 360)
+          )
         for: 0m
         labels:
           severity: warning

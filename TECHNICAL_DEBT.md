@@ -1041,3 +1041,29 @@ Likely causes, unconfirmed:
       `quantityReserved`; DB check `quantity_reserved >= 0`.
 - [ ] TD-24.3: derive or verify the counter from the ledger (single source
       of truth), and repair existing drift with a one-off script.
+
+## TD-25 — Grafana is OOM-killed at its 192 Mi limit
+
+Seen 2026-11-02 right after `bin/obs up`: opening the dashboard list
+OOM-killed Grafana (13.0.2, `limits.memory: 192Mi`, exit 137); readiness then
+failed until the restart came back. Startup also logged SQLite
+`database is locked` retries while provisioning ran alongside the first UI
+requests. It recovered and served the RED dashboard afterwards, but the first
+page load of a fresh stack is the one a demo relies on.
+
+The obs stack sits exactly at its 3 Gi budget
+(`environments/local/README.md`), so a higher limit must come from another
+component (Kibana 768 Mi / Elasticsearch 1152 Mi are the candidates) or a
+budget change.
+
+### Tasks
+- [ ] TD-25.1: measure Grafana's steady and peak RSS on a fresh `bin/obs up`
+      (dashboard list + RED dashboard load) and record the numbers here.
+- [ ] TD-25.2: raise Grafana to the measured peak plus headroom (likely
+      256–320 Mi), funded by trimming Kibana or Elasticsearch, and update the
+      budget table; or trim Grafana instead (disable unused features such as
+      the alerting scheduler, live, and plugin preinstall) if that keeps it
+      under 192 Mi.
+- [ ] TD-25.3: `bin/obs up` waits for one successful dashboard-list request
+      before reporting Up, so a first-load OOM shows in the script, not the
+      demo.
