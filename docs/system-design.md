@@ -235,12 +235,21 @@ above):
 **`PATCH /orders/{id}` / `PUT /orders/{id}`** (caller: `gshop`; callee:
 order-service; cancellation built 2026-11-01):
 - Request: `{"status": "cancelled"}` — the only accepted value.
-- `200`: the updated `OrderResponse` with `status: "cancelled"`.
-- `404`: unknown order. `400`: an unknown status string. `409`: the order is
-  not `authorized` (e.g. already dispatched or confirmed).
-- Publishes `order-events: OrderCancelled {reason: customer}` via the outbox.
-  The shared fan-out (**built 2026-11-02**) voids the payment hold, releases
-  the inventory reservation and aborts a non-dispatched fulfilment task.
+- Optional `Authorization: Bearer <token>`: a configured **dev-only operator
+  token** selects `reason: operator` and the configured operator actor
+  (ADR 0024). Absent = customer cancellation. Malformed/mismatched → `401`.
+  The customer path remains unauthenticated.
+- `200`: the updated `OrderResponse` with `status: "cancelled"`. A repeat
+  cancel (US-9.7) is an idempotent `200` no-op: no new transition, no second
+  event.
+- `400`: an unknown status string. `401`: invalid operator token. `404`:
+  unknown order. `409`: the order is not `authorized` (e.g. already dispatched
+  or confirmed).
+- Publishes `order-events: OrderCancelled {reason: customer|operator, actor}`
+  via the outbox. The shared fan-out (**built 2026-11-02**) voids the payment
+  hold, releases the inventory reservation and aborts a non-dispatched
+  fulfilment task. Cancelling while `PaymentAuthorizationExpired` is racing
+  produces exactly one transition/event; the loser is a no-op (US-9.7).
 - `DELETE /orders/{id}` is a separate hard-delete (no event, no release).
 
 **`POST /auth/signup`** (caller: `gshop`; callee: user-service, US-16.1,
@@ -447,19 +456,25 @@ synchronous and publish nothing (ADR 0018).
 
 **`OrderCancelled`**:
 
-Registry: [`registry/order-service/registry.json`](../registry/order-service/registry.json) → `order-events-OrderCancelled` v2 (`reason` is optional in the schema so the `BACKWARD_TRANSITIVE` rule accepts the addition; this producer always sends it).
+Registry: [`registry/order-service/registry.json`](../registry/order-service/registry.json) → `order-events-OrderCancelled` v3 (`reason` and `actor` are optional in the schema so `BACKWARD_TRANSITIVE` accepts the additions; this producer always sends both).
 ```json
 {
   "orderId": "string (UUID)",
   "customerId": "string",
   "reason": "string — customer | auth_expired | stale | operator (optional in schema, always sent)",
+  "actor": {
+    "type": "string — customer | operator | system",
+    "id": "string — customerId | operator id | system component"
+  },
   "timestamp": "string (ISO-8601 instant)"
 }
 ```
 Published when order-service moves an order to `cancelled`: from a customer
-`PATCH`/`PUT /orders/{id}` with `status: cancelled` (`reason: customer`), or
-when it consumes `PaymentAuthorizationExpired` (`reason: auth_expired`) —
-both **built 2026-11-02**. This is US-9's shared cancellation fan-out event:
+`PATCH`/`PUT /orders/{id}` with `status: cancelled` (`reason: customer`), from
+a dev operator request with the configured Bearer token (`reason: operator`,
+`actor: {operator, id}`), or when it consumes `PaymentAuthorizationExpired`
+(`reason: auth_expired`, `actor: {system, payment-service}`) — customer/expiry
+**built 2026-11-02**; operator backend built the same day (US-22, ADR 0024). This is US-9's shared cancellation fan-out event:
 payment-service voids the hold (US-9.3), inventory-service releases the
 reservation (US-9.4), fulfilment-service aborts a non-dispatched task
 (US-9.5), and notification-service sends reason-specific copy (US-9.9) — all

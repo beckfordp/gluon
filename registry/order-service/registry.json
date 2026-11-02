@@ -96,6 +96,83 @@
             },
             "additionalProperties": false
           }
+        },
+        {
+          "version": "3",
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "OrderCancelledEvent",
+            "description": "Order cancelled: a customer/operator cancel or a consumed PaymentAuthorizationExpired moved the order to cancelled.",
+            "type": "object",
+            "required": [
+              "orderId",
+              "customerId",
+              "timestamp"
+            ],
+            "properties": {
+              "orderId": {
+                "description": "Order UUID (order-service's order id).",
+                "examples": [
+                  "3f2b8c1e-5d4a-4e7b-9c6f-1a2b3c4d5e6f"
+                ],
+                "type": "string"
+              },
+              "customerId": {
+                "description": "Customer who placed the order.",
+                "examples": [
+                  "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                ],
+                "type": "string"
+              },
+              "timestamp": {
+                "description": "When the order was cancelled (ISO-8601 instant).",
+                "examples": [
+                  "2026-10-31T10:15:30Z"
+                ],
+                "type": "string",
+                "format": "date-time"
+              },
+              "reason": {
+                "description": "Cancellation trigger: customer | auth_expired | stale | operator. Always sent by the producer.",
+                "examples": [
+                  "customer"
+                ],
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "actor": {
+                "description": "Who cancelled. Always sent by the producer; absent on old messages.",
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "description": "Actor type: customer | operator | system.",
+                    "examples": [
+                      "operator"
+                    ],
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "Actor id: the customerId, operator id, or system component.",
+                    "examples": [
+                      "dev-operator"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
         }
       ]
     },

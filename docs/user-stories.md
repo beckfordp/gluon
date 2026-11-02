@@ -420,16 +420,34 @@ the shared compensation (US-9).
 - [ ] US-21.5: gshop keeps Cancel enabled for `authorized` (the only
       observable status pre-dispatch) and surfaces the `409` (gshop)
 
-## US-22 — Operator-initiated cancellation *(US-9 trigger, placeholder)*
+## US-22 — Operator-initiated cancellation *(US-9 trigger)*
 As a support operator, I can cancel an eligible order on a customer's
 behalf, so issues can be resolved when the customer can't use their own
 account.
 
 - Reuses US-9's cancellation path and compensation; adds operator identity
   and reason to the audit and notification.
-- No operator auth/role model exists yet (user-service issues customer
-  tokens only) — this story is the reason to add one, not a v1 requirement.
-- Explicitly not a bulk/incident cancellation tool.
+- **Refined 2026-11-02 (ADR 0024):** the operator model is a config-gated
+  **dev-only token** in order-service (`Authorization: Bearer <token>`), not
+  a real role system. Real operator identity/roles remain deferred.
+  Eligibility is identical to customer cancellation (only `authorized`;
+  dispatched/confirmed → `409`). `OrderCancelled` v3 carries an optional
+  typed `actor {type: customer|operator|system, id}`, persisted in
+  `order_cancellation_audit` in the same transaction. Notification keeps
+  generic “support team” copy; the actor is for audit/logs, not the customer
+  email. No bulk/incident path.
+- The gshop operator action is deferred to ADM-7 (Admin console), which will
+  use this contract.
+
+### Tasks
+- [x] Refine US-22: dev-only operator token, same eligibility, typed actor,
+      backend first (ADR 0024) — 2026-11-02
+- [x] Reuse US-9's cancel path with `reason: operator`, recording the actor
+      in the order audit trail (order-service) — `j8-operator-cancel_20261102`
+- [x] Notification mirror/logging of the actor (customer copy unchanged)
+      (notification-service) — `j8-operator-actor_20261102`
+- [ ] Operator cancel action on the admin screen, eligible orders only —
+      **deferred to ADM-7**; explicitly no bulk/incident cancellation (gshop)
 
 ## US-23 — Cancel after dispatch / returns *(placeholder, out of US-9 scope)*
 As a customer, once my order has dispatched I can't cancel it — I need a
