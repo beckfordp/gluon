@@ -1013,7 +1013,7 @@ the task before cancelling; that is a workaround, not a fix.
 - [ ] TD-23.3: drop the wait-for-task workaround from `bin/verify-admin-demo`
       once fixed.
 
-## TD-24 — Inventory reserved counter drifts from the reservation ledger (negative `quantityReserved`)
+## TD-24 — Inventory reserved counter drifts from the reservation ledger (negative `quantityReserved`) — **RESOLVED 2026-11-03**
 
 Seen 2026-11-02 in the Catalogue prototype (ADM-11): `watch-mido-commander`
 shows `quantityAvailable 8`, `quantityReserved -2`, while its
@@ -1032,15 +1032,33 @@ Likely causes, unconfirmed:
 - **Counter decremented without a matching active line** (double release
   on redelivery), which would explain the negative value.
 
+### Findings (TD-24.1, 2026-11-03)
+Reserve/release/ship were sound (per-order lock; the counter moves only with
+an `active` line). Drift was −126 over 7 SKUs; the 124 `active` lines were
+all acceptance-test orders from 2026-10-31/11-02:
+- **Absolute overwrite (confirmed):** acceptance teardown `TestData.restore`
+  PUT the snapshot incl. `quantityReserved`, wiping reservations still held
+  at teardown; their later release/ship drove the counter negative. gshop's
+  stock ±1 PATCHed the page-load reserved value the same way.
+- **Pre-J7 lines (cannot recur):** 63 dispatched orders' lines stayed
+  `active` because inventory ignored dispatch before US-21.4; the orders
+  were then deleted. 60 more were `authorized` orders cleanup never finished.
+- Double release: ruled out.
+
 ### Tasks
-- [ ] TD-24.1: inventory-service — reconcile: compare each SKU's
-      `quantity_reserved` with the sum of its `active` ledger lines and with
-      order status; find which cause(s) apply and record them here.
-- [ ] TD-24.2: make the stock adjust a relative/available-only operation
-      (or optimistic-lock it on `updated_at`) so it can never overwrite
-      `quantityReserved`; DB check `quantity_reserved >= 0`.
-- [ ] TD-24.3: derive or verify the counter from the ledger (single source
-      of truth), and repair existing drift with a one-off script.
+- [x] TD-24.1: reconcile counter vs ledger; causes recorded above.
+- [x] TD-24.2: `quantityReserved` is ledger-only (inventory-service
+      `td24-ledger-only-reserved_20261103`): PUT/PATCH set
+      `quantityAvailable` and ignore a sent reserved value; V8 adds
+      `CHECK (quantity_available >= 0)` and `CHECK (quantity_reserved >= 0)`.
+      gshop's stock ±1 sends `quantityAvailable` only
+      (`td24-stock-adjust-available-only_20261103`).
+- [x] TD-24.3: no repair or data migration (gluon is not in production —
+      reset + reseed instead). The acceptance suite no longer restores stock
+      (`td24-restore-available-only_20261103`); `bin/run-acceptance` now runs
+      `bin/reset-data` first (truncate every DB, purge event topics, flush
+      caches, seed catalogue + demo data; ~40 s) and `bin/check-stock-ledger`
+      after (reserved = active ledger lines per SKU).
 
 ## TD-25 — Grafana is OOM-killed at its 192 Mi limit
 

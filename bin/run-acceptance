@@ -3,8 +3,10 @@
 # gluon-local: gshop driven in Chromium against the real services.
 #
 # The suite lives in tests/acceptance (gluon-acceptance). This script checks
-# the cluster and toolchain, checks the user-story coverage matrix, runs the
-# suite, checks it left inventory as it found it, then opens the report.
+# the cluster and toolchain, checks the user-story coverage matrix, resets
+# every database and reseeds (bin/reset-data), runs the suite, checks reserved
+# stock still matches the reservation ledger (bin/check-stock-ledger, TD-24),
+# then opens the report.
 #
 # Usage:
 #   bin/run-acceptance [--no-open] [playwright args...]
@@ -80,18 +82,19 @@ GLUON_DIR="$GLUON_DIR" npm run -s coverage:matrix || {
   exit 1
 }
 
+# --- reset + seed ------------------------------------------------------------
+# Every run starts from a known baseline; scenarios never restore data (TD-24).
+echo "== Reset and seed =="
+"$GLUON_DIR/bin/reset-data" --yes < /dev/null
+
 # --- suite -------------------------------------------------------------------
 echo "== Acceptance suite =="
-mkdir -p target
-scripts/inventory-snapshot.sh > target/run-acceptance-inventory-before.txt
 npx bddgen < /dev/null
 status=0
 npx playwright test "${args[@]+"${args[@]}"}" < /dev/null || status=$?
-scripts/inventory-snapshot.sh > target/run-acceptance-inventory-after.txt
-if ! cmp -s target/run-acceptance-inventory-before.txt target/run-acceptance-inventory-after.txt; then
-  echo "WARN: inventory changed during the run:"
-  diff target/run-acceptance-inventory-before.txt target/run-acceptance-inventory-after.txt || true
-fi
+
+echo "== Stock ledger invariant =="
+"$GLUON_DIR/bin/check-stock-ledger" || status=1
 
 # --- report ------------------------------------------------------------------
 # show-report serves until Ctrl+C, so only when someone is there to close it.

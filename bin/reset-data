@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# DEMO ONLY. Resets every service database and cache on the local gluon-local
+# cluster, then reseeds through the services' public APIs, so acceptance and
+# end-to-end runs start from a known, ledger-consistent baseline (TD-24).
+# Gluon has no production data: wrong data is fixed by reset + reseed, never
+# by data migrations. Never run this against a shared/production environment.
+#
+# Truncates every table except flyway_schema_history in each *-postgres
+# database, purges every event topic (all records deleted; topics, consumer
+# offsets and Debezium's connect-* topics kept), flushes each *-redis,
+# removes bin/seed-demo-data's state manifest,
+# then runs catalog-service's seed-watches.sh (catalogue + stock 10 per SKU)
+# and bin/seed-demo-data (demo customers and orders).
+#
+# Usage: ./bin/reset-data --yes [--no-seed]
+
+set -euo pipefail
+
+GLUON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+NAMESPACE="${NAMESPACE:-gluon-local}"
+
+CONFIRMED=0
+SEED=1
+for arg in "$@"; do
+  case "$arg" in
+    --yes) CONFIRMED=1 ;;
+    --no-seed) SEED=0 ;;
+    -h|--help)
+      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0 ;;
+    *) echo "Unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+[ "$CONFIRMED" = 1 ] || { echo "Refusing to wipe without --yes (see --help)." >&2; exit 2; }
+
+if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+  echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
+  exit 1
+fi
+
+deployments() { # suffix
+  kubectl -n "$NAMESPACE" get deploy -o name | sed -n "s|^deployment.apps/\(.*-$1\)$|\1|p"
+}
+
+echo "== Truncating databases"
+for db in $(deployments postgres); do
+  echo "  $db"
+  kubectl -n "$NAMESPACE" exec -i "deploy/$db" -- \
+    sh -c 'psql -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT 'TRUNCATE ' || string_agg(format('%I.%I', schemaname, tablename), ', ') || ' CASCADE'
+FROM pg_tables
+WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+HAVING count(*) > 0
+\gexec
+SQL
+done
+
+echo "== Purging event topics"
+# Deletes every record up to each partition's end offset; consumers carry on
+# from there, so no offsets reset and no restarts are needed.
+kubectl -n "$NAMESPACE" exec -i deploy/kafka -- sh <<'SH'
+set -e
+K=/opt/kafka/bin; B=localhost:9092
+topics=$($K/kafka-topics.sh --bootstrap-server $B --list | grep -v -e '^__' -e '^connect-' | paste -sd, -)
+[ -n "$topics" ] || exit 0
+$K/kafka-get-offsets.sh --bootstrap-server $B --time -1 --topic-partitions "$topics" |
+  awk -F: 'BEGIN { printf "{\"version\":1,\"partitions\":[" }
+    { printf "%s{\"topic\":\"%s\",\"partition\":%s,\"offset\":%s}", (NR > 1 ? "," : ""), $1, $2, $3 }
+    END { print "]}" }' > /tmp/purge.json
+$K/kafka-delete-records.sh --bootstrap-server $B --offset-json-file /tmp/purge.json > /dev/null
+echo "  $topics"
+SH
+
+flush_caches() {
+  echo "== Flushing caches"
+  for cache in $(deployments redis); do
+    kubectl -n "$NAMESPACE" exec "deploy/$cache" -- redis-cli FLUSHALL >/dev/null
+  done
+}
+flush_caches
+
+rm -f "$GLUON_DIR/.seed-demo-data.state.json"
+
+if [ "$SEED" = 1 ]; then
+  echo "== Seeding catalogue and stock"
+  CATALOG_SERVICE_URL="${CATALOG_SERVICE_URL:-http://catalog-service.$NAMESPACE.svc.cluster.local:8080}" \
+    "$GLUON_DIR/services/catalog-service/scripts/seed-watches.sh" | tail -2
+  # seed-watches lists the empty catalogue first, caching that empty list.
+  flush_caches
+  echo "== Seeding demo customers and orders"
+  "$GLUON_DIR/bin/seed-demo-data" | tail -1
+fi
+echo "Done."

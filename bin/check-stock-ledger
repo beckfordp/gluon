@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Checks inventory's reservation invariant on gluon-local (TD-24): every SKU's
+# quantity_reserved equals the sum of its `active` order_reservations lines.
+# Prints each drifted SKU and exits 1 if any; exits 0 when consistent.
+#
+# Usage: ./bin/check-stock-ledger
+
+set -euo pipefail
+
+NAMESPACE="${NAMESPACE:-gluon-local}"
+
+drift="$(kubectl -n "$NAMESPACE" exec -i deploy/inventory-postgres -- \
+  sh -c 'psql -v ON_ERROR_STOP=1 -At -F " " -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+SELECT i.sku, i.quantity_reserved, COALESCE(SUM(r.quantity), 0)
+FROM inventory i
+LEFT JOIN order_reservations r ON r.sku = i.sku AND r.status = 'active'
+GROUP BY i.sku, i.quantity_reserved
+HAVING i.quantity_reserved <> COALESCE(SUM(r.quantity), 0)
+ORDER BY i.sku;
+SQL
+)"
+
+if [ -n "$drift" ]; then
+  echo "FAIL: reserved stock drifted from the reservation ledger (sku reserved active-ledger):" >&2
+  echo "$drift" >&2
+  exit 1
+fi
+echo "OK: reserved stock matches the reservation ledger for every SKU"

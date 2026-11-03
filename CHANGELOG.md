@@ -643,3 +643,11 @@ own line. See each repo's own `git log` for full detail either way.
   capture-decline reconciliation flag resolved first-wins, and customer
   email history. It surfaced TD-23: fulfilment drops an `OrderCancelled`
   consumed before the task's `PaymentAuthorized`.
+- **Reserved stock is ledger-only; test runs start from a reset (TD-24).**
+  inventory's `quantityReserved` had drifted negative because PUT/PATCH
+  accepted absolute values and the acceptance teardown and gshop's stock ±1
+  wrote back stale ones. Now only reserve/release/ship change it, a sent value
+  is ignored, and V8 forbids negative quantities. Test data is no longer
+  restored: `bin/reset-data` truncates every database, purges the event
+  topics, flushes caches and reseeds through the public APIs, and
+  `bin/run-acceptance` runs it first and `bin/check-stock-ledger` after.
