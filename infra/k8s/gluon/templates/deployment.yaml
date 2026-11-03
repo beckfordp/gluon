@@ -41,12 +41,24 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+          # Startup (Flyway, Kafka group join) can take ~15s on a busy laptop;
+          # the startup probe holds liveness off until the first success.
+          startupProbe:
+            httpGet:
+              path: {{ .Values.healthPath }}
+              port: {{ .Values.port }}
+            periodSeconds: 2
+            failureThreshold: 60
+          # Generous timeout/threshold: at the 500m CPU limit a GC pause under
+          # acceptance load can exceed 1s, and a liveness kill then takes the
+          # service down mid-run.
           livenessProbe:
             httpGet:
               path: {{ .Values.healthPath }}
               port: {{ .Values.port }}
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: {{ .Values.readyPath }}
