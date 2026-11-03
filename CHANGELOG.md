@@ -651,3 +651,10 @@ own line. See each repo's own `git log` for full detail either way.
   restored: `bin/reset-data` truncates every database, purges the event
   topics, flushes caches and reseeds through the public APIs, and
   `bin/run-acceptance` runs it first and `bin/check-stock-ledger` after.
+- **Acceptance suite green again; probes survive load.** The suite caught up
+  with guest checkout (fill the guest email) and the collapsible Admin
+  Fulfilment section, and runs 36/36 from a reset. Every service now has a
+  startup probe (up to 120s to boot) and a liveness probe with a 5s timeout
+  and 6 failures before a restart: the old 1s timeout let a GC pause at the
+  500m CPU limit get order-service killed mid-run. The run surfaced TD-26:
+  fulfilment drops a `PaymentAuthorized` that beats the order's commit.
