@@ -658,3 +658,11 @@ own line. See each repo's own `git log` for full detail either way.
   and 6 failures before a restart: the old 1s timeout let a GC pause at the
   500m CPU limit get order-service killed mid-run. The run surfaced TD-26:
   fulfilment drops a `PaymentAuthorized` that beats the order's commit.
+- **Acceptance suite caught up with Journeys 6–8 and the Admin console.**
+  Four new features cover customer cancel, operator cancel and simulated
+  expiry, the customer record with every customer email, and catalogue
+  stock. The coverage matrix passes for the first time since the admin
+  work: 60 tasks covered, 25 out of scope (each says what proves it), 53
+  scenarios green. From now on a journey is DONE only once the matrix is
+  clean and `bin/run-acceptance` is green. order-service now gets 512Mi,
+  because it was OOMKilled at 384Mi under suite load (TD-27).

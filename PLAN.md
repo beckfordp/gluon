@@ -580,7 +580,11 @@ skeleton was never built to have, not a gap introduced by it — unlike the
 Rework section above, this isn't paying down debt from already-shipped
 behavior, it's building out the checkout journey for the first time.
 Numbered `Checkout Journey N` the same way the other sections above are
-numbered — each its own cross-repo unit of work. gshop UI work can start
+numbered — each its own cross-repo unit of work. **Definition of done
+(2026-11-03):** a journey, or an Admin section, is DONE only once its
+stories are covered or out of scope in the acceptance coverage matrix and
+`bin/run-acceptance` is green — each ends with an "Acceptance" task. The
+suite runs once per journey, not per service track. gshop UI work can start
 against the in-browser checkout mock (`VITE_CHECKOUT_MOCK=true`) while the
 service contracts land; only the service changes gate real end-to-end
 verification.
@@ -664,6 +668,8 @@ against the `simulated` interpreter (same pattern as Rework 2). gshop UI —
 mock mode scenarios: normal, item unavailable, card declined, service
 error; prototype implemented and usability-signed-off 2026-10-26.
 
+- [x] Acceptance — `us-11-14-checkout`, `us-14-checkout-failures` (ACC-4.2–4.3)
+
 **Exit criteria:** prototype UX signed off in mock mode; US-11.1/12.1/
 13.1/13.2/14.1/14.2 done and unit-tested; real-path checkout verified
 end-to-end for authorised, reservation-failed, and declined cards once the
@@ -709,6 +715,8 @@ built in parallel with any of them.
 **Stub / fan-out:** notification-service's consumer tested against a
 synthetic `UserRegistered` event, same pattern as every other per-repo
 Kafka consumer test in this codebase.
+
+- [x] Acceptance — `us-16-account` (ACC-4.1); welcome email in `us-27-admin-emails` (ACC-7.3)
 
 **Exit criteria:** met 2026-10-28 — signup → welcome email and login verified
 against the real cluster (`scripts/verify-auth.sh`,
@@ -767,6 +775,8 @@ Browser click-through of the real auth UI remains available at
 dispatch-success and dispatch-failure paths; no real warehouse/carrier
 integration (out of scope — see US-17/18's own notes in `user-stories.md`).
 
+- [x] Acceptance — `us-17-19-fulfilment`, `us-18-dispatch-failure` (ACC-5.1–5.2); emails in ACC-7.3
+
 **Exit criteria:** met 2026-10-28 — both paths verified end-to-end against the
 real local cluster (`scripts/verify-fulfilment-history.sh` drives checkout →
 fulfilment `simulate-next` → order-service `dispatched`/`dispatch_failed`,
@@ -805,6 +815,8 @@ which Order History renders); the mock Order History preview was removed.
 **Stub / fan-out:** synthetic `DispatchConfirmed` events exercise both the
 capture-success and capture-failure paths against the `simulated`
 interpreter's `capture` operation.
+
+- [x] Acceptance — capture → `Confirmed` / `Payment failed` in `us-17-19-fulfilment` (ACC-5.3); emails in ACC-7.3
 
 **Exit criteria:** both paths verified end-to-end — this closes out
 Checkout Journey 1's US-14.3 and `user-stories.md`'s US-15.
@@ -845,6 +857,8 @@ Journeys 3/4 — can run in parallel with either.
 **Stub / fan-out:** a synthetic `Authorized` payment with an already-past
 `expiresAt`, seeded directly in payment-service's own test DB — proves the
 sweep's query/publish logic without waiting out a real expiry window.
+
+- [x] Acceptance — Admin Expire in `us-24-25-admin-orders` (ACC-7.2); expiry copy in ACC-7.3
 
 **Exit criteria:** met 2026-11-02 — `scripts/verify-auth-expiry.sh` proves
 the real path end-to-end: payment `voided` (`authorization_expired`), one
@@ -906,6 +920,8 @@ payment-service's void, inventory-service's release and fulfilment-service's
 abort independently of a live checkout; a pair of racing cancellation
 events proves US-9.7's single-transition rule without a real race window.
 
+- [x] Acceptance — `us-09-21-cancellation` (ACC-7.1); cancellation copy in ACC-7.3
+
 **Exit criteria:** customer cancel verified end-to-end against the real
 local cluster — money hold voided, stock released, a non-dispatched
 fulfilment task aborted, and the cancellation email using the customer
@@ -948,6 +964,8 @@ no-op — no capture after void, no abort after dispatch, no release for a
 shipped order. The order-service pair proves whichever transition commits
 first wins deterministically.
 
+- [x] Acceptance — past-cancelling `409` in `us-09-21-cancellation` (ACC-7.1); the race itself is out of scope (not timeable through gshop)
+
 **Exit criteria:** a cancel racing dispatch never produces both outcomes:
 exactly one of `cancelled` / `dispatched` wins, the losing side is a no-op
 everywhere, cancel after dispatch returns `409`, and any loser that cannot
@@ -983,6 +1001,8 @@ model.
 operator directory; tests assert an invalid token is rejected (401), the
 actor/audit are recorded, and `reason: operator` reaches the event and email.
 The customer PATCH remains unauthenticated (ADR 0024 caveat).
+
+- [x] Acceptance — operator cancel in `us-24-25-admin-orders` (ACC-7.2); support copy in ACC-7.3
 
 **Exit criteria:** backend met 2026-11-02 — operator can cancel only an
 eligible order, the cancel reaches the same compensation fan-out, the actor
@@ -1080,6 +1100,8 @@ offline/UI-test path while each real endpoint lands; its shapes mirror the
 ledger table and notification copy so real wiring is a gateway swap, not a
 redesign.
 
+- [x] Acceptance — `us-24-25-admin-orders`, `us-27-admin-emails` (ACC-7.2–7.3); reconciliation UI out of scope (no flag without a race)
+
 **Exit criteria:** the Admin console reads real orders, ledger lines and
 sent emails, and drives real operator cancel and expiry; the mock tabs
 remain only as an offline prototype; all new endpoints and the live flow
@@ -1130,6 +1152,8 @@ overlay reads `GET /catalogs/{id}`.
 - [ ] ADM-21 — verification: `bin/verify-catalogue-admin` live script
       (create with stock, edit copy/image, retire hides from storefront,
       restore, unauthorised write 401, duplicate SKU 409)
+
+- [ ] Acceptance — stock ±1 in `us-28-catalogue-admin` (ACC-7.4); extend it as ADM-12–21 land
 
 **Exit criteria:** an operator can add, edit, retire and restock products
 from the Admin console against real services; product images and copy
@@ -1627,7 +1651,7 @@ domain-level steps over page objects. Each scenario is tagged with the
 checks; they are not replaced. Numbered `Acceptance N`, promoted into
 tracks in that repo's own `conductor/tracks.md`.
 
-**Order:** 1 → 2 first; 3/4 in any order after 2; 5 after 4; 6 last.
+**Order:** 1 → 2 first; 3/4 in any order after 2; 5 after 4; 6, then 7.
 
 ## Acceptance 1 — Suite scaffold
 
@@ -1774,10 +1798,42 @@ tracks in that repo's own `conductor/tracks.md`.
       through), warns if inventory changed and serves the report. Full suite
       36 green. Acceptance 3–6 each got a `/conductor:review` pass before
       archive (3–5 retroactively).*
-- [ ] ACC-6.3 — adWhere are d US-20 feature now Journey 5 has landed; blocked on a
-      way for Playwright to seed a past `expiresAt` (no DB seeding exists in
-      the suite). The other US-9/US-20 tasks are recorded out of scope with
-      `verify-auth-expiry.sh` as the proof.
+- [x] ACC-6.3 — add a US-20 feature now Journey 5 has landed
+      *Done 2026-11-03 via ACC-7.2: the Admin console's Expire action (ADM-5)
+      runs the real expiry sweep for one order, so no past `expiresAt` needs
+      seeding.*
 
 **Exit criteria:** every done US-N story is either covered or explicitly
 marked out of scope in the matrix.
+
+---
+
+## Acceptance 7 — Catch-up: Journeys 6–8 and Admin
+
+**Repos:** `tests/acceptance`, `gluon` (`PLAN.md`).
+
+**Depends on:** Acceptance 6. Classification of every uncovered task
+approved 2026-11-03: UI-observable → scenario; races, refinements and
+reconciliation flags → out of scope with what proves them.
+
+- [x] ACC-7.1 — customer cancel: Order History Cancel, stock released,
+      fulfilment `Cancelled` from Pending/Picking/Packed, `409` past
+      cancelling (US-9.1/9.4/9.5/9.8, US-21.1/21.5)
+- [x] ACC-7.2 — Admin Orders: list, ledger and fulfilment; operator cancel;
+      Expire authorization; no actions once shipped (US-24, US-25, US-22.2/
+      22.4, US-20.1–20.4/20.6)
+- [x] ACC-7.3 — Admin Customers: guest/registered record and email history;
+      every customer email, cancellation copy per reason (US-27, US-7.1,
+      9.9, 16.4, 17.5, 18.4, 19.4, 20.5)
+- [x] ACC-7.4 — Catalogue: stock ±1 saved to inventory (US-28.1)
+- [x] ACC-7.5 — prevention: every journey ends with an "Acceptance" task;
+      DONE needs a clean matrix and a green `bin/run-acceptance` (see
+      Checkout Journey)
+      *ACC-7.1–7.4 done 2026-11-03 (gluon-acceptance tracks
+      customer-cancel, admin-orders, admin-emails, catalogue-admin
+      `_20261103`). Matrix: no problems. Cancel/expire scenarios wait for the
+      fulfilment task first — a cancel that beats it leaves it Pending
+      (TD-23). A run surfaced TD-27 (order-service OOMKilled).*
+
+**Exit criteria:** `bin/run-acceptance` passes with the coverage-matrix
+gate on: every done story covered or out of scope.
