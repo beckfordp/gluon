@@ -89,7 +89,10 @@ is not `[x]`, then stop again.
 - [ ] **S36 — PERF-8.1** step load to the knee
 - [ ] **S37 — PERF-8.2** scale-out
 - [ ] **S38 — PERF-8.3** soak
-- [ ] **S39 — PERF-8.4** instrumentation overhead
+- [ ] **S39 — PERF-8.4** instrumentation overhead. Also measure the knee with
+      JFR on vs off (TD-28), then propose an ADR on JVM observability cost in
+      constrained pods (JMX-only default, JFR on demand). The small laptop pods
+      are the point: they expose overhead that large JVMs hide.
 - [ ] **S40 — PERF-8.5** lag cross-check
 
 ## Perf 9: resilience experiments
@@ -127,6 +130,8 @@ is not `[x]`, then stop again.
 
 - 2026-11-04 — Sequence agreed: Tier 1 → Perf 4 close-out → Perf 5 → Tier 2
   → Perf 6–11. Tier 2 goes after tracing so the races are easier to diagnose.
+- 2026-11-04 — JFR overhead (TD-28) gets an ADR, but only after the S39
+  measurements, not before.
 
 ## Step notes
 
