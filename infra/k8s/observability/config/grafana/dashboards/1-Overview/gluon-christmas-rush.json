@@ -1,0 +1,1000 @@
+{
+  "annotations": {},
+  "description": "Level 1 overview of the order journey: demand, checkout outcomes and latency against SLOs, errors by service, dispatch against arrivals, money held, saturation. Start here.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "gluon"
+      ],
+      "targetBlank": false,
+      "title": "gluon dashboards",
+      "tooltip": "",
+      "type": "dashboards"
+    },
+    {
+      "asDropdown": false,
+      "icon": "doc",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Guide",
+      "tooltip": "What this dashboard is for and how to read it",
+      "type": "link",
+      "url": "https://github.com/beckfordp/gluon/blob/main/docs/observability/dashboards.md#christmas-rush"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [
+        {
+          "gridPos": {
+            "h": 9,
+            "w": 24,
+            "x": 0,
+            "y": 1
+          },
+          "id": 2,
+          "options": {
+            "content": "**Purpose.** One screen that answers *is the order journey healthy right now?* It shows symptoms (what customers feel) on top and saturation (likely causes) at the bottom.\n\n**Use it when** running a load test or the Christmas Rush demo, or when something looks wrong and you need to know where to look first.\n\n**How to read it**\n- Top row: demand and checkout. Success % and latency against the dashed 1.5s SLO line are the headline numbers.\n- Errors row: 5xx means a fault (SLO 1%). 4xx is usually business rejections: declines, stock-outs. Click a series to open that service on the **Service** dashboard.\n- Flow row: if dispatch stays below arrivals, the backlog grows. If event age passes the 2 min line, async processing is behind. Panel links (\u2197) drill down to **Dispatch & async flow** and **Checkout & payments**.\n- Saturation panels are causes, not symptoms. Click a pod to open it on **Pods & runtime**.\n- A dashed red line is an SLO. A panel with no data means that event hasn't happened yet.\n\n**Background:** [RED/USE best practices](https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/best-practices/) \u00b7 [Hierarchy of needs](https://grafana.com/docs/learning-hub/intro-to-grafana-cloud/00-intro/02-hierarchy-of-needs) \u00b7 [Dashboards that matter](https://kindatechnical.com/microservices-architecture/building-observability-dashboards-that-matter.html) \u00b7 [ADR 0027](https://github.com/beckfordp/gluon/blob/main/docs/adr/0027-dashboard-architecture.md)",
+            "mode": "markdown"
+          },
+          "repeatDirection": "h",
+          "title": "",
+          "transparent": false,
+          "type": "text"
+        }
+      ],
+      "title": "About this dashboard",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "panels": [],
+      "title": "Demand & checkout",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Arrival rate: orders saved after a successful checkout.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 11
+      },
+      "id": 4,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Checkout & payments",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-checkout/gluon-checkout?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(orders_placed_total[$__rate_interval]))",
+          "legendFormat": "orders/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Orders placed /s",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Share of checkouts that ended authorized. Declines and stock-outs count against it.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 11
+      },
+      "id": 5,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Checkout & payments",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-checkout/gluon-checkout?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum(rate(checkout_outcome_total{outcome=\"authorized\"}[$__rate_interval])) / sum(rate(checkout_outcome_total[$__rate_interval]))",
+          "legendFormat": "success %",
+          "refId": "A"
+        }
+      ],
+      "title": "Checkout success %",
+      "transparent": false,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "authorized / declined / out_of_stock / invalid / unavailable / error",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 11
+      },
+      "id": 6,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Checkout & payments",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-checkout/gluon-checkout?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (outcome) (rate(checkout_outcome_total[$__rate_interval]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Checkout outcomes /s",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1.5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 11
+      },
+      "id": 7,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Checkout & payments",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-checkout/gluon-checkout?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "title": "Checkout latency vs 1.5s SLO",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      },
+      "id": 8,
+      "panels": [],
+      "title": "Errors (symptoms)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Server faults. Empty means none so far. Click a series to open that service.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [
+            {
+              "asDropdown": false,
+              "icon": "",
+              "includeVars": false,
+              "keepTime": false,
+              "tags": [],
+              "targetBlank": false,
+              "title": "Open ${__field.labels.service} on Service",
+              "tooltip": "",
+              "type": "link",
+              "url": "/d/gluon-service/gluon-service?var-service=${__field.labels.service}&${__url_time_range}"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (service) (rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[$__rate_interval])) / sum by (service) (rate(http_server_request_duration_seconds_count[$__rate_interval]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP 5xx % by service (SLO 1%)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Rejections the client sees: declines (402), out of stock (409), validation (400), not found (404).",
+      "fieldConfig": {
+        "defaults": {
+          "links": [
+            {
+              "asDropdown": false,
+              "icon": "",
+              "includeVars": false,
+              "keepTime": false,
+              "tags": [],
+              "targetBlank": false,
+              "title": "Open ${__field.labels.service} on Service",
+              "tooltip": "",
+              "type": "link",
+              "url": "/d/gluon-service/gluon-service?var-service=${__field.labels.service}&${__url_time_range}"
+            }
+          ],
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (service) (rate(http_server_request_duration_seconds_count{http_response_status_code=~\"4..\"}[$__rate_interval])) / sum by (service) (rate(http_server_request_duration_seconds_count[$__rate_interval]))",
+          "legendFormat": "{{service}}",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP 4xx % by service",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 11,
+      "panels": [],
+      "title": "Flow & capacity",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Dispatch keeping up with arrivals means the people backlog is flat.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 29
+      },
+      "id": 12,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Dispatch & async flow",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-dispatch/gluon-dispatch?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(fulfilment_transitions_total{to=\"DISPATCHED\"}[$__rate_interval]))",
+          "legendFormat": "dispatched/s",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(orders_placed_total[$__rate_interval]))",
+          "legendFormat": "placed/s",
+          "refId": "B"
+        }
+      ],
+      "title": "Dispatch vs order arrival",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 29
+      },
+      "id": 13,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Dispatch & async flow",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-dispatch/gluon-dispatch?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (state) (fulfilment_backlog_size)",
+          "legendFormat": "{{state}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Fulfilment backlog by state",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "How stale events are when consumed: outbox \u2192 Debezium \u2192 Kafka \u2192 consumer.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 29
+      },
+      "id": 14,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Dispatch & async flow",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-dispatch/gluon-dispatch?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (messaging_consumer_group_name, le) (rate(purekafka_consumer_event_age_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{messaging_consumer_group_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Event age at consume p95 (SLO 2 min)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Card authorizations not yet captured or voided. A rising line means money is stuck.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 29
+      },
+      "id": 15,
+      "links": [
+        {
+          "asDropdown": false,
+          "icon": "",
+          "includeVars": false,
+          "keepTime": false,
+          "tags": [],
+          "targetBlank": false,
+          "title": "Drill down: Checkout & payments",
+          "tooltip": "",
+          "type": "link",
+          "url": "/d/gluon-checkout/gluon-checkout?${__url_time_range}"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(payments_uncaptured_count)",
+          "legendFormat": "held",
+          "refId": "A"
+        }
+      ],
+      "title": "Uncaptured authorizations (money held)",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Cause, not symptom: check here when latency rises. Click a pod to open it.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [
+            {
+              "asDropdown": false,
+              "icon": "",
+              "includeVars": false,
+              "keepTime": false,
+              "tags": [],
+              "targetBlank": false,
+              "title": "Open ${__field.labels.pod} on Pods & runtime",
+              "tooltip": "",
+              "type": "link",
+              "url": "/d/gluon-pods/gluon-pods?var-pod=${__field.labels.pod}&${__url_time_range}"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (pod) (rate(container_cpu_usage_seconds_total{pod_uid!=\"\"}[$__rate_interval]) * on (pod_uid) group_left (pod) label_replace(kube_pod_info{pod=~\".*-service-.*\"}, \"pod_uid\", \"$1\", \"uid\", \"(.*)\")) / sum by (pod) (kube_pod_container_resource_limits{resource=\"cpu\", pod=~\".*-service-.*\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Service saturation: CPU % of limit",
+      "transparent": false,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Near 100% means an OOMKill is close (TD-27).",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "links": [
+            {
+              "asDropdown": false,
+              "icon": "",
+              "includeVars": false,
+              "keepTime": false,
+              "tags": [],
+              "targetBlank": false,
+              "title": "Open ${__field.labels.pod} on Pods & runtime",
+              "tooltip": "",
+              "type": "link",
+              "url": "/d/gluon-pods/gluon-pods?var-pod=${__field.labels.pod}&${__url_time_range}"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (pod) (container_memory_working_set_bytes{pod_uid!=\"\"} * on (pod_uid) group_left (pod) label_replace(kube_pod_info{pod=~\".*-service-.*\"}, \"pod_uid\", \"$1\", \"uid\", \"(.*)\")) / sum by (pod) (kube_pod_container_resource_limits{resource=\"memory\", pod=~\".*-service-.*\"})",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Service saturation: memory % of limit",
+      "transparent": false,
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "gluon"
+  ],
+  "templating": {},
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Christmas Rush",
+  "uid": "gluon-christmas-rush"
+}

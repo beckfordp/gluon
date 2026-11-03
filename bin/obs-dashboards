@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Generate the gluon Grafana dashboards from code (ADR 0027,
+# infra/k8s/observability/dashboards/). Grafana provisions the committed JSON
+# with allowUiUpdates: false, so this is the only way to change a dashboard.
+#
+# Usage:
+#   bin/obs-dashboards           # regenerate JSON into config/grafana/dashboards/
+#   bin/obs-dashboards --check   # exit 1 if the committed JSON is stale
+#   bin/obs-dashboards --test    # generator unit tests (includes --check)
+set -euo pipefail
+
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/infra/k8s/observability/dashboards"
+VENV="$SRC/.venv"
+
+if [ ! -x "$VENV/bin/python" ] || ! cmp -s "$SRC/requirements.txt" "$VENV/requirements.txt"; then
+  echo "== creating dashboard generator venv ($VENV) ==" >&2
+  python3 -m venv "$VENV"
+  "$VENV/bin/pip" install -q --disable-pip-version-check -r "$SRC/requirements.txt"
+  cp "$SRC/requirements.txt" "$VENV/requirements.txt"
+fi
+
+cd "$SRC"
+if [ "${1:-}" = "--test" ]; then
+  exec "$VENV/bin/python" -m unittest -v test_generate
+fi
+exec "$VENV/bin/python" generate.py "$@"

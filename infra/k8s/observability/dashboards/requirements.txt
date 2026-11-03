@@ -1,0 +1,2 @@
+# Grafana Foundation SDK (ADR 0027) — pinned; bump deliberately and regenerate.
+grafana-foundation-sdk==1769699379!11.6.0

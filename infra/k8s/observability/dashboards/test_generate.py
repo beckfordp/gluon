@@ -92,6 +92,12 @@ class GenerateSuite(unittest.TestCase):
                         used = set(re.findall(r"\$([A-Za-z_]\w*)", t["expr"])) - {"__rate_interval"}
                         self.assertLessEqual(used, defined)
 
+    def test_panel_ids_unique(self):
+        for uid, (_, d) in self.built.items():
+            ids = [p["id"] for p in all_panels(d)]
+            with self.subTest(uid):
+                self.assertEqual(len(ids), len(set(ids)))
+
     def test_titles_unique_within_a_dashboard(self):
         for uid, (_, d) in self.built.items():
             titles = [p["title"] for p in query_panels(d)]
