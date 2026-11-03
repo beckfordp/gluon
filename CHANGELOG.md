@@ -677,3 +677,10 @@ own line. See each repo's own `git log` for full detail either way.
   down. Python and the Grafana Foundation SDK generate them
   (`bin/obs-dashboards`, ADR 0027). Their first live run found TD-28: the new
   JFR runtime telemetry throttles and OOM-kills services at rest.
+- **JFR runtime telemetry switched off; services stop throttling at rest.**
+  purerest 0.8.2 keeps the JMX JVM metrics (heap, GC, threads, CPU) and
+  drops the Java Flight Recorder streams that Perf 4 had turned on. Idle CPU
+  per service fell from 200–420m to under 75m, the OOM kills stopped, and the
+  acceptance suite went from 38/53 in 7.7 min to 53/53 in 1.3–2.9 min (TD-28).
+  At 5 workers there are no restarts, but checkout nears 5s: a capacity limit
+  for Perf 8 (TD-17 closed).

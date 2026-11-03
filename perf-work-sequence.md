@@ -11,11 +11,11 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S1
+**Next step:** S2
 
 ## Tier 1: unblock Perf 4
 
-- [ ] **S1 — TD-28** JFR telemetry off: purerest `disableAllJfrFeatures()`,
+- [x] **S1 — TD-28** JFR telemetry off: purerest `disableAllJfrFeatures()`,
       release 0.8.2, bump 8 services, redeploy. Includes **TD-17.2** (suite
       at 5 workers, no restarts) and ticking TD-17.1 (already done in the
       chart). *Done when:* acceptance green twice from a reset, no restarts,
@@ -132,3 +132,10 @@ is not `[x]`, then stop again.
 
 Append one line per finished step: date, commits, anything surprising, and
 any change to later steps.
+
+- 2026-11-04 **S1** — purerest v0.8.2 (acf91e7, track archived f8f7248); 8 services bumped
+  inside their open journey-telemetry tracks; 3 acceptance runs with 0 restarts (53/53 ×2 at 2
+  workers, 52/53 at 5 workers). Idle CPU 8–73m. TD-17 closed, keeping workers: 2 (at 5 workers
+  checkout p99 reaches 4.8s on 500m pods). Notification's deploy hits the AsyncAPI cold-build race
+  every time; rerun it. *For S2:* working set at rest is 237–333Mi of 384Mi.
+

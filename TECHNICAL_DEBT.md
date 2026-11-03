@@ -606,7 +606,7 @@ newTrack → implement → review → archive), ticked here once archived.
 - [ ] TD-16.8: re-run the cross-repo live E2E suite (list above) after the
       sweep; re-create the Debezium register Job first if OrbStack restarted.
 
-## TD-17 — Liveness probes too tight for JVM services on 500m CPU
+## TD-17 — Liveness probes too tight for JVM services on 500m CPU — **RESOLVED 2026-11-04**
 
 Every service's Deployment comes from the shared chart
 (`infra/k8s/gluon/templates/deployment.yaml`): liveness and readiness both
@@ -625,13 +625,19 @@ runs 2 workers to stay clear of it; that's a workaround, not a fix. All 8
 services share the settings, so any of them can do the same.
 
 ### Tasks
-- [ ] TD-17.1: chart — add a `startupProbe` (e.g. `/health`, period 5 s,
+- [x] TD-17.1: chart — add a `startupProbe` (e.g. `/health`, period 5 s,
       `failureThreshold` ~24, so ~2 min to start) so liveness only applies
       after startup; raise liveness `timeoutSeconds` (e.g. 3) and
       `failureThreshold`; make them values, not template literals.
-- [ ] TD-17.2: re-run the full acceptance suite at default workers
+- [x] TD-17.2: re-run the full acceptance suite at default workers
       (`bin/run-acceptance --workers=5`) with no restarts, then drop the
       suite's `workers: 2` pin if it's no longer needed.
+
+**Resolution (2026-11-04):** TD-17.1 shipped with the 2026-11-03 probe change
+(startup probe, liveness 5s timeout × 6). At `--workers=5` the suite ran with
+no restarts (52/53). The one failure was a 5s UI timeout: checkout p99 reached
+4.8s with every pod throttled 34–54% at its 500m limit. That's a capacity
+limit, not a probe one, so the suite keeps `workers: 2` (Perf 8 sizes it).
 
 ## TD-18 — Schema registry enforces nothing and persists nothing — **RESOLVED 2026-10-31**
 
@@ -1129,7 +1135,7 @@ budget) so the acceptance suite can run; TD-27.1 still open.
       keep 512Mi with the measurement as the reason (ADR 0015); check the
       other services' headroom too.
 
-## TD-28 — JFR runtime telemetry (PERF-4.1) burns CPU and memory: services OOMKilled at rest
+## TD-28 — JFR runtime telemetry (PERF-4.1) burns CPU and memory: services OOMKilled at rest — **RESOLVED 2026-11-04**
 
 purerest 0.8.x registers `RuntimeMetrics.builder(otel).build()` from
 `opentelemetry-runtime-telemetry-java17`, which turns on its JFR streaming
@@ -1147,8 +1153,16 @@ as the JMX ones. On 2026-11-04, with all eight services on that build:
 Found with the new Pods & runtime and Service dashboards (Perf 4b).
 
 ### Tasks
-- [ ] TD-28.1: purerest — `RuntimeMetrics.builder(...).disableAllJfrFeatures()`
+- [x] TD-28.1: purerest — `RuntimeMetrics.builder(...).disableAllJfrFeatures()`
       (keep the JMX metrics the dashboards use: heap, GC, threads, CPU, classes),
       release 0.8.2, bump all 8 services, redeploy.
-- [ ] TD-28.2: rerun `bin/run-acceptance` twice from a reset: green, no
+- [x] TD-28.2: rerun `bin/run-acceptance` twice from a reset: green, no
       restarts, idle service CPU < 50m; then re-check TD-27's headroom.
+
+**Resolution (2026-11-04):** purerest v0.8.2 (`disableAllFeatures()`, the
+2.27 builder's name for it; `RuntimeMetricsSuite` proves no JFR-only metric
+is emitted), bumped in all 8 services. Acceptance from a reset: 53/53 in 2.9m,
+then 53/53 in 1.3m (before: 38/53 in 7.7m), with no restarts across three
+runs. Idle CPU dropped from 200–420m to 8–73m per service. Notification (73m)
+and fulfilment (60m) stay above 50m from Kafka consumer polling, not JFR.
+Working set at rest is 237–333Mi of 384Mi; TD-27 (S2) re-measures it.
