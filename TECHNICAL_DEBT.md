@@ -1085,3 +1085,24 @@ budget change.
 - [ ] TD-25.3: `bin/obs up` waits for one successful dashboard-list request
       before reporting Up, so a first-load OOM shows in the script, not the
       demo.
+
+## TD-26 — Fulfilment drops a `PaymentAuthorized` that beats the order's commit
+
+Checkout (`order-service` `POST /orders`) authorizes payment synchronously and
+only then saves the order. payment-service publishes `PaymentAuthorized` at
+authorization, so fulfilment-service can consume it, call `GET /orders/{id}`
+before the order row commits, get 404, log "PaymentAuthorized for an unknown
+order - skipping" and never create the task. The order stays `authorized` with
+no fulfilment task — undispatchable until the authorization expires.
+
+Seen 2026-11-03 in a full acceptance run (order `dc2ee9c9…`: GET 404 at
+09:54:31.25, the POST completing in the same millisecond). Timing-dependent;
+the rerun passed 36/36. Sibling of TD-23 (cross-topic ordering).
+
+### Tasks
+- [ ] TD-26.1: fulfilment-service treats `OrderLookup.NotFound` as transient
+      for a bounded window (raise → existing DLQ retry with backoff), and only
+      drops after retries are exhausted; consumer test for late-commit order.
+- [ ] TD-26.2: decide whether order-service should instead persist the order
+      (e.g. `pending_payment`) before authorizing, closing the window at the
+      source; record as an ADR if chosen.
