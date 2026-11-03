@@ -666,3 +666,14 @@ own line. See each repo's own `git log` for full detail either way.
   scenarios green. From now on a journey is DONE only once the matrix is
   clean and `bin/run-acceptance` is green. order-service now gets 512Mi,
   because it was OOMKilled at 384Mi under suite load (TD-27).
+- **Grafana dashboards rebuilt as a 3-level set, generated from code.**
+  Seven dashboards replace the four hand-written ones. *Christmas Rush* (the
+  home page) shows demand, checkout outcomes and latency against SLO, error %
+  by service, dispatch against arrivals, event age and money held. *Service*
+  (pick one), *Checkout & payments* and *Dispatch & async flow* sit below it,
+  and *Pods & runtime*, *Data stores* and *Kafka & Debezium* below those.
+  Each dashboard has an About row and a Guide link
+  (docs/observability/dashboards.md), and you can click a series to drill
+  down. Python and the Grafana Foundation SDK generate them
+  (`bin/obs-dashboards`, ADR 0027). Their first live run found TD-28: the new
+  JFR runtime telemetry throttles and OOM-kills services at rest.
