@@ -996,6 +996,10 @@ is verified under ADM-7/ADM-9.
 **Repos:** `gshop`, `inventory-service`, `notification-service`,
 `order-service`, `user-service`, `payment-service`, and gluon's local infra.
 
+**User stories:** the operator-facing outcomes are US-24–US-28, tagged
+*(admin)* in `docs/user-stories.md`, so the acceptance coverage matrix
+tracks them.
+
 **Depends on:** the approved mock prototype (`f1d3116`) and Journey 5's
 cancellation fan-out. Operator auth/roles are US-22; this section adds the
 read models and triggers the real console needs.

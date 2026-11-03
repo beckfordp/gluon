@@ -454,14 +454,17 @@ account.
   use this contract.
 
 ### Tasks
-- [x] Refine US-22: dev-only operator token, same eligibility, typed actor,
-      backend first (ADR 0024) — 2026-11-02
-- [x] Reuse US-9's cancel path with `reason: operator`, recording the actor
-      in the order audit trail (order-service) — `j8-operator-cancel_20261102`
-- [x] Notification mirror/logging of the actor (customer copy unchanged)
-      (notification-service) — `j8-operator-actor_20261102`
-- [ ] Operator cancel action on the admin screen, eligible orders only —
-      **deferred to ADM-7**; explicitly no bulk/incident cancellation (gshop)
+- [x] US-22.1: refine US-22: dev-only operator token, same eligibility, typed
+      actor, backend first (ADR 0024) — done 2026-11-02
+- [x] US-22.2: reuse US-9's cancel path with `reason: operator`, recording
+      the actor in the order audit trail (order-service) — done 2026-11-02
+      (`j8-operator-cancel_20261102`)
+- [x] US-22.3: notification mirror/logging of the actor (customer copy
+      unchanged) (notification-service) — done 2026-11-02
+      (`j8-operator-actor_20261102`)
+- [x] US-22.4: operator cancel action on the admin screen, eligible orders
+      only; no bulk/incident cancellation (gshop) — done 2026-11-02 (ADM-7,
+      `admin-console_20261102`; see US-25)
 
 ## US-23 — Cancel after dispatch / returns *(placeholder, out of US-9 scope)*
 As a customer, once my order has dispatched I can't cancel it — I need a
@@ -475,6 +478,132 @@ for cancellation.
 - US-19.3's capture-failure reconciliation is the closest thing today; a
   real returns flow is out of scope for v1.
 - Placeholder only; not refined.
+
+## Admin stories *(admin)*
+Stories for the gshop Admin console's operator, tagged *(admin)*. They
+restate PLAN.md's ADM-N delivery items as user-facing outcomes so the
+acceptance coverage matrix tracks admin features like any other story;
+each task names the ADM item that delivered it. Operator identity is the
+ADR 0024 dev token, not a real role system. Acceptance scenarios for these
+stories carry `@admin` alongside their `@US-N.M` tags.
+
+## US-24 — Operator order overview *(admin)*
+As a support operator, I can see every order across all customers with its
+status and reserved stock, so I can find and diagnose any order without
+database access.
+
+- One admin-wide order list (not per customer), newest first, with status
+  and customer (or guest email).
+- Each order shows its reservation-ledger lines (`active`, `released`,
+  `shipped`) from inventory-service, joined by order id.
+
+### Tasks
+- [x] US-24.1: admin-wide order list endpoint (order-service) — done
+      2026-11-02 (ADM-4, `admin-orders_20261102`)
+- [x] US-24.2: reservation-ledger read endpoint
+      `GET /inventorys/order-reservations` filtered by order/status
+      (inventory-service) — done 2026-11-02 (ADM-1, `admin-ledger_20261102`)
+- [x] US-24.3: Admin Orders tab lists every order with status, customer and
+      its ledger lines (gshop) — done 2026-11-02 (ADM-7,
+      `admin-console_20261102`)
+
+## US-25 — Operator cancel and simulated expiry *(admin)*
+As a support operator, I can cancel an eligible order on a customer's
+behalf and, for demos, expire an authorization early, so both cancellation
+paths can be driven and shown from the console.
+
+- Cancel uses US-22's contract (`reason: operator`, actor recorded); only
+  `authorized` orders are eligible, others show the `409`.
+- Expiry runs payment-service's real sweep for one order (US-20), not a
+  shortcut; the order ends `cancelled` with stock released.
+- Both actions need the dev operator token; without it they're refused
+  (`401`).
+
+### Tasks
+- [x] US-25.1: token-gated `POST /payments/authorizations/{orderId}/expire`
+      runs the real expiry sweep for one order (payment-service) — done
+      2026-11-02 (ADM-5, `expiry-trigger_20261102`)
+- [x] US-25.2: Admin Orders tab Cancel (eligible orders only) and Expire
+      actions with the operator token, showing the resulting status and
+      ledger release (gshop) — done 2026-11-02 (ADM-7,
+      `admin-console_20261102`)
+
+## US-26 — Reconciliation queue *(admin)*
+As a support operator, I can see orders that lost a cancel/dispatch or
+capture race and mark them resolved with a note, so nothing needing manual
+follow-up is silently forgotten.
+
+- Open flags from order, payment, fulfilment and inventory show on the
+  order; resolving records operator, note and time; the first resolver wins.
+- A new flag raises an alert (Prometheus rule → Alertmanager).
+
+### Tasks
+- [x] US-26.1: per-service `GET`/`PATCH /reconciliations` with
+      `open`/`resolved`, operator id, note and timestamp; token-gated
+      resolve (order/payment/fulfilment/inventory-service) — done 2026-11-02
+      (ADM-4, `reconciliation-workflow_20261102` ×3, ADR 0026)
+- [x] US-26.2: `ReconciliationFlagRecorded` alert from the flags counter
+      (gluon observability) — done 2026-11-02 (ADM-4); fires on a series'
+      first flag since 2026-11-03
+- [x] US-26.3: Admin Orders tab shows open flags and resolves them with a
+      note (gshop) — done 2026-11-02 (ADM-7, `admin-console_20261102`)
+
+## US-27 — Customer view and email history *(admin)*
+As a support operator, I can look up a customer and see their orders and
+every email we sent them, so I can answer "did you tell me?" questions.
+
+- Emails are recorded at send time (subject, body, status, reason), keyed
+  by customer and order; payment/fulfilment emails are attributed through
+  an order lookup (ADR 0025).
+- Guests have no account: anonymous checkout asks for an email, which is
+  stored on the order and used for their emails and shown in the console.
+
+### Tasks
+- [x] US-27.1: `sent_email` audit table and `GET /emails?customerId=&orderId=`
+      (notification-service, Postgres + Flyway) — done 2026-11-02 (ADM-2,
+      ADM-6)
+- [x] US-27.2: recipient resolution — `GET /users/{id}`, order lookup for
+      payment/fulfilment emails (user-service, notification-service) — done
+      2026-11-02 (ADM-3, ADR 0025)
+- [x] US-27.3: guest email required at anonymous checkout, stored on the
+      order and used as the notification fallback (gshop, order-service,
+      notification-service) — done 2026-11-02 (ADM-10)
+- [x] US-27.4: Admin Customers tab with a customer's orders and email
+      history; guests labelled by their email (gshop) — done 2026-11-02
+      (ADM-8, `admin-console_20261102`)
+
+## US-28 — Catalogue management *(admin)*
+As a catalogue operator, I can add, edit, retire and restock products from
+the console, so the storefront's range, copy and pictures change without
+scripts or database edits.
+
+- catalog-service owns product copy and media references: tagline,
+  long description, `imageUrl` + `imageAlt` (Unsplash for now).
+- Retire hides a product from the storefront but keeps it for past orders;
+  SKUs are unique; writes need the operator token.
+- A new product gets its stock record; stock ±1 changes `quantityAvailable`
+  only (reserved stock belongs to the ledger, TD-24).
+
+### Tasks
+- [x] US-28.1: Catalogue section prototype — real catalogue/stock reads and
+      stock ±1, simulated add/edit/retire with validation and storefront
+      preview (gshop) — done 2026-11-02 (ADM-11)
+- [ ] US-28.2: product copy and media fields `longDescription`,
+      `imageUrl`, `imageAlt` (catalog-service) — ADM-12
+- [ ] US-28.3: seed images and long descriptions from catalogue data, not
+      gshop (catalog-service seed) — ADM-13
+- [ ] US-28.4: unique SKU (`409`) and cache invalidation on writes
+      (catalog-service) — ADM-14
+- [ ] US-28.5: retire/restore via `status`, storefront shows active only
+      (catalog-service) — ADM-15
+- [ ] US-28.6: operator token on catalogue writes (catalog-service) — ADM-16
+- [ ] US-28.7: creating a product creates its stock record (catalog-service,
+      inventory-service or gshop) — ADM-17
+- [ ] US-28.8: admin search by name/SKU and status (catalog-service) — ADM-18
+- [ ] US-28.9: real-wire the Catalogue section; storefront renders
+      catalogue images (gshop) — ADM-19
+- [ ] US-28.10: storefront product overlay with large image and long
+      description (gshop) — ADM-20
 
 ## Open questions
 - ~~Auth/identity — no user-service yet~~ — **Resolved 2026-10-26** via
