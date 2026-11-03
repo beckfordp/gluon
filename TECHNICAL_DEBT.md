@@ -1128,3 +1128,27 @@ budget) so the acceptance suite can run; TD-27.1 still open.
 - [ ] TD-27.2: fix the growth, then drop order-service back to 384Mi — or
       keep 512Mi with the measurement as the reason (ADR 0015); check the
       other services' headroom too.
+
+## TD-28 — JFR runtime telemetry (PERF-4.1) burns CPU and memory: services OOMKilled at rest
+
+purerest 0.8.x registers `RuntimeMetrics.builder(otel).build()` from
+`opentelemetry-runtime-telemetry-java17`, which turns on its JFR streaming
+features (allocation, network I/O, context switches, lock contention) as well
+as the JMX ones. On 2026-11-04, with all eight services on that build:
+- idle services used 0.2–0.4 cores of their 500m limit (inventory 0.42,
+  notification 0.28, fulfilment 0.2), and the cluster sat at 2.5 cores at rest;
+- during an acceptance run every service pod was CPU-throttled (28–98%),
+  checkout `POST /orders` p95 was 3.8s and `/health/ready` 0.5–1s, failing
+  15/53 scenarios on UI timeouts;
+- fulfilment, inventory, notification and payment were `OOMKilled` while idle
+  after the run. That is TD-27's off-heap squeeze, now in every service, and it
+  resets their counters, so dashboards go blank after each kill.
+
+Found with the new Pods & runtime and Service dashboards (Perf 4b).
+
+### Tasks
+- [ ] TD-28.1: purerest — `RuntimeMetrics.builder(...).disableAllJfrFeatures()`
+      (keep the JMX metrics the dashboards use: heap, GC, threads, CPU, classes),
+      release 0.8.2, bump all 8 services, redeploy.
+- [ ] TD-28.2: rerun `bin/run-acceptance` twice from a reset: green, no
+      restarts, idle service CPU < 50m; then re-check TD-27's headroom.
