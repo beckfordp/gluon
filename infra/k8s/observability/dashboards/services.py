@@ -2,7 +2,6 @@
 from lib import R, about, dashboard, service_var, stat, timeline, to_service, ts
 
 HTTP = "http_server_request_duration_seconds"
-CLIENT = "http_client_request_duration_seconds"
 S = 'service="$service"'
 CHECKOUT = f'{HTTP}_bucket{{service="order-service", http_route="/orders", http_request_method="POST"}}'
 
@@ -38,21 +37,15 @@ def service():
             ts("Server latency p50 / p95 / p99", quantiles(f"{HTTP}_bucket{{{S}}}", ""), "s", 6),
         ]),
         ("Dependencies & resilience", [
-            ts("Outbound call latency p95 by target",
-               [(f"histogram_quantile(0.95, sum by (server_address, le) (rate({CLIENT}_bucket{{{S}}}{R})))",
-                 "{{server_address}}")], "s", 6),
-            ts("Outbound call errors /s",
-               [(f'sum by (server_address, http_response_status_code, error_type) '
-                 f'(rate({CLIENT}_count{{{S}, http_response_status_code=~"5.."}}{R}) '
-                 f'or rate({CLIENT}_count{{{S}, error_type!=""}}{R}))',
-                 "{{server_address}} {{http_response_status_code}}{{error_type}}")], "reqps", 6),
             ts("Retries /s by outcome",
                [(f"sum by (outcome) (rate(purerest_retry_attempts_total{{{S}}}{R}))", "http {{outcome}}"),
                 (f"sum by (outcome) (rate(purekafka_retry_attempts_total{{{S}}}{R}))", "kafka {{outcome}}")],
-               "reqps", 6),
+               "reqps", 12),
             timeline("Circuit breakers (HTTP + Kafka)",
                      [(f"purerest_circuit_breaker_state{{{S}}}", "http {{state}}"),
-                      (f"purekafka_circuit_breaker_state{{{S}}}", "kafka {{state}}")], 6),
+                      (f"purekafka_circuit_breaker_state{{{S}}}", "kafka {{state}}")], 12,
+                     desc="Outbound HTTP latency per target isn't measured yet (no client metrics); "
+                          "Perf 5 tracing adds it."),
         ]),
         ("Kafka consumers", [
             ts("Event age at consume p95 (SLO 2 min)",
@@ -103,8 +96,8 @@ def service():
             "the overview shows errors or latency on a service, or you are changing one service and want "
             "to see its effect.",
             ["Golden signals (rate, errors, latency): is this service healthy for its callers?",
-             "Dependencies: is the problem in something it calls? Watch outbound latency and errors, "
-             "retries, and breakers opening (a breaker opens to stop calls to a failing dependency).",
+             "Dependencies: is the problem in something it calls? Watch retries and breakers opening "
+             "(a breaker opens to stop calls to a failing dependency).",
              "Kafka consumers: event age over 2 min, growing lag or DLQ publishes mean async work is "
              "falling behind or failing.",
              "Database & runtime: queueing for a pool connection, slow queries, heap pressure or CPU "
@@ -121,13 +114,8 @@ def checkout():
                    f"/ sum(rate(checkout_outcome_total{R}))", "success %")], "percent", 6,
                  steps=[(0, "red"), (95, "orange"), (99, "green")]),
             ts("Checkout outcomes /s", [(f"sum by (outcome) (rate(checkout_outcome_total{R}))", "{{outcome}}")],
-               "reqps", 6, stack=True),
-            ts("Checkout latency vs 1.5s SLO", quantiles(CHECKOUT, ""), "s", 6, slo=1.5),
-            ts("Checkout downstream latency p95",
-               [(f'histogram_quantile(0.95, sum by (server_address, le) '
-                 f'(rate({CLIENT}_bucket{{service="order-service"}}{R})))', "{{server_address}}")], "s", 6,
-               data_links=[to_service("server_address")],
-               desc="Order service's calls to cart, inventory and payment: which hop is slow?"),
+               "reqps", 9, stack=True),
+            ts("Checkout latency vs 1.5s SLO", quantiles(CHECKOUT, ""), "s", 9, slo=1.5),
         ]),
         ("Payments", [
             ts("Authorize outcomes /s",
@@ -170,8 +158,8 @@ def checkout():
             "capture. Business outcomes per step, not just HTTP codes.",
             "checkout success drops or latency rises on the overview, or you need to tell *declined by the "
             "bank* apart from *our fault*.",
-            ["Checkout row: success %, the outcome mix and latency against the 1.5s SLO. Downstream "
-             "latency shows which hop is slow; click it to open that service.",
+            ["Checkout row: success %, the outcome mix and latency against the 1.5s SLO. To find a slow "
+             "hop, open the Service dashboard for cart, inventory or payment.",
              "Payments row: declines are expected business outcomes. Capture failures and a growing "
              "oldest uncaptured age are not.",
              "Basket & stock row: stock-outs (insufficient), cart failures and a falling catalog cache hit % "
@@ -190,7 +178,8 @@ def dispatch():
                "short", 6, stack=True),
             ts("Oldest open task age by state",
                [("max by (state) (fulfilment_backlog_oldest_age_seconds)", "{{state}}")], "s", 6),
-            ts("Tasks created /s", [(f"sum(rate(fulfilment_tasks_created_total{R}))", "created/s")], "reqps", 6),
+            ts("Tasks created /s", [(f"sum(rate(fulfilment_tasks_total{R}))", "created/s")], "reqps", 6,
+               desc="fulfilment.tasks.created — Prometheus drops the _created suffix (OpenMetrics)."),
             ts("Fulfilment step duration p95",
                [(f"histogram_quantile(0.95, sum by (from, to, le) (rate(fulfilment_step_duration_seconds_bucket{R})))",
                  "{{from}} → {{to}}")], "s", 12, desc="How long staff take between steps (pick, pack, dispatch)."),

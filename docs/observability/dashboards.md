@@ -64,9 +64,9 @@ dropdown. It replaces the old `gluon-red` dashboard.
 **How to read it** (top to bottom = symptom to cause):
 1. *Golden signals*: request rate, error % (4xx/5xx against 1%), errors by route and
    status, latency p50/p95/p99.
-2. *Dependencies & resilience*: outbound latency and errors per target, retries and
-   breaker state. A slow or failing dependency shows up here before it shows in the golden
-   signals.
+2. *Dependencies & resilience*: retries and breaker state. A failing dependency shows up
+   here before it shows in the golden signals. Outbound HTTP latency per target isn't
+   measured yet (purerest has no client metrics). Perf 5 tracing adds it.
 3. *Kafka consumers*: event age against 2 min, lag by topic, DLQ publishes and stream restarts.
 4. *Database & runtime*: query p95 and errors, pool in use/pending and wait p95 (queueing for
    a connection), JVM heap, cats-effect CPU starvation and GC time.
@@ -77,8 +77,8 @@ dropdown. It replaces the old `gluon-red` dashboard.
 shows business outcomes at each step, not just HTTP codes.
 
 **How to read it.**
-1. *Checkout*: success %, outcome mix, latency against SLO, and order-service's downstream latency
-   per hop (click a hop to open that service).
+1. *Checkout*: success %, outcome mix and latency against SLO. For a slow hop, open
+   **Service** for cart, inventory or payment.
 2. *Payments*: authorize and capture outcomes, voids and expired authorizations, and money held
    (uncaptured count and oldest age). Declines are expected. Capture failures and a rising
    oldest age are not.

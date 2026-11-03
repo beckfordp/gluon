@@ -233,6 +233,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
+      "description": "fulfilment.tasks.created \u2014 Prometheus drops the _created suffix (OpenMetrics).",
       "fieldConfig": {
         "defaults": {
           "unit": "reqps"
@@ -265,7 +266,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(fulfilment_tasks_created_total[$__rate_interval]))",
+          "expr": "sum(rate(fulfilment_tasks_total[$__rate_interval]))",
           "legendFormat": "created/s",
           "refId": "A"
         }
