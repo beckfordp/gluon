@@ -1106,3 +1106,18 @@ the rerun passed 36/36. Sibling of TD-23 (cross-topic ordering).
 - [ ] TD-26.2: decide whether order-service should instead persist the order
       (e.g. `pending_payment`) before authorizing, closing the window at the
       source; record as an ADR if chosen.
+
+## TD-27 — order-service OOMKilled at its 384Mi limit under suite load
+
+order-service was `OOMKilled` (exit 137) on 2026-11-03 after ~26 min up, mid
+acceptance run (third suite run on that pod), failing 4 scenarios with
+ECONNREFUSED. The heap is capped at 40% of the limit (`MaxRAMPercentage=40`,
+~154Mi), so the overrun is off-heap (threads, metaspace, direct buffers,
+OTel exporter) growing across runs. Other services ran the same load
+without a restart.
+
+### Tasks
+- [ ] TD-27.1: measure order-service RSS vs heap across repeated suite runs
+      (NMT `-XX:NativeMemoryTracking=summary`) and find what grows.
+- [ ] TD-27.2: fix the growth, or raise order-service's memory limit within
+      the laptop budget (ADR 0015) with the measurement as the reason.
