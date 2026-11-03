@@ -6,6 +6,8 @@ fields:
   - name: quantityAvailable
     type: Int
     example: "100"
+  # TD-24: hand-edited in the service to be ledger-only (not updatable either);
+  # the generator has no visibility for that yet.
   - name: quantityReserved
     type: Int
     example: "0"
