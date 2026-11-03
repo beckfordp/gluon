@@ -2,6 +2,7 @@
 from lib import POD_JOIN, R, SERVICE_PODS, about, dashboard, stat, to_dashboard, to_pod, to_service, ts
 
 HTTP = "http_server_request_duration_seconds"
+API = 'http_route!~"/health.*"'  # probes would dilute error %
 CHECKOUT = f'{HTTP}_bucket{{service="order-service", http_route="/orders", http_request_method="POST"}}'
 
 
@@ -26,13 +27,13 @@ def christmas_rush():
         ]),
         ("Errors (symptoms)", [
             ts("HTTP 5xx % by service (SLO 1%)",
-               [(f'100 * sum by (service) (rate({HTTP}_count{{http_response_status_code=~"5.."}}{R})) '
-                 f"/ sum by (service) (rate({HTTP}_count{R}))", "{{service}}")], "percent", 12, slo=1,
+               [(f'100 * sum by (service) (rate({HTTP}_count{{{API}, http_response_status_code=~"5.."}}{R})) '
+                 f"/ sum by (service) (rate({HTTP}_count{{{API}}}{R}))", "{{service}}")], "percent", 12, slo=1,
                data_links=[to_service()],
                desc="Server faults. Empty means none so far. Click a series to open that service."),
             ts("HTTP 4xx % by service",
-               [(f'100 * sum by (service) (rate({HTTP}_count{{http_response_status_code=~"4.."}}{R})) '
-                 f"/ sum by (service) (rate({HTTP}_count{R}))", "{{service}}")], "percent", 12,
+               [(f'100 * sum by (service) (rate({HTTP}_count{{{API}, http_response_status_code=~"4.."}}{R})) '
+                 f"/ sum by (service) (rate({HTTP}_count{{{API}}}{R}))", "{{service}}")], "percent", 12,
                data_links=[to_service()],
                desc="Rejections the client sees: declines (402), out of stock (409), validation (400), "
                     "not found (404)."),

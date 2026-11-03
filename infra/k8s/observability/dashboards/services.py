@@ -3,6 +3,7 @@ from lib import R, about, dashboard, service_var, stat, timeline, to_service, ts
 
 HTTP = "http_server_request_duration_seconds"
 S = 'service="$service"'
+API = f'{S}, http_route!~"/health.*"'  # probes would dilute error %
 CHECKOUT = f'{HTTP}_bucket{{service="order-service", http_route="/orders", http_request_method="POST"}}'
 
 BEST_PRACTICES = ("Dashboard best practices",
@@ -24,10 +25,10 @@ def service():
             ts("Request rate by route",
                [(f"sum by (http_route) (rate({HTTP}_count{{{S}}}{R}))", "{{http_route}}")], "reqps", 6),
             ts("Error % (4xx / 5xx)",
-               [(f'100 * sum(rate({HTTP}_count{{{S}, http_response_status_code=~"5.."}}{R})) '
-                 f"/ sum(rate({HTTP}_count{{{S}}}{R}))", "5xx"),
-                (f'100 * sum(rate({HTTP}_count{{{S}, http_response_status_code=~"4.."}}{R})) '
-                 f"/ sum(rate({HTTP}_count{{{S}}}{R}))", "4xx")], "percent", 6, slo=1,
+               [(f'100 * sum(rate({HTTP}_count{{{API}, http_response_status_code=~"5.."}}{R})) '
+                 f"/ sum(rate({HTTP}_count{{{API}}}{R}))", "5xx"),
+                (f'100 * sum(rate({HTTP}_count{{{API}, http_response_status_code=~"4.."}}{R})) '
+                 f"/ sum(rate({HTTP}_count{{{API}}}{R}))", "4xx")], "percent", 6, slo=1,
                desc="The dashed line is the 1% SLO, and it applies to 5xx. 4xx is usually a business "
                     "rejection."),
             ts("Errors /s by route and status",
@@ -127,11 +128,10 @@ def checkout():
             ts("Voids + expired authorizations /s",
                [(f"sum(rate(payments_voided_total{R}))", "voided"),
                 (f"sum(rate(payments_authorizations_expired_total{R}))", "expired")], "reqps", 6),
-            ts("Money held: uncaptured count + oldest age",
-               [("sum(payments_uncaptured_count)", "count"),
-                ("max(payments_uncaptured_oldest_age_seconds)", "oldest (s)")], "short", 6,
-               desc="Authorizations not yet captured or voided. If the oldest age keeps climbing, captures "
-                    "are stuck."),
+            ts("Money held: uncaptured count", [("sum(payments_uncaptured_count)", "held")], "short", 3,
+               desc="Authorizations not yet captured or voided."),
+            ts("Oldest uncaptured age", [("max(payments_uncaptured_oldest_age_seconds)", "oldest")], "s", 3,
+               desc="If this keeps climbing, captures are stuck."),
         ]),
         ("Basket & stock", [
             ts("Inventory reservations /s",
