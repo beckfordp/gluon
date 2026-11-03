@@ -1,11 +1,12 @@
-# Grafana dashboard provider (grafana.yaml): the JSON files in dashboards/,
-# mounted from the grafana-dashboards ConfigMap.
+# Grafana dashboard provider (grafana.yaml): one subdirectory per folder
+# (1-Overview, 2-Services, 3-Platform — ADR 0027), each mounted from its own
+# grafana-dashboards-* ConfigMap; subdirectory names become Grafana folders.
 apiVersion: 1
 providers:
   - name: gluon
-    folder: gluon
     type: file
     allowUiUpdates: false
     updateIntervalSeconds: 30
     options:
       path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
