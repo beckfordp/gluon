@@ -1412,10 +1412,12 @@ spans and logs, never on metric labels.
 - [ ] PERF-4.11 — milestone log lines (order placed, reserved,
       authorized, dispatched, captured, notified) with `order_id` +
       `correlation_id`, structured for Kibana (Q17)
-- [ ] PERF-4.12 — **Christmas Rush** overview dashboard: order arrival rate,
+- [x] PERF-4.12 — **Christmas Rush** overview dashboard: order arrival rate,
       checkout p99 + outcomes, error rate, breaker states, consumer lag and
       event age per consumer group, fulfilment backlog vs dispatch rate,
       uncaptured-authorization age, outbox age, pod CPU/memory (Q13–Q15)
+      *Done 2026-11-04 as a set of 7 generated dashboards in 3 levels (ADR 0027,
+      docs/observability/dashboards.md). The live check surfaced TD-28.*
 
 **Exit criteria:** every journey milestone visible as a metric, span and
 log line for one order; Christmas Rush dashboard renders with live data.
