@@ -1401,7 +1401,7 @@ spans and logs, never on metric labels.
       (Q10, Q15)
 - [x] PERF-4.6 — inventory-service: reservation outcome counter
       (reserved / insufficient / released) (Q10)
-- [ ] PERF-4.7 — fulfilment-service: backlog size/age gauge by status,
+- [x] PERF-4.7 — fulfilment-service: backlog size/age gauge by status,
       pick/pack/dispatch step durations, dispatch rate — separate from
       consumer lag, which Q14 depends on (Q13, Q14)
 - [ ] PERF-4.8 — catalog-service Redis cache hit/miss; cart, user and

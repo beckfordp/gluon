@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S7
+**Next step:** S7a
 
 ## Tier 1: unblock Perf 4
 
@@ -31,7 +31,9 @@ is not `[x]`, then stop again.
 - [x] **S4 — PERF-4.4** order-service journey telemetry
 - [x] **S5 — PERF-4.5** payment-service
 - [x] **S6 — PERF-4.6** inventory-service
-- [ ] **S7 — PERF-4.7** fulfilment-service
+- [x] **S7 — PERF-4.7** fulfilment-service
+- [ ] **S7a — TD-25.4** Grafana OOM at 256Mi (reopened in S6): `GOMEMLIMIT`
+      + query concurrency cap, re-measure under acceptance load; else 320Mi.
 - [ ] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
 - [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
       deviation (Debezium lag panel instead of an outbox-row gauge); tick
@@ -134,6 +136,8 @@ is not `[x]`, then stop again.
   measurements, not before.
 - 2026-11-04 — S3: fund Grafana with obs profiles (one UI at a time), not by
   trimming Kibana/ES; the user's suggestion.
+- 2026-11-04 — Grafana OOM in S6: TD-25 reopened as S7a, right after S7
+  (`GOMEMLIMIT` + query cap first, 320Mi as the fallback).
 
 ## Step notes
 
@@ -182,3 +186,13 @@ any change to later steps.
   reported, so the S4 snapshot self-join doesn't apply. **Grafana OOMKilled again at 14:14 (256Mi,
   1 restart)** — TD-25 not fully closed; decide before Perf 7 load runs. *For S7:* fulfilment's
   decorator is `Sync` too.
+- 2026-11-04 **S7** — fulfilment-service journey-telemetry archived (7def49e). Plan ticks missing
+  for phases 1–2 again; added (a0e261c). Verify script (31d5ea0) expected `fulfilment_tasks_created_total`,
+  but Prometheus drops the OpenMetrics `_created` suffix, so it's `fulfilment_tasks_total` (the
+  dashboard already used that); fixed. Review fix (600b8cc): the decorator read `from` with a separate
+  `store.get` outside the `FOR UPDATE` txn (S4 race class, plus 1 extra query per transition); the
+  store now returns `(before, after)` via `transitionFrom`, and `transition` is an extension; `Sync`→
+  `Monad`. 96 tests, metrics files 100%. Redeployed; acceptance run 1 failed at seeding on the TD-26
+  race ("PaymentAuthorized for an unknown order"), run 2 53/53 with the ledger OK; verify green;
+  0 new restarts. *For S8:* catalog/cart/user have no state machines, so the `from` race doesn't
+  apply; check their decorator bounds. *For S19:* TD-26 now also breaks seeding sometimes.

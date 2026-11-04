@@ -1066,7 +1066,7 @@ all acceptance-test orders from 2026-10-31/11-02:
       caches, seed catalogue + demo data; ~40 s) and `bin/check-stock-ledger`
       after (reserved = active ledger lines per SKU).
 
-## TD-25 — Grafana is OOM-killed at its 192 Mi limit — **RESOLVED 2026-11-04**
+## TD-25 — Grafana is OOM-killed at its 192 Mi limit — **REOPENED 2026-11-04**
 
 Seen 2026-11-02 right after `bin/obs up`: opening the dashboard list
 OOM-killed Grafana (13.0.2, `limits.memory: 192Mi`, exit 137); readiness then
@@ -1103,6 +1103,15 @@ already ~11.6Gi with the stack up, over the 11Gi ceiling. Fix: `bin/obs up
 (default, Grafana) is 2.31Gi stack / 10.91Gi namespace, so Gatling fits;
 `logs` (Kibana) and `all` are over the ceiling and say so (exit 3). `up`
 fails if the first dashboard-list request doesn't load or Grafana restarted.
+
+**Reopened (2026-11-04):** OOMKilled again at 256Mi at 14:14 (1 restart), during
+S6 acceptance traffic with dashboards open. Likely cause: Go's GC ignores the
+cgroup limit and lets the heap reach ~2× live before collecting, so a 165Mi
+peak can overshoot 256Mi.
+
+- [ ] TD-25.4: set `GOMEMLIMIT` (~200MiB) and cap concurrent dashboard
+      queries; re-measure with acceptance running and dashboards open. If it
+      still OOMs, 320Mi, funded from Prometheus. Must close before Perf 7 load.
 
 ## TD-26 — Fulfilment drops a `PaymentAuthorized` that beats the order's commit
 
