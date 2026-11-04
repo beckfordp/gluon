@@ -1392,7 +1392,7 @@ spans and logs, never on metric labels.
       (Q3, Q14)
 - [ ] PERF-4.3 — DB pool: in-use/waiting if skunk's pool exposes them,
       else a connection-acquire-time histogram helper (Q2, Q7)
-- [ ] PERF-4.4 — order-service: `orders.status.transitions{from,to}`,
+- [x] PERF-4.4 — order-service: `orders.status.transitions{from,to}`,
       time-in-state histogram (`Authorized` → `Dispatching` → `Confirmed`),
       `checkout.outcome{authorized,declined,out_of_stock,invalid}` (Q3,
       Q10, Q13)

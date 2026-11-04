@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S4
+**Next step:** S5
 
 ## Tier 1: unblock Perf 4
 
@@ -28,7 +28,7 @@ is not `[x]`, then stop again.
 
 ## Perf 4: close-out (code done; live verify + review + archive per service)
 
-- [ ] **S4 — PERF-4.4** order-service journey telemetry
+- [x] **S4 — PERF-4.4** order-service journey telemetry
 - [ ] **S5 — PERF-4.5** payment-service
 - [ ] **S6 — PERF-4.6** inventory-service
 - [ ] **S7 — PERF-4.7** fulfilment-service
@@ -157,3 +157,11 @@ any change to later steps.
   `bin/obs up [metrics|logs|all]` (your idea). S2 had put the namespace at ~11.6Gi with obs up,
   over the 11Gi ceiling; `metrics` (default, Grafana only) is 10.91Gi. *For S4–S10 and Perf 7–10:*
   Kibana only via `bin/obs up logs`, never beside a Gatling run; `check-obs-logs.sh` needs logs profile.
+- 2026-11-04 **S4** — order-service journey-telemetry archived (6377a44). Plan ticks were missing
+  for already-committed phases 1–2; added. Review fixes (28e1157): exhaustive `CheckoutOutcomes.classify`
+  (was `case Left(_)`); transition `prev` read via `FOR UPDATE` CTE, since the self-join returned the
+  statement snapshot, so a capture racing dispatch-confirm would mislabel `from`/time-in-state.
+  257 tests; redeployed; acceptance 53/53 (first try failed at seeding with an empty catalog
+  response, retry clean), 0 restarts; verify script green. `checkout.outcome{invalid}` not seen
+  live (the suite sends no invalid checkouts). *For S5–S8:* check other services' guarded UPDATEs
+  for the same snapshot self-join if they report `from`.
