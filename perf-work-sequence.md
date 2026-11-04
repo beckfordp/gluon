@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S9
+**Next step:** S10
 
 ## Tier 1: unblock Perf 4
 
@@ -37,7 +37,7 @@ is not `[x]`, then stop again.
 - [x] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
 - [x] **S8a — TD-29** order-service `OrderCancellation` wildcard over sealed
       `OrderEvent` → exhaustive match (found after S8's review).
-- [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
+- [x] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
       deviation (Debezium lag panel instead of an outbox-row gauge); tick
       PERF-4.1–4.3 + 4.8 + 4.11 (purerest track already archived).
 - [ ] **S10 — PERF-4.10** business spans. Only the `checkout` span exists.
@@ -209,3 +209,6 @@ any change to later steps.
 - 2026-11-04 **S7a** — Grafana `GOMEMLIMIT=200MiB` + `GF_DATAPROXY_MAX_CONNS_PER_HOST=4` (both
   confirmed live), still 256Mi. Acceptance 53/53 with 6 passes × 2 concurrent full dashboard
   query loads: peak anon 179Mi, 0 oom_kill, 0 restarts. 320Mi fallback not needed. VM size → S29a.
+- 2026-11-04 **S9** — notification track live-verified (7/7 series, `order_notified` in logs),
+  reviewed (2 Low, not fixed), archived. PERF-4.9 `[-]`: Debezium behind-source + event age
+  cover the outbox hop; rows have no published flag.

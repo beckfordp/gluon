@@ -1384,14 +1384,17 @@ Infrastructure-side metrics (Postgres, Redis, Kafka, Debezium) come from
 exporters in PERF-3.1, not code. **Cardinality rule:** order ids go on
 spans and logs, never on metric labels.
 
-- [ ] PERF-4.1 — purerestlib: register JVM runtime metrics
+- [x] PERF-4.1 — purerestlib: register JVM runtime metrics
       (`opentelemetry-runtime-telemetry`: heap, GC, threads) and
       cats-effect `IORuntime` metrics in `Metrics.oteljava` (Q2, Q6)
-- [ ] PERF-4.2 — purekafka: event-age-at-consume histogram (now − record
+      *Done 2026-11-04, all 8 services; JFR features off since 0.8.2 (TD-28).*
+- [x] PERF-4.2 — purekafka: event-age-at-consume histogram (now − record
       timestamp) in the consumer wrappers — lateness, not just offset lag
       (Q3, Q14)
-- [ ] PERF-4.3 — DB pool: in-use/waiting if skunk's pool exposes them,
+      *Done 2026-11-04 (`EventAge`), in every consumer.*
+- [x] PERF-4.3 — DB pool: in-use/waiting if skunk's pool exposes them,
       else a connection-acquire-time histogram helper (Q2, Q7)
+      *Done 2026-11-04 (`PoolMetrics`), on every Postgres pool.*
 - [x] PERF-4.4 — order-service: `orders.status.transitions{from,to}`,
       time-in-state histogram (`Authorized` → `Dispatching` → `Confirmed`),
       `checkout.outcome{authorized,declined,out_of_stock,invalid}` (Q3,
@@ -1404,17 +1407,23 @@ spans and logs, never on metric labels.
 - [x] PERF-4.7 — fulfilment-service: backlog size/age gauge by status,
       pick/pack/dispatch step durations, dispatch rate — separate from
       consumer lag, which Q14 depends on (Q13, Q14)
-- [ ] PERF-4.8 — catalog-service Redis cache hit/miss; cart, user and
+- [x] PERF-4.8 — catalog-service Redis cache hit/miss; cart, user and
       notification outcome counters for their key operations (Q2)
-      *(catalog, cart, user done 2026-11-04; notification closes with S9)*
-- [ ] PERF-4.9 — outbox gauge in each producing service: unpublished rows
+      *Done 2026-11-04; notification: `notifications.emails{event_type,outcome}`.*
+- [-] PERF-4.9 — outbox gauge in each producing service: unpublished rows
       + oldest-row age — the outbox → Debezium hop (Q2, Q3)
+      *Deviation 2026-11-04: no per-service gauge. Debezium
+      `MilliSecondsBehindSource` ("Outbox → Kafka: Debezium behind source"
+      panel, Dispatch & Kafka dashboards) plus consumer event age cover the
+      hop. Debezium reads the WAL, so rows carry no published flag and
+      "unpublished rows" isn't measurable from the table.*
 - [ ] PERF-4.10 — business spans: reserve, authorize, capture, outbox
       write, DB transaction, with `order.id` attribute and span events on
       status transitions (Q16)
-- [ ] PERF-4.11 — milestone log lines (order placed, reserved,
+- [x] PERF-4.11 — milestone log lines (order placed, reserved,
       authorized, dispatched, captured, notified) with `order_id` +
       `correlation_id`, structured for Kibana (Q17)
+      *Done 2026-11-04 (`Milestones`); `correlation_id` is empty until PERF-5.6.*
 - [x] PERF-4.12 — **Christmas Rush** overview dashboard: order arrival rate,
       checkout p99 + outcomes, error rate, breaker states, consumer lag and
       event age per consumer group, fulfilment backlog vs dispatch rate,
