@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S6
+**Next step:** S7
 
 ## Tier 1: unblock Perf 4
 
@@ -30,7 +30,7 @@ is not `[x]`, then stop again.
 
 - [x] **S4 — PERF-4.4** order-service journey telemetry
 - [x] **S5 — PERF-4.5** payment-service
-- [ ] **S6 — PERF-4.6** inventory-service
+- [x] **S6 — PERF-4.6** inventory-service
 - [ ] **S7 — PERF-4.7** fulfilment-service
 - [ ] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
 - [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
@@ -172,3 +172,13 @@ any change to later steps.
   doesn't apply. Left as is: the two uncaptured gauges each query per scrape (2 queries, small skew).
   Operator expiry (ADM-5) is counted via the sweep, so no double count. *For S6–S8:* the inventory
   and fulfilment `instrument` decorators are also `Sync`; check their bounds in review.
+- 2026-11-04 **S6** — inventory-service journey-telemetry archived (8efd0f8). Plan ticks missing
+  for phases 1–2 again; added (9ce8794). Live verify green on the S1 deploy (8 series; reserved 156,
+  insufficient 8, lines released 98 / shipped 36), 177 tests, InventoryJourneyMetrics 100%. Review
+  fix (0f5badc): `instrument` `Sync`→`Monad`; not redeployed. Deviation from PLAN wording: `released`
+  is a line count (`inventory.reservation.lines{released|shipped}`), not a reservation outcome;
+  outcomes are `reserved|insufficient|already_released`. Left as is: an idempotent re-reserve of
+  the same order counts `reserved` + milestone again (rare; order-service retry only). No `from`
+  reported, so the S4 snapshot self-join doesn't apply. **Grafana OOMKilled again at 14:14 (256Mi,
+  1 restart)** — TD-25 not fully closed; decide before Perf 7 load runs. *For S7:* fulfilment's
+  decorator is `Sync` too.

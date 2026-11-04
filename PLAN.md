@@ -1399,7 +1399,7 @@ spans and logs, never on metric labels.
 - [x] PERF-4.5 — payment-service: authorize/capture outcome counters,
       uncaptured-authorization age gauge, expiry counter once US-20 lands
       (Q10, Q15)
-- [ ] PERF-4.6 — inventory-service: reservation outcome counter
+- [x] PERF-4.6 — inventory-service: reservation outcome counter
       (reserved / insufficient / released) (Q10)
 - [ ] PERF-4.7 — fulfilment-service: backlog size/age gauge by status,
       pick/pack/dispatch step durations, dispatch rate — separate from
