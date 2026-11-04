@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S10
+**Next step:** S11
 
 ## Tier 1: unblock Perf 4
 
@@ -40,7 +40,7 @@ is not `[x]`, then stop again.
 - [x] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
       deviation (Debezium lag panel instead of an outbox-row gauge); tick
       PERF-4.1–4.3 + 4.8 + 4.11 (purerest track already archived).
-- [ ] **S10 — PERF-4.10** business spans. Only the `checkout` span exists.
+- [x] **S10 — PERF-4.10** business spans. Only the `checkout` span exists.
       **Decision:** finish the reserve/authorize/capture/outbox spans now, or
       move them into Perf 5 where traces become visible? Then the Perf 4 exit
       check and CHANGELOG entry.
@@ -53,6 +53,7 @@ is not `[x]`, then stop again.
 - [ ] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
       `traceparent` header alias)
 - [ ] **S15 — PERF-5.5** consumers continue the trace
+- [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
 - [ ] **S16 — PERF-5.6** trace/span/correlation ids on every log line
       (fills milestone `correlation_id`)
 - [ ] **S17 — PERF-5.7** `verify-tracing.sh`
@@ -148,6 +149,8 @@ is not `[x]`, then stop again.
   becomes its own decision (S29a) before Perf 7, not part of S7a.
 - 2026-11-04 — S8 review graded a `scala-fp.md` breach as Low (should be High);
   cross-repo grep found one more (TD-29) → S8a before S9.
+- 2026-11-04 — S10: business spans (PERF-4.10) → Perf 5 as PERF-5.9 (S15a),
+  after consumers join traces and before `verify-tracing.sh`; the user's call.
 
 ## Step notes
 
@@ -212,3 +215,6 @@ any change to later steps.
 - 2026-11-04 **S9** — notification track live-verified (7/7 series, `order_notified` in logs),
   reviewed (2 Low, not fixed), archived. PERF-4.9 `[-]`: Debezium behind-source + event age
   cover the outbox hop; rows have no published flag.
+- 2026-11-04 **S10** — PERF-4.10 spans moved to Perf 5 (PERF-5.9, step S15a), your call.
+  Perf 4 exit met, spans excepted: all six milestones logged for one order (101/239 in 6h),
+  each counted in Prometheus, Christmas Rush 14/15 queries with data (5xx % empty, no 5xx).

@@ -702,3 +702,12 @@ own line. See each repo's own `git log` for full detail either way.
   twice the live size. `GOMEMLIMIT=200MiB` makes it collect first, and
   Prometheus requests are capped at 4 at a time; peak 179Mi under a heavier
   load than the one that killed it (TD-25).
+- **Performance 4 complete: the order journey is measurable.** Every service
+  exports JVM, cats-effect runtime and DB-pool metrics; every consumer
+  records event age; each service counts its own outcomes (checkout,
+  reservations, authorize/capture, fulfilment steps, emails). Each step
+  logs a milestone line with `order_id` (placed → reserved → authorized →
+  dispatched → captured → notified), so Kibana can follow one order. The
+  outbox hop is measured by Debezium's lag, not a per-service gauge (the
+  outbox table has nothing to count). Business spans move to Perf 5, where
+  Tempo makes them visible.

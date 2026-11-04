@@ -1417,9 +1417,11 @@ spans and logs, never on metric labels.
       panel, Dispatch & Kafka dashboards) plus consumer event age cover the
       hop. Debezium reads the WAL, so rows carry no published flag and
       "unpublished rows" isn't measurable from the table.*
-- [ ] PERF-4.10 — business spans: reserve, authorize, capture, outbox
+- [-] PERF-4.10 — business spans: reserve, authorize, capture, outbox
       write, DB transaction, with `order.id` attribute and span events on
       status transitions (Q16)
+      *Moved 2026-11-04 to PERF-5.9: only `checkout` exists, and spans are
+      invisible until Tempo (PERF-5.3).*
 - [x] PERF-4.11 — milestone log lines (order placed, reserved,
       authorized, dispatched, captured, notified) with `order_id` +
       `correlation_id`, structured for Kibana (Q17)
@@ -1433,6 +1435,11 @@ spans and logs, never on metric labels.
 
 **Exit criteria:** every journey milestone visible as a metric, span and
 log line for one order; Christmas Rush dashboard renders with live data.
+
+*Met 2026-11-04, spans excepted (→ PERF-5.9): one order logs all six
+milestones (101 of 239 orders in 6h), each has a counter in Prometheus,
+and 14/15 Christmas Rush queries return data (the 15th is 5xx %, empty
+because there were no 5xx).*
 
 ---
 
@@ -1470,6 +1477,10 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       run, report % with complete traces; expose the exporter's dropped-span
       count (the batch processor drops silently when its queue fills) on
       Grafana (Q8, Q16)
+- [ ] PERF-5.9 — business spans (from PERF-4.10): reserve, authorize,
+      capture, outbox write, DB transaction, with `order.id` attribute and
+      span events on status transitions; before PERF-5.7 so its trace
+      assertion covers them (Q16)
 
 **Exit criteria:** one order's full lifecycle visible as one trace in
 Tempo, with jump-to-logs in Kibana.
