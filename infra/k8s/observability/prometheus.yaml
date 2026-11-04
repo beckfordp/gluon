@@ -67,6 +67,8 @@ spec:
             - --storage.tsdb.retention.time=2d
             - --storage.tsdb.retention.size=1GB
             - --web.enable-lifecycle
+            # PERF-5.3: keep exemplars (trace_id on histogram buckets) for Grafana.
+            - --enable-feature=exemplar-storage
           # Laptop budget (environments/local/README.md): request = limit.
           resources:
             requests:

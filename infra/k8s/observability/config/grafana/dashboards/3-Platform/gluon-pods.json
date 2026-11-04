@@ -743,6 +743,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (service, le) (rate(db_client_connection_wait_time_seconds_bucket[$__rate_interval])))",
           "legendFormat": "{{service}}",
           "refId": "A"

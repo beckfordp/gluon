@@ -252,6 +252,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
@@ -261,6 +262,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
           "legendFormat": "p95",
           "refId": "B"
@@ -270,6 +272,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"order-service\", http_route=\"/orders\", http_request_method=\"POST\"}[$__rate_interval])))",
           "legendFormat": "p99",
           "refId": "C"

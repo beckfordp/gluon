@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Opt-in observability stack for gluon-local (PLAN.md PERF-3.1–3.4):
-# Prometheus + exporters, Elasticsearch/Kibana/Filebeat, Grafana. Kept out
-# of bin/k8s-local-up because it costs ~3Gi of the 12Gi laptop budget
+# Opt-in observability stack for gluon-local (PLAN.md PERF-3.1–3.4, PERF-5.3):
+# Prometheus + exporters, Elasticsearch/Kibana/Filebeat, Grafana, Tempo. Kept out
+# of bin/k8s-local-up because it costs ~3.3Gi of the 16Gi laptop budget
 # (environments/local/README.md); bring it up only to watch a run.
 #
 # Usage:
@@ -11,17 +11,19 @@
 #   bin/obs down     delete the stack (services and shared infra untouched)
 #   bin/obs status   stack pods and the memory budget
 #
-# Profiles pick the UI (TD-25): both UIs together don't fit beside the
-# services and a Gatling run. Prometheus, exporters, Elasticsearch and
-# Filebeat run in every profile, so metrics and logs are collected either way.
-#   metrics (default)  Grafana, no Kibana — fits the budget
-#   logs               Kibana, no Grafana — over the namespace ceiling
-#   all                both — over the namespace ceiling
+# Profiles pick the UI (TD-25). On the 16 GB VM only one UI fit beside the
+# services and a Gatling run; on 20 GiB (S29a) all fit, so a profile now just
+# saves memory. Prometheus, exporters, Elasticsearch, Filebeat and Tempo run
+# in every profile, so metrics, logs and traces are collected either way.
+#   metrics (default)  Grafana, no Kibana
+#   logs               Kibana, no Grafana
+#   all                both
 # Switching profile deletes the other UI (objects labelled gluon-obs/ui).
 #
 # OrbStack serves the stack's LoadBalancer services on localhost:
 #   Grafana http://localhost:3000, Kibana http://localhost:5601,
 #   Prometheus http://localhost:9092, Alertmanager http://localhost:9093
+# Tempo is in-cluster only (http://tempo:4318 OTLP, :3200 query); use Grafana.
 #
 # Exits 3 if the stack is up but over budget (bin/lib/obs-budget.sh): its
 # numbers are fine, but a Gatling run beside it would starve the node.
@@ -167,7 +169,6 @@ case "$cmd" in
     echo "== Memory budget =="
     budget || {
       echo "WARN: over budget — no room for a Gatling run beside the stack" >&2
-      [ "$profile" = metrics ] || echo "  (expected for '$profile'; 'bin/obs up' alone fits beside Gatling)" >&2
       exit 3
     }
     ;;

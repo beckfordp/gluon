@@ -5,16 +5,16 @@
 # Sums container memory limits for pods labelled
 # app.kubernetes.io/part-of=gluon-obs (the stack bin/obs manages) and for the
 # whole namespace. Prints one line each, plus a FAIL line per problem:
-#   obs stack: <n> Gi (budget 3 Gi)
-#   namespace: <n> Gi (budget 11 Gi)
+#   obs stack: <n> Gi (budget 3.5 Gi)
+#   namespace: <n> Gi (budget 15 Gi)
 # Returns 0 within budget, 3 over it (or with a container lacking a memory
 # limit, or request != limit), matching run-validity's "invalid" code.
 #
-# The namespace ceiling is 11 Gi, not 12: a Gatling Job (1 Gi,
+# The namespace ceiling is 15 Gi, not 16 (S29a: VM 20 GiB): a Gatling Job (1 Gi,
 # tests/performance/k8s/perf-job.yaml) must still fit beside the stack.
 
-OBS_BUDGET_STACK_GI="${OBS_BUDGET_STACK_GI:-3}"
-OBS_BUDGET_NAMESPACE_GI="${OBS_BUDGET_NAMESPACE_GI:-11}"
+OBS_BUDGET_STACK_GI="${OBS_BUDGET_STACK_GI:-3.5}"
+OBS_BUDGET_NAMESPACE_GI="${OBS_BUDGET_NAMESPACE_GI:-15}"
 
 obs_budget_evaluate() { # <pods.json>
   local out

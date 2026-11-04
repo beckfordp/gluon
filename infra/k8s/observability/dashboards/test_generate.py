@@ -92,6 +92,13 @@ class GenerateSuite(unittest.TestCase):
                         used = set(re.findall(r"\$([A-Za-z_]\w*)", t["expr"])) - {"__rate_interval"}
                         self.assertLessEqual(used, defined)
 
+    def test_latency_quantiles_show_exemplars(self):
+        for uid, (_, d) in self.built.items():
+            for p in query_panels(d):
+                for t in p["targets"]:
+                    with self.subTest(uid=uid, panel=p["title"], ref=t["refId"]):
+                        self.assertEqual(t.get("exemplar", False), t["expr"].startswith("histogram_quantile("))
+
     def test_panel_ids_unique(self):
         for uid, (_, d) in self.built.items():
             ids = [p["id"] for p in all_panels(d)]

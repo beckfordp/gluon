@@ -1,0 +1,82 @@
+# Tempo for gluon-local (ADR 0021, PLAN.md PERF-5.3), in every bin/obs
+# profile. Config in config/tempo.yaml (configMapGenerator). Traces live on
+# an emptyDir: a restart loses them, as Prometheus's do.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tempo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tempo
+  template:
+    metadata:
+      labels:
+        app: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.10.10
+          args:
+            - -config.file=/etc/tempo/tempo.yaml
+          env:
+            # As Grafana (TD-25.4): Go's GC otherwise lets the heap run to
+            # ~2x live before collecting, past the cgroup limit.
+            - name: GOMEMLIMIT
+              value: 200MiB
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Laptop budget (environments/local/README.md): request = limit.
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          ports:
+            - name: http
+              containerPort: 3200
+            - name: otlp-http
+              containerPort: 4318
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3200
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+            - name: data
+              mountPath: /var/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
+---
+# In-cluster only: Grafana is the UI. Services send to http://tempo:4318.
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+spec:
+  selector:
+    app: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: 3200
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318

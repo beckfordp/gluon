@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fixture tests for bin/lib/obs-budget.sh (PERF-3.4): pod lists as
 # `kubectl get pods -o json` returns them, checked against the observability
-# stack's 3Gi share and the namespace's 11Gi (12Gi minus Gatling's 1Gi).
+# stack's 3.5Gi share and the namespace's 15Gi (16Gi minus Gatling's 1Gi).
 #   bin/test/obs-budget-test.sh
 set -euo pipefail
 
@@ -40,16 +40,16 @@ expect() { # <name> <file> <exit> [line expected in output]
 }
 
 pods "$work/fits.json" "$(pod svc no 7Gi)" "$(pod es yes 1Gi)" "$(pod prom yes 1536Mi)"
-expect "within both budgets" "$work/fits.json" 0 "obs stack: 2.50 Gi (budget 3 Gi)"
+expect "within both budgets" "$work/fits.json" 0 "obs stack: 2.50 Gi (budget 3.5 Gi)"
 
 pods "$work/units.json" "$(pod a yes 524288Ki)" "$(pod b yes 536870912)" "$(pod c no 1G)"
-expect "Ki, plain bytes and decimal G" "$work/units.json" 0 "namespace: 1.93 Gi (budget 11 Gi)"
+expect "Ki, plain bytes and decimal G" "$work/units.json" 0 "namespace: 1.93 Gi (budget 15 Gi)"
 
-pods "$work/obs-over.json" "$(pod es yes 2Gi)" "$(pod kibana yes 1100Mi)"
-expect "obs stack over 3Gi" "$work/obs-over.json" 3 "FAIL obs stack over budget"
+pods "$work/obs-over.json" "$(pod es yes 2Gi)" "$(pod kibana yes 1600Mi)"
+expect "obs stack over 3.5Gi" "$work/obs-over.json" 3 "FAIL obs stack over budget"
 
-pods "$work/ns-over.json" "$(pod svc no 9Gi)" "$(pod es yes 2560Mi)"
-expect "namespace over 11Gi" "$work/ns-over.json" 3 "FAIL namespace over budget"
+pods "$work/ns-over.json" "$(pod svc no 13Gi)" "$(pod es yes 2560Mi)"
+expect "namespace over 15Gi" "$work/ns-over.json" 3 "FAIL namespace over budget"
 
 pods "$work/req.json" "$(pod es yes 1Gi 512Mi)"
 expect "request != limit" "$work/req.json" 3 "FAIL es/c: memory request 512Mi != limit 1Gi"

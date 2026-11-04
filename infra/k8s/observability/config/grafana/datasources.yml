@@ -11,3 +11,39 @@ datasources:
     editable: false
     jsonData:
       timeInterval: 15s
+      # PERF-5.3: an exemplar's trace_id opens its trace in Tempo.
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+  # PERF-5.3 (ADR 0021): traces from every service, OTLP into http://tempo:4318.
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      # Trace → its log lines, by trace_id (Filebeat's gluon-logs-* index).
+      tracesToLogsV2:
+        datasourceUid: elasticsearch
+        filterByTraceID: true
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+      nodeGraph:
+        enabled: true
+  # Read-only view of Filebeat's index, for the trace → logs link; Kibana
+  # stays the place to explore logs, so trace_id links out to it.
+  - name: Elasticsearch
+    uid: elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    editable: false
+    jsonData:
+      index: gluon-logs-*
+      timeField: "@timestamp"
+      logMessageField: message
+      logLevelField: level
+      dataLinks:
+        - field: trace_id
+          url: "http://localhost:5601/app/discover#/?_a=(query:(language:kuery,query:'trace_id:\"$${__value.raw}\"'))&_g=(time:(from:now-1d,to:now))"

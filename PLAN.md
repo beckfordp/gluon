@@ -1227,9 +1227,9 @@ Performance 11 writes the answers down.
 Until Gluon runs on real cloud resources this is a **demo**: it shows
 *where* thresholds and bottlenecks sit and that the instrumentation reveals
 them, not real-world capacity numbers. Host: MacBook Pro M1 Max, 10 cores
-(8P + 2E), 32 GB; OrbStack VM capped at 16 GB, all 10 cores.
+(8P + 2E), 32 GB; OrbStack VM capped at 20 GiB (16 GB until S29a), all 10 cores.
 
-Memory budget (limits, inside the 16 GB VM):
+Memory budget (limits, inside the 20 GiB VM; 16 Gi for containers):
 
 | Component | Budget |
 |---|---|
@@ -1239,7 +1239,7 @@ Memory budget (limits, inside the 16 GB VM):
 | Elasticsearch (768 Mi heap) + Kibana + Filebeat | ~2.5 GB |
 | Prometheus + Grafana + Tempo | ~1.2 GB |
 | Gatling Job | 1 GB |
-| **Total / headroom** | **~13 GB / ~3 GB** |
+| **Total / headroom** | **~13 GB / ~7 GB** |
 
 Rules that follow from it:
 

@@ -40,9 +40,14 @@ def to_dashboard(uid, title):
 
 def _targets(panel, exprs):
     for i, (expr, legend) in enumerate(exprs):
-        panel.with_target(prometheus.Dataquery().expr(expr).legend_format(legend).ref_id(chr(65 + i))
-                          .datasource(DS))
+        q = prometheus.Dataquery().expr(expr).legend_format(legend).ref_id(chr(65 + i)).datasource(DS)
+        panel.with_target(q.exemplar(True) if _is_latency(expr) else q)
     return panel
+
+
+def _is_latency(expr):
+    """Latency quantiles show exemplars: each dot's trace_id opens its trace in Tempo (PERF-5.3)."""
+    return expr.startswith("histogram_quantile(")
 
 
 def _thresholds(steps):

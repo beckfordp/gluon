@@ -284,6 +284,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "refId": "A"
@@ -293,6 +294,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "p95",
           "refId": "B"
@@ -302,6 +304,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "p99",
           "refId": "C"
@@ -508,6 +511,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (messaging_consumer_group_name, le) (rate(purekafka_consumer_event_age_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{messaging_consumer_group_name}}",
           "refId": "A"
@@ -668,6 +672,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (db_operation, le) (rate(db_client_operation_duration_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{db_operation}}",
           "refId": "A"
@@ -816,6 +821,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "exemplar": true,
           "expr": "histogram_quantile(0.95, sum by (db_client_connection_pool_name, le) (rate(db_client_connection_wait_time_seconds_bucket{service=\"$service\"}[$__rate_interval])))",
           "legendFormat": "{{db_client_connection_pool_name}}",
           "refId": "A"
