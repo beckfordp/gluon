@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S12
+**Next step:** S13
 
 ## Tier 1: unblock Perf 4
 
@@ -48,8 +48,10 @@ is not `[x]`, then stop again.
 ## Perf 5: end-to-end tracing
 
 - [x] **S11 — PERF-5.1** accept ADR 0021 (Tempo)
-- [ ] **S12 — PERF-5.2** purerest OTLP span exporter
+- [x] **S12 — PERF-5.2** purerest OTLP span exporter
 - [ ] **S13 — PERF-5.3** Tempo in the obs stack (256Mi) + Grafana datasource;
+      bump 8 services to purerest 0.10.0, `Tracing.console` → `Tracing.resource`
+      + chart env `OTEL_EXPORTER_OTLP_ENDPOINT` (Tempo OTLP **HTTP** :4318), generator template;
       includes S29a: OrbStack VM 16 → 20 GiB, raise budget + ceilings
       (PLAN.md, environments/local/README.md, `bin/lib/obs-budget.sh`)
 - [ ] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
@@ -223,3 +225,9 @@ any change to later steps.
 - 2026-11-04 **S11** — ADR 0021 accepted, amended: Tempo in the obs stack at 256Mi (was
   local-infra ~0.5GB, which didn't fit beside a Gatling run). S29a folded into S13.
   *For S13:* restarting OrbStack drops the Debezium connectors; re-register them.
+- 2026-11-04 **S12** — purerest track archived (0638cd5); v0.9.0 then **v0.10.0** after review
+  (High: `samplingRatio` was a raw `Double`, scala-fp §5 → opaque `SamplingRatio`; Low: blank
+  ratio = unset). Deviation: OTLP/HTTP, not gRPC (JDK sender has no gRPC; okhttp excluded, POM
+  checked). Verified: local otelcol 0.139.0 received `demo-span` with `service.name`; Tracing 94%,
+  TracingConfig 100%. No CHANGELOG entry yet (library only); add one in S13 when traces show.
+  *For S13:* Tempo needs its OTLP HTTP receiver on 4318; services bump to 0.10.0.

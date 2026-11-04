@@ -1461,8 +1461,12 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       links), OTLP export from purerestlib
       *Accepted 2026-11-04: Tempo in the observability stack at 256Mi, not
       `local-infra`; OrbStack VM 16 → 20 GiB to fit it (with PERF-5.3).*
-- [ ] PERF-5.2 — purerestlib: OTLP span exporter, configurable endpoint +
-      sampling ratio (logging exporter stays as the no-backend default)
+- [x] PERF-5.2 — purerestlib: OTLP span exporter, configurable endpoint +
+      sampling ratio (logging exporter stays as the no-backend default).
+      purerest v0.10.0: `Tracing.resource(serviceName, TracingConfig.fromEnv(sys.env))`
+      reads `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_TRACES_SAMPLER_ARG`. OTLP over
+      **HTTP (:4318)**, not gRPC: the JDK HttpClient sender (no okhttp) has no gRPC.
+      Services switch from `Tracing.console` in PERF-5.3.
 - [ ] PERF-5.3 — Tempo in the observability stack (`bin/obs`, 256Mi) +
       OrbStack VM 16 → 20 GiB with the budget/ceiling raised; Grafana data source with
       trace → Kibana link by `trace_id` and exemplars on latency panels
