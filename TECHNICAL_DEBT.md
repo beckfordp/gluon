@@ -1204,3 +1204,22 @@ then 53/53 in 1.3m (before: 38/53 in 7.7m), with no restarts across three
 runs. Idle CPU dropped from 200–420m to 8–73m per service. Notification (73m)
 and fulfilment (60m) stay above 50m from Kafka consumer polling, not JFR.
 Working set at rest is 237–333Mi of 384Mi; TD-27 (S2) re-measures it.
+
+## TD-29 — `OrderCancellation` hides new events behind `case _ => None` — **RESOLVED 2026-11-04**
+
+`OrderCancellation.reasonFor` / `actorFor` (order-service) match the sealed
+`OrderEvent` with `case _ => None`, against `scala-fp.md` ("a new case must
+break compilation"). A new cancelling event (e.g. TD-8's reservation
+auto-release) would compile and silently write no cancellation audit row.
+Found 2026-11-04 by a cross-repo grep after S8's review missed the same rule
+in user-service (`UserJourneyMetrics`, fixed in `91b7faa`); every other
+wildcard in the repos matches an open set or treats all errors alike.
+
+### Tasks
+- [x] TD-29.1: list the non-cancelling events explicitly (`None`) in both
+      matches; test that each event's reason/actor agree.
+
+**Resolution (2026-11-04):** order-service `443baa1`: both matches list the four
+non-cancelling events explicitly; `OrderCancellationSuite` checks reason/actor
+agree for every event (258 tests green). Note: no service builds with
+`-Werror`/`-Wconf`, so a non-exhaustive match is still only a warning.

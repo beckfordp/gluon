@@ -35,6 +35,8 @@ is not `[x]`, then stop again.
 - [x] **S7a — TD-25.4** Grafana OOM at 256Mi (reopened in S6): `GOMEMLIMIT`
       + query concurrency cap, re-measure under acceptance load; else 320Mi.
 - [x] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
+- [x] **S8a — TD-29** order-service `OrderCancellation` wildcard over sealed
+      `OrderEvent` → exhaustive match (found after S8's review).
 - [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
       deviation (Debezium lag panel instead of an outbox-row gauge); tick
       PERF-4.1–4.3 + 4.8 + 4.11 (purerest track already archived).
@@ -144,6 +146,8 @@ is not `[x]`, then stop again.
   (`GOMEMLIMIT` + query cap first, 320Mi as the fallback).
 - 2026-11-04 — S7a: tune within the budget first; the OrbStack VM size
   becomes its own decision (S29a) before Perf 7, not part of S7a.
+- 2026-11-04 — S8 review graded a `scala-fp.md` breach as Low (should be High);
+  cross-repo grep found one more (TD-29) → S8a before S9.
 
 ## Step notes
 
