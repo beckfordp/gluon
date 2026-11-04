@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S5
+**Next step:** S6
 
 ## Tier 1: unblock Perf 4
 
@@ -29,7 +29,7 @@ is not `[x]`, then stop again.
 ## Perf 4: close-out (code done; live verify + review + archive per service)
 
 - [x] **S4 — PERF-4.4** order-service journey telemetry
-- [ ] **S5 — PERF-4.5** payment-service
+- [x] **S5 — PERF-4.5** payment-service
 - [ ] **S6 — PERF-4.6** inventory-service
 - [ ] **S7 — PERF-4.7** fulfilment-service
 - [ ] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
@@ -165,3 +165,10 @@ any change to later steps.
   response, retry clean), 0 restarts; verify script green. `checkout.outcome{invalid}` not seen
   live (the suite sends no invalid checkouts). *For S5–S8:* check other services' guarded UPDATEs
   for the same snapshot self-join if they report `from`.
+- 2026-11-04 **S5** — payment-service journey-telemetry archived (5456b96). Plan ticks missing for
+  phases 1–2 again; added (d2b1f10). Live verify green on the S1 deploy (all 10 series), 249 tests.
+  Review fix (fc51c9b): `instrument` `Sync`→`Monad`, gauge `register` `Sync`→`Monad: Clock`; not
+  redeployed (bounds only, no behaviour change). No `from` reported, so the S4 snapshot self-join
+  doesn't apply. Left as is: the two uncaptured gauges each query per scrape (2 queries, small skew).
+  Operator expiry (ADM-5) is counted via the sweep, so no double count. *For S6–S8:* the inventory
+  and fulfilment `instrument` decorators are also `Sync`; check their bounds in review.

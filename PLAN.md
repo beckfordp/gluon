@@ -1396,7 +1396,7 @@ spans and logs, never on metric labels.
       time-in-state histogram (`Authorized` → `Dispatching` → `Confirmed`),
       `checkout.outcome{authorized,declined,out_of_stock,invalid}` (Q3,
       Q10, Q13)
-- [ ] PERF-4.5 — payment-service: authorize/capture outcome counters,
+- [x] PERF-4.5 — payment-service: authorize/capture outcome counters,
       uncaptured-authorization age gauge, expiry counter once US-20 lands
       (Q10, Q15)
 - [ ] PERF-4.6 — inventory-service: reservation outcome counter
