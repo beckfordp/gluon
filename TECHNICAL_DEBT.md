@@ -1113,7 +1113,7 @@ the rerun passed 36/36. Sibling of TD-23 (cross-topic ordering).
       (e.g. `pending_payment`) before authorizing, closing the window at the
       source; record as an ADR if chosen.
 
-## TD-27 — order-service OOMKilled at its 384Mi limit under suite load
+## TD-27 — order-service OOMKilled at its 384Mi limit under suite load — **RESOLVED 2026-11-04**
 
 order-service was `OOMKilled` (exit 137) on 2026-11-03 after ~26 min up, mid
 acceptance run (third suite run on that pod), failing 4 scenarios with
@@ -1129,11 +1129,23 @@ off-heap.
 budget) so the acceptance suite can run; TD-27.1 still open.
 
 ### Tasks
-- [ ] TD-27.1: measure order-service RSS vs heap across repeated suite runs
+- [x] TD-27.1: measure order-service RSS vs heap across repeated suite runs
       (NMT `-XX:NativeMemoryTracking=summary`) and find what grows.
-- [ ] TD-27.2: fix the growth, then drop order-service back to 384Mi — or
+- [x] TD-27.2: fix the growth, then drop order-service back to 384Mi — or
       keep 512Mi with the measurement as the reason (ADR 0015); check the
       other services' headroom too.
+
+**Resolution (2026-11-04):** not a leak. NMT (jcmd from an ephemeral JDK
+container) over three suite runs: RSS 333→395→403→408Mi, flat after run 2.
+Growth is warm-up: code cache +30Mi, heap committed +19Mi, metaspace +13Mi.
+Once warm the fixed off-heap cost is ~250Mi (metaspace ~110Mi for ~20k
+classes, code cache ~57Mi, symbols ~37Mi, class space 17Mi, CDS 12Mi), plus
+~75Mi of glibc malloc arenas NMT doesn't see. Every service has it: during
+the runs inventory and fulfilment were OOMKilled at 384Mi, and notification
+sat at 377Mi. Fix (chart-wide): `MALLOC_ARENA_MAX=2` (−55Mi RSS measured)
+and 512Mi for all 8 services, with the heap still at 40% (≈205Mi; peak
+≈475Mi). order-service's override is gone. Laptop cost +896Mi (PLAN.md
+budget).
 
 ## TD-28 — JFR runtime telemetry (PERF-4.1) burns CPU and memory: services OOMKilled at rest — **RESOLVED 2026-11-04**
 

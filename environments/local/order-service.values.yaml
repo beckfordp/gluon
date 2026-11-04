@@ -20,13 +20,3 @@ env:
   - name: PAYMENT_SERVICE_URL
     value: http://payment-service:8080
 
-# TD-27: order-service runs ~220Mi off-heap and was OOMKilled at the 384Mi
-# default under acceptance-suite load. 512Mi (heap 40% ≈ 205Mi) until TD-27.1
-# finds what grows.
-resources:
-  requests:
-    cpu: 250m
-    memory: 512Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi

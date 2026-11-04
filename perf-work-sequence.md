@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S2
+**Next step:** S3
 
 ## Tier 1: unblock Perf 4
 
@@ -20,7 +20,7 @@ is not `[x]`, then stop again.
       at 5 workers, no restarts) and ticking TD-17.1 (already done in the
       chart). *Done when:* acceptance green twice from a reset, no restarts,
       idle service CPU < 50m.
-- [ ] **S2 — TD-27** order-service memory: measure RSS vs heap (NMT) after
+- [x] **S2 — TD-27** order-service memory: measure RSS vs heap (NMT) after
       S1; fix the growth, or keep 512Mi with the numbers as the reason.
 - [ ] **S3 — TD-25** Grafana first-load OOM: measure, resize within the 3Gi
       obs budget, `bin/obs up` waits for a dashboard load.
@@ -143,4 +143,10 @@ any change to later steps.
   workers, 52/53 at 5 workers). Idle CPU 8–73m. TD-17 closed, keeping workers: 2 (at 5 workers
   checkout p99 reaches 4.8s on 500m pods). Notification's deploy hits the AsyncAPI cold-build race
   every time; rerun it. *For S2:* working set at rest is 237–333Mi of 384Mi.
-
+- 2026-11-04 **S2** — not a leak: warm off-heap ~250Mi (metaspace ~110, code cache ~57, symbols ~37)
+  + ~75Mi glibc arenas; RSS flat after 2 suite runs. Inventory + fulfilment OOMKilled at 384Mi
+  mid-measurement. Decision: chart-wide 512Mi + `MALLOC_ARENA_MAX=2` (−55Mi), heap stays 40%;
+  order override dropped; budget +896Mi (~13/16 GB). Verify: 0 restarts over 3 runs, RSS 235–352Mi;
+  runs 51/53, 52/53, 53/53, with flaky async email/dispatch-failure UI timeouts (not memory), so watch
+  them in S4–S9. *For S3:* the laptop now has ~3 GB headroom, not 4, so S3 can't take Grafana memory
+  from the services.

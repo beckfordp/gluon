@@ -684,3 +684,9 @@ own line. See each repo's own `git log` for full detail either way.
   acceptance suite went from 38/53 in 7.7 min to 53/53 in 1.3–2.9 min (TD-28).
   At 5 workers there are no restarts, but checkout nears 5s: a capacity limit
   for Perf 8 (TD-17 closed).
+- **Services sized from measurement: 512Mi each, malloc arenas capped.**
+  Native Memory Tracking showed the OOM kills weren't a leak: a warm service
+  carries ~250Mi off-heap (metaspace for ~20k classes, JIT code cache,
+  symbols) plus ~75Mi of glibc malloc arenas, so 384Mi only fit until the
+  heap grew. Every service now gets 512Mi and `MALLOC_ARENA_MAX=2` (−55Mi),
+  with the heap still at 40% of the limit (TD-27). Cost: +896Mi on the laptop.

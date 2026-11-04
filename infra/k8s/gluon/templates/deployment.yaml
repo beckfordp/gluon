@@ -37,6 +37,10 @@ spec:
             - name: JAVA_OPTS
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.mallocArenaMax }}
+            - name: MALLOC_ARENA_MAX
+              value: {{ . | quote }}
+            {{- end }}
             {{- range .Values.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}

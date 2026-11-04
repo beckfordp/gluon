@@ -1233,13 +1233,13 @@ Memory budget (limits, inside the 16 GB VM):
 
 | Component | Budget |
 |---|---|
-| 8 services × 384 Mi (JVM `-XX:MaxRAMPercentage=75`) | ~3 GB |
+| 8 services × 512 Mi (JVM `-XX:MaxRAMPercentage=40`, `MALLOC_ARENA_MAX=2`; TD-27) | ~4 GB |
 | 6 Postgres × 256 Mi, 3 Redis × 64 Mi | ~1.7 GB |
 | Kafka, Kafka Connect, Apicurio | ~2.5 GB |
 | Elasticsearch (768 Mi heap) + Kibana + Filebeat | ~2.5 GB |
 | Prometheus + Grafana + Tempo | ~1.2 GB |
 | Gatling Job | 1 GB |
-| **Total / headroom** | **~12 GB / ~4 GB** |
+| **Total / headroom** | **~13 GB / ~3 GB** |
 
 Rules that follow from it:
 
