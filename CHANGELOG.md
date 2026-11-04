@@ -697,3 +697,8 @@ own line. See each repo's own `git log` for full detail either way.
   leaves Kibana out; `bin/obs up logs` swaps them, and `all` runs both
   without load. Logs are collected in every profile. `up` also checks the
   first dashboard load succeeds (TD-25).
+- **Grafana stays inside 256Mi under load.** It was OOM-killed again with
+  acceptance traffic and dashboards open: Go's GC lets the heap reach about
+  twice the live size. `GOMEMLIMIT=200MiB` makes it collect first, and
+  Prometheus requests are capped at 4 at a time; peak 179Mi under a heavier
+  load than the one that killed it (TD-25).

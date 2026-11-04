@@ -51,6 +51,15 @@ spec:
             # "database is locked" retries (TD-25).
             - name: GF_DATABASE_WAL
               value: "true"
+            # TD-25.4: Go's GC ignores the cgroup limit and lets the heap reach
+            # ~2x live before collecting, so a 165Mi peak overshot 256Mi.
+            # GOMEMLIMIT makes it collect first; the rest is page cache.
+            - name: GOMEMLIMIT
+              value: 200MiB
+            # TD-25.4: fewer Prometheus responses decoded at once when every
+            # panel of a dashboard fires together.
+            - name: GF_DATAPROXY_MAX_CONNS_PER_HOST
+              value: "4"
             - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
               value: /var/lib/grafana/dashboards/1-Overview/gluon-christmas-rush.json
           securityContext:

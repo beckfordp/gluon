@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S7a
+**Next step:** S8
 
 ## Tier 1: unblock Perf 4
 
@@ -32,7 +32,7 @@ is not `[x]`, then stop again.
 - [x] **S5 — PERF-4.5** payment-service
 - [x] **S6 — PERF-4.6** inventory-service
 - [x] **S7 — PERF-4.7** fulfilment-service
-- [ ] **S7a — TD-25.4** Grafana OOM at 256Mi (reopened in S6): `GOMEMLIMIT`
+- [x] **S7a — TD-25.4** Grafana OOM at 256Mi (reopened in S6): `GOMEMLIMIT`
       + query concurrency cap, re-measure under acceptance load; else 320Mi.
 - [ ] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
 - [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
@@ -76,6 +76,10 @@ is not `[x]`, then stop again.
 - [ ] **S27 — PERF-6.5** `fault_injected_total` metric + dashboard panel
 - [ ] **S28 — PERF-6.6** `bin/fault` CLI
 - [ ] **S29 — PERF-6.7** wire into every service
+- [ ] **S29a — Decision:** OrbStack VM 16 → 20 GiB? Host is 32 GB; 16 GB
+      had no recorded rationale (half the host). If yes: `orb config set
+      memory_mib 20480`, update PLAN.md "Demo, not capacity" + the
+      environments/local/README.md budget. Before Perf 7 load.
 
 ## Perf 7: Christmas load model
 
@@ -138,6 +142,8 @@ is not `[x]`, then stop again.
   trimming Kibana/ES; the user's suggestion.
 - 2026-11-04 — Grafana OOM in S6: TD-25 reopened as S7a, right after S7
   (`GOMEMLIMIT` + query cap first, 320Mi as the fallback).
+- 2026-11-04 — S7a: tune within the budget first; the OrbStack VM size
+  becomes its own decision (S29a) before Perf 7, not part of S7a.
 
 ## Step notes
 
@@ -196,3 +202,6 @@ any change to later steps.
   race ("PaymentAuthorized for an unknown order"), run 2 53/53 with the ledger OK; verify green;
   0 new restarts. *For S8:* catalog/cart/user have no state machines, so the `from` race doesn't
   apply; check their decorator bounds. *For S19:* TD-26 now also breaks seeding sometimes.
+- 2026-11-04 **S7a** — Grafana `GOMEMLIMIT=200MiB` + `GF_DATAPROXY_MAX_CONNS_PER_HOST=4` (both
+  confirmed live), still 256Mi. Acceptance 53/53 with 6 passes × 2 concurrent full dashboard
+  query loads: peak anon 179Mi, 0 oom_kill, 0 restarts. 320Mi fallback not needed. VM size → S29a.
