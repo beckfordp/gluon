@@ -12,6 +12,7 @@ metadata:
   namespace: gluon-local
   labels:
     app.kubernetes.io/part-of: gluon-obs
+    gluon-obs/ui: kibana
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 600

@@ -1258,6 +1258,8 @@ Rules that follow from it:
   Absolute ceiling: ~50 checkouts/s offered load.
 - **Scale-out stops at 2 replicas,** only for the service PERF-8.1 found
   to be the bottleneck — 3 replicas of everything won't fit.
+- **One UI at a time during load:** `bin/obs up` (metrics, Grafana) fits
+  beside a Gatling run; Kibana needs `bin/obs up logs`, after the run (TD-25).
 - **Soak = 1h, not overnight;** ES retention 1 day, Prometheus 3 days,
   Tempo 1 day; `bin/obs down` between sessions.
 - **Tracing sampling stays 1.0** — demo rates are low enough, and every

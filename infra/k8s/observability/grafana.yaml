@@ -10,6 +10,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: grafana
+  # bin/obs up picks a UI by this label (metrics|logs|all profiles).
+  labels:
+    gluon-obs/ui: grafana
 spec:
   replicas: 1
   strategy:
@@ -44,6 +47,10 @@ spec:
             # the read-only root filesystem).
             - name: GF_PLUGINS_PREINSTALL_DISABLED
               value: "true"
+            # WAL: provisioning and the first UI requests otherwise hit SQLite
+            # "database is locked" retries (TD-25).
+            - name: GF_DATABASE_WAL
+              value: "true"
             - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
               value: /var/lib/grafana/dashboards/1-Overview/gluon-christmas-rush.json
           securityContext:
@@ -54,13 +61,15 @@ spec:
             capabilities:
               drop: ["ALL"]
           # Laptop budget (environments/local/README.md): request = limit.
+          # TD-25: 192Mi was OOM-killed on the first dashboard-list load;
+          # measured 165Mi anon at peak (all 7 dashboards' queries at once).
           resources:
             requests:
               cpu: 50m
-              memory: 192Mi
+              memory: 256Mi
             limits:
               cpu: 500m
-              memory: 192Mi
+              memory: 256Mi
           ports:
             - name: http
               containerPort: 3000
@@ -114,6 +123,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafana
+  labels:
+    gluon-obs/ui: grafana
 spec:
   type: LoadBalancer
   selector:

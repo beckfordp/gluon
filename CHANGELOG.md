@@ -690,3 +690,10 @@ own line. See each repo's own `git log` for full detail either way.
   symbols) plus ~75Mi of glibc malloc arenas, so 384Mi only fit until the
   heap grew. Every service now gets 512Mi and `MALLOC_ARENA_MAX=2` (−55Mi),
   with the heap still at 40% of the limit (TD-27). Cost: +896Mi on the laptop.
+- **Observability profiles: Grafana or Kibana, not both, during a run.**
+  After the services grew to 512Mi there wasn't room for both UIs beside a
+  Gatling run, and Grafana's 192Mi was OOM-killed on its first dashboard
+  load. `bin/obs up` now runs Grafana (256Mi, sized from measurement) and
+  leaves Kibana out; `bin/obs up logs` swaps them, and `all` runs both
+  without load. Logs are collected in every profile. `up` also checks the
+  first dashboard load succeeds (TD-25).

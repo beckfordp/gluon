@@ -1066,7 +1066,7 @@ all acceptance-test orders from 2026-10-31/11-02:
       caches, seed catalogue + demo data; ~40 s) and `bin/check-stock-ledger`
       after (reserved = active ledger lines per SKU).
 
-## TD-25 — Grafana is OOM-killed at its 192 Mi limit
+## TD-25 — Grafana is OOM-killed at its 192 Mi limit — **RESOLVED 2026-11-04**
 
 Seen 2026-11-02 right after `bin/obs up`: opening the dashboard list
 OOM-killed Grafana (13.0.2, `limits.memory: 192Mi`, exit 137); readiness then
@@ -1081,16 +1081,28 @@ component (Kibana 768 Mi / Elasticsearch 1152 Mi are the candidates) or a
 budget change.
 
 ### Tasks
-- [ ] TD-25.1: measure Grafana's steady and peak RSS on a fresh `bin/obs up`
+- [x] TD-25.1: measure Grafana's steady and peak RSS on a fresh `bin/obs up`
       (dashboard list + RED dashboard load) and record the numbers here.
-- [ ] TD-25.2: raise Grafana to the measured peak plus headroom (likely
+- [x] TD-25.2: raise Grafana to the measured peak plus headroom (likely
       256–320 Mi), funded by trimming Kibana or Elasticsearch, and update the
       budget table; or trim Grafana instead (disable unused features such as
       the alerting scheduler, live, and plugin preinstall) if that keeps it
       under 192 Mi.
-- [ ] TD-25.3: `bin/obs up` waits for one successful dashboard-list request
+- [x] TD-25.3: `bin/obs up` waits for one successful dashboard-list request
       before reporting Up, so a first-load OOM shows in the script, not the
       demo.
+
+**Resolution (2026-11-04):** measured at a temporary 512Mi: anon (unreclaimable)
+144Mi idle, 165Mi peak with all 7 dashboards' 109 queries fired at once; the
+rest of cgroup usage is page cache (startup touches 418Mi total). Grafana now
+256Mi, with `GF_DATABASE_WAL=true` (no more "database is locked" retries).
+3 load passes at 256Mi: anon 158Mi, 0 OOM kills, 0 restarts. Elasticsearch
+had nothing to give (1034/1152Mi anon), and after TD-27 the namespace was
+already ~11.6Gi with the stack up, over the 11Gi ceiling. Fix: `bin/obs up
+[metrics|logs|all]` profiles pick the UI (`gluon-obs/ui` label). `metrics`
+(default, Grafana) is 2.31Gi stack / 10.91Gi namespace, so Gatling fits;
+`logs` (Kibana) and `all` are over the ceiling and say so (exit 3). `up`
+fails if the first dashboard-list request doesn't load or Grafana restarted.
 
 ## TD-26 — Fulfilment drops a `PaymentAuthorized` that beats the order's commit
 

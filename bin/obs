@@ -5,10 +5,19 @@
 # (environments/local/README.md); bring it up only to watch a run.
 #
 # Usage:
-#   bin/obs up       apply infra/k8s/observability, wait for it, run the
+#   bin/obs up [metrics|logs|all]
+#                    apply infra/k8s/observability, wait for it, run the
 #                    one-shot setup Jobs, print URLs and the memory budget
 #   bin/obs down     delete the stack (services and shared infra untouched)
 #   bin/obs status   stack pods and the memory budget
+#
+# Profiles pick the UI (TD-25): both UIs together don't fit beside the
+# services and a Gatling run. Prometheus, exporters, Elasticsearch and
+# Filebeat run in every profile, so metrics and logs are collected either way.
+#   metrics (default)  Grafana, no Kibana — fits the budget
+#   logs               Kibana, no Grafana — over the namespace ceiling
+#   all                both — over the namespace ceiling
+# Switching profile deletes the other UI (objects labelled gluon-obs/ui).
 #
 # OrbStack serves the stack's LoadBalancer services on localhost:
 #   Grafana http://localhost:3000, Kibana http://localhost:5601,
@@ -30,14 +39,28 @@ STACK_DIR="$GLUON_DIR/infra/k8s/observability"
 JOBS_DIR="$STACK_DIR/jobs"
 SELECTOR="app.kubernetes.io/part-of=gluon-obs"
 WAIT_TIMEOUT="${OBS_WAIT_TIMEOUT:-300s}"
+GRAFANA_URL="http://localhost:3000"
 
-usage() { echo "usage: bin/obs up|down|status" >&2; exit 2; }
+usage() { echo "usage: bin/obs up [metrics|logs|all] | down | status" >&2; exit 2; }
 
-[ "$#" = 1 ] || usage
+[ "$#" -ge 1 ] || usage
 cmd="$1"
+profile=""
 case "$cmd" in
-  up|down|status) ;;
+  up)
+    [ "$#" -le 2 ] || usage
+    profile="${2:-metrics}"
+    case "$profile" in metrics|logs|all) ;; *) usage ;; esac
+    ;;
+  down|status) [ "$#" = 1 ] || usage ;;
   *) usage ;;
+esac
+
+# The UI a profile leaves out ("" = none), by its gluon-obs/ui label.
+case "$profile" in
+  metrics) skip_ui=kibana ;;
+  logs) skip_ui=grafana ;;
+  *) skip_ui="" ;;
 esac
 
 # --- preflight (as bin/run-perf) ---------------------------------------------
@@ -70,6 +93,9 @@ run_jobs() {
   local f job
   for f in "$JOBS_DIR"/*.yaml; do
     [ -e "$f" ] || continue
+    if [ -n "$skip_ui" ] && [ "$(kubectl create --dry-run=client -o jsonpath='{.metadata.labels.gluon-obs/ui}' -f "$f")" = "$skip_ui" ]; then
+      continue
+    fi
     job="$(kubectl create --dry-run=client -o jsonpath='{.metadata.name}' -f "$f")"
     kubectl -n "$NAMESPACE" delete job "$job" --ignore-not-found >/dev/null
     kubectl -n "$NAMESPACE" apply -f "$f" >/dev/null
@@ -82,11 +108,40 @@ run_jobs() {
   done
 }
 
+# TD-25.3: a fresh Grafana was OOM-killed by its first dashboard-list
+# request, so `up` makes that request itself and fails if Grafana restarted.
+check_grafana() {
+  local tries=30 restarts
+  until curl -fsS --max-time 10 "$GRAFANA_URL/api/search?type=dash-db" 2>/dev/null | grep -q '"uid"'; do
+    tries=$((tries - 1))
+    if [ "$tries" = 0 ]; then
+      echo "FAIL: Grafana dashboard list didn't load — kubectl -n $NAMESPACE logs deploy/grafana" >&2
+      return 1
+    fi
+    sleep 2
+  done
+  restarts="$(kubectl -n "$NAMESPACE" get pods -l app=grafana -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}')"
+  if [ -n "$(tr -d ' 0' <<< "$restarts")" ]; then
+    echo "FAIL: Grafana restarted ($restarts) during the dashboard-list load — kubectl -n $NAMESPACE describe pod -l app=grafana" >&2
+    return 1
+  fi
+  echo "  Grafana dashboard list loaded"
+}
+
 case "$cmd" in
   up)
-    echo "== Applying $STACK_DIR =="
+    echo "== Applying $STACK_DIR (profile: $profile) =="
     if [ -z "$(kubectl kustomize "$STACK_DIR")" ]; then
       echo "  (no resources yet)"
+    elif [ -n "$skip_ui" ]; then
+      # Select by label in the manifests, not the cluster: objects applied
+      # before the label existed are still deleted (by name).
+      kubectl delete -k "$STACK_DIR" -l "gluon-obs/ui=$skip_ui" --ignore-not-found >/dev/null
+      if [ -d "$JOBS_DIR" ]; then
+        kubectl -n "$NAMESPACE" delete -f "$JOBS_DIR" -l "gluon-obs/ui=$skip_ui" --ignore-not-found >/dev/null
+      fi
+      kubectl -n "$NAMESPACE" wait --for=delete pod -l "app=$skip_ui" --timeout="$WAIT_TIMEOUT" >/dev/null 2>&1 || true
+      kubectl apply -k "$STACK_DIR" -l "gluon-obs/ui!=$skip_ui" >/dev/null
     else
       kubectl apply -k "$STACK_DIR" >/dev/null
     fi
@@ -100,13 +155,21 @@ case "$cmd" in
     done
     echo "== One-shot setup Jobs =="
     run_jobs
+    if [ "$skip_ui" != grafana ]; then
+      echo "== First Grafana load =="
+      check_grafana || exit 1
+    fi
     echo "== Up =="
-    echo "  Grafana     http://localhost:3000"
-    echo "  Kibana      http://localhost:5601"
+    [ "$skip_ui" = grafana ] || echo "  Grafana     $GRAFANA_URL"
+    [ "$skip_ui" = kibana ] || echo "  Kibana      http://localhost:5601"
     echo "  Prometheus  http://localhost:9092"
     echo "  Alertmanager http://localhost:9093"
     echo "== Memory budget =="
-    budget || { echo "WARN: over budget — no room for a Gatling run beside the stack" >&2; exit 3; }
+    budget || {
+      echo "WARN: over budget — no room for a Gatling run beside the stack" >&2
+      [ "$profile" = metrics ] || echo "  (expected for '$profile'; 'bin/obs up' alone fits beside Gatling)" >&2
+      exit 3
+    }
     ;;
   down)
     echo "== Deleting the observability stack =="

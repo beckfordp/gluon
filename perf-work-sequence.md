@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S3
+**Next step:** S4
 
 ## Tier 1: unblock Perf 4
 
@@ -22,7 +22,7 @@ is not `[x]`, then stop again.
       idle service CPU < 50m.
 - [x] **S2 — TD-27** order-service memory: measure RSS vs heap (NMT) after
       S1; fix the growth, or keep 512Mi with the numbers as the reason.
-- [ ] **S3 — TD-25** Grafana first-load OOM: measure, resize within the 3Gi
+- [x] **S3 — TD-25** Grafana first-load OOM: measure, resize within the 3Gi
       obs budget, `bin/obs up` waits for a dashboard load.
       **Decision:** take the memory from Kibana or from Elasticsearch?
 
@@ -132,6 +132,8 @@ is not `[x]`, then stop again.
   → Perf 6–11. Tier 2 goes after tracing so the races are easier to diagnose.
 - 2026-11-04 — JFR overhead (TD-28) gets an ADR, but only after the S39
   measurements, not before.
+- 2026-11-04 — S3: fund Grafana with obs profiles (one UI at a time), not by
+  trimming Kibana/ES; the user's suggestion.
 
 ## Step notes
 
@@ -150,3 +152,8 @@ any change to later steps.
   runs 51/53, 52/53, 53/53, with flaky async email/dispatch-failure UI timeouts (not memory), so watch
   them in S4–S9. *For S3:* the laptop now has ~3 GB headroom, not 4, so S3 can't take Grafana memory
   from the services.
+- 2026-11-04 **S3** — Grafana anon peak 165Mi (all 7 dashboards' queries at once) → 256Mi + SQLite
+  WAL; 3 load passes, 0 OOM/restarts. Decision changed: neither Kibana nor ES trimmed; instead
+  `bin/obs up [metrics|logs|all]` (your idea). S2 had put the namespace at ~11.6Gi with obs up,
+  over the 11Gi ceiling; `metrics` (default, Grafana only) is 10.91Gi. *For S4–S10 and Perf 7–10:*
+  Kibana only via `bin/obs up logs`, never beside a Gatling run; `check-obs-logs.sh` needs logs profile.
