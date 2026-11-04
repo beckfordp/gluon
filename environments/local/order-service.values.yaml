@@ -3,6 +3,11 @@ image:
   tag: latest
 
 env:
+  # PERF-5.3: spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021). With the
+  # obs stack down the exporter drops them, logging one "Failed to export"
+  # line per batch; the service is otherwise unaffected.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
   - name: POSTGRES_HOST
     value: order-postgres
   - name: POSTGRES_DB
