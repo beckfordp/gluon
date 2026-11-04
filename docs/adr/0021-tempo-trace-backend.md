@@ -1,7 +1,7 @@
 # 0021. Tempo as the trace backend
 
 ## Status
-Proposed (2026-10-30)
+Accepted (2026-11-04); proposed 2026-10-30
 
 ## Context
 purerestlib creates OpenTelemetry spans for every HTTP server/client call,
@@ -23,9 +23,10 @@ panels, and jump from a trace to its logs. Candidates:
   either, so the async fan-out story can't be shown.
 
 ## Decision
-1. **Tempo** is the trace backend, deployed in `local-infra` next to
-   Prometheus/Grafana (single-binary mode, local disk, 1-day retention
-   within the laptop budget in PLAN.md).
+1. **Tempo** is the trace backend, deployed in the opt-in observability
+   stack (`infra/k8s/observability`, `bin/obs`) next to Prometheus/Grafana,
+   in every profile: single-binary mode, local disk, 1-day retention,
+   256Mi (request = limit).
 2. **purerestlib exports spans over OTLP** to a configurable endpoint with
    a configurable sampling ratio. `LoggingSpanExporter` stays as the default
    when no endpoint is set, so services still run without a backend.
@@ -40,8 +41,11 @@ panels, and jump from a trace to its logs. Candidates:
   Christmas Rush demo can go panel → exemplar → trace → logs.
 - Fits ADR 0016's "same self-hosted stack, no commercial APM" for every
   tier.
-- Adds one more pod to the local cluster (~0.5 GB), counted in the laptop
-  budget.
+- Adds 256Mi to the observability stack (2.31 → 2.56 Gi in the `metrics`
+  profile), which puts the namespace at 11.16 Gi, over its 11 Gi ceiling.
+  So the OrbStack VM goes from 16 to 20 GiB, applied with Tempo in PERF-5.3
+  (work sequence S29a, brought forward); the cluster budget and ceiling
+  are raised there, with measured numbers.
 - Logs (Kibana) and traces (Grafana/Tempo) live in different tools; the
   link between them is by `trace_id`/`correlation_id` on every log line
   (PERF-5.6), not a shared backend.

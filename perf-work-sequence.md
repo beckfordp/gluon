@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S11
+**Next step:** S12
 
 ## Tier 1: unblock Perf 4
 
@@ -47,9 +47,11 @@ is not `[x]`, then stop again.
 
 ## Perf 5: end-to-end tracing
 
-- [ ] **S11 — PERF-5.1** accept ADR 0021 (Tempo)
+- [x] **S11 — PERF-5.1** accept ADR 0021 (Tempo)
 - [ ] **S12 — PERF-5.2** purerest OTLP span exporter
-- [ ] **S13 — PERF-5.3** Tempo in local-infra + Grafana datasource
+- [ ] **S13 — PERF-5.3** Tempo in the obs stack (256Mi) + Grafana datasource;
+      includes S29a: OrbStack VM 16 → 20 GiB, raise budget + ceilings
+      (PLAN.md, environments/local/README.md, `bin/lib/obs-budget.sh`)
 - [ ] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
       `traceparent` header alias)
 - [ ] **S15 — PERF-5.5** consumers continue the trace
@@ -79,10 +81,7 @@ is not `[x]`, then stop again.
 - [ ] **S27 — PERF-6.5** `fault_injected_total` metric + dashboard panel
 - [ ] **S28 — PERF-6.6** `bin/fault` CLI
 - [ ] **S29 — PERF-6.7** wire into every service
-- [ ] **S29a — Decision:** OrbStack VM 16 → 20 GiB? Host is 32 GB; 16 GB
-      had no recorded rationale (half the host). If yes: `orb config set
-      memory_mib 20480`, update PLAN.md "Demo, not capacity" + the
-      environments/local/README.md budget. Before Perf 7 load.
+- [-] **S29a** VM 16 → 20 GiB: decided yes in S11, done in S13.
 
 ## Perf 7: Christmas load model
 
@@ -151,6 +150,9 @@ is not `[x]`, then stop again.
   cross-repo grep found one more (TD-29) → S8a before S9.
 - 2026-11-04 — S10: business spans (PERF-4.10) → Perf 5 as PERF-5.9 (S15a),
   after consumers join traces and before `verify-tracing.sh`; the user's call.
+- 2026-11-04 — S11: Tempo goes in the obs stack (every profile) at 256Mi, not
+  local-infra at 0.5Gi. That takes `metrics` to 11.16Gi, over the 11Gi
+  ceiling, so S29a is brought forward into S13 (VM → 20 GiB); the user's call.
 
 ## Step notes
 
@@ -218,3 +220,6 @@ any change to later steps.
 - 2026-11-04 **S10** — PERF-4.10 spans moved to Perf 5 (PERF-5.9, step S15a), your call.
   Perf 4 exit met, spans excepted: all six milestones logged for one order (101/239 in 6h),
   each counted in Prometheus, Christmas Rush 14/15 queries with data (5xx % empty, no 5xx).
+- 2026-11-04 **S11** — ADR 0021 accepted, amended: Tempo in the obs stack at 256Mi (was
+  local-infra ~0.5GB, which didn't fit beside a Gatling run). S29a folded into S13.
+  *For S13:* restarting OrbStack drops the Debezium connectors; re-register them.

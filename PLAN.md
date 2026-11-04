@@ -1445,7 +1445,7 @@ because there were no 5xx).*
 
 ## Performance 5 — End-to-end tracing (sync + async)
 
-**Repos:** `lib/purerest`, `services/*`, `gluon` (`infra/k8s/local-infra`,
+**Repos:** `lib/purerest`, `services/*`, `gluon` (`infra/k8s/observability`,
 `docs/adr`).
 
 **Depends on:** Performance 2 (3 for the Grafana links).
@@ -1456,12 +1456,15 @@ and every Debezium connector maps it to a Kafka header, but no service
 writes it (`OrderStore` documents it as always NULL), and no consumer calls
 `KafkaTracing.traced` to join it. `correlation_id` already flows end to end.
 
-- [ ] PERF-5.1 — [ADR 0021](./docs/adr/0021-tempo-trace-backend.md):
+- [x] PERF-5.1 — [ADR 0021](./docs/adr/0021-tempo-trace-backend.md):
       Tempo as trace backend (Grafana-native, trace ↔ metrics ↔ logs
       links), OTLP export from purerestlib
+      *Accepted 2026-11-04: Tempo in the observability stack at 256Mi, not
+      `local-infra`; OrbStack VM 16 → 20 GiB to fit it (with PERF-5.3).*
 - [ ] PERF-5.2 — purerestlib: OTLP span exporter, configurable endpoint +
       sampling ratio (logging exporter stays as the no-backend default)
-- [ ] PERF-5.3 — Tempo in `local-infra`; Grafana data source with
+- [ ] PERF-5.3 — Tempo in the observability stack (`bin/obs`, 256Mi) +
+      OrbStack VM 16 → 20 GiB with the budget/ceiling raised; Grafana data source with
       trace → Kibana link by `trace_id` and exemplars on latency panels
 - [ ] PERF-5.4 — write the active `traceparent` into `outbox_events.trace_parent`
       in all four producing services (order, payment,
