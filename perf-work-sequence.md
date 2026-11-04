@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S8
+**Next step:** S9
 
 ## Tier 1: unblock Perf 4
 
@@ -34,10 +34,10 @@ is not `[x]`, then stop again.
 - [x] **S7 — PERF-4.7** fulfilment-service
 - [x] **S7a — TD-25.4** Grafana OOM at 256Mi (reopened in S6): `GOMEMLIMIT`
       + query concurrency cap, re-measure under acceptance load; else 320Mi.
-- [ ] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
+- [x] **S8 — PERF-4.8** catalog, cart, user (3 small tracks)
 - [ ] **S9 — PERF-4.9 / 4.11** notification-service track; record the 4.9
       deviation (Debezium lag panel instead of an outbox-row gauge); tick
-      PERF-4.1–4.3 + 4.11 (purerest track already archived).
+      PERF-4.1–4.3 + 4.8 + 4.11 (purerest track already archived).
 - [ ] **S10 — PERF-4.10** business spans. Only the `checkout` span exists.
       **Decision:** finish the reserve/authorize/capture/outbox spans now, or
       move them into Perf 5 where traces become visible? Then the Perf 4 exit

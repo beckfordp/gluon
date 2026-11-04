@@ -1406,6 +1406,7 @@ spans and logs, never on metric labels.
       consumer lag, which Q14 depends on (Q13, Q14)
 - [ ] PERF-4.8 — catalog-service Redis cache hit/miss; cart, user and
       notification outcome counters for their key operations (Q2)
+      *(catalog, cart, user done 2026-11-04; notification closes with S9)*
 - [ ] PERF-4.9 — outbox gauge in each producing service: unpublished rows
       + oldest-row age — the outbox → Debezium hop (Q2, Q3)
 - [ ] PERF-4.10 — business spans: reserve, authorize, capture, outbox
