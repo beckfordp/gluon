@@ -711,3 +711,10 @@ own line. See each repo's own `git log` for full detail either way.
   outbox hop is measured by Debezium's lag, not a per-service gauge (the
   outbox table has nothing to count). Business spans move to Perf 5, where
   Tempo makes them visible.
+- **Traces in Grafana.** Tempo joins the observability stack (every
+  profile, 256Mi) and all 8 services export spans to it over OTLP/HTTP
+  (purerest 0.10.0). Grafana opens a trace from Explore and jumps from a
+  trace to its log lines. To make room the OrbStack VM went from 16 to
+  20 GiB, so Grafana and Kibana now both fit beside a Gatling run. Not yet
+  one trace per order: service-to-service calls and Kafka hops still start
+  new traces (rest of Perf 5).

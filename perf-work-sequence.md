@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S13
+**Next step:** S14
 
 ## Tier 1: unblock Perf 4
 
@@ -49,7 +49,7 @@ is not `[x]`, then stop again.
 
 - [x] **S11 — PERF-5.1** accept ADR 0021 (Tempo)
 - [x] **S12 — PERF-5.2** purerest OTLP span exporter
-- [ ] **S13 — PERF-5.3** Tempo in the obs stack (256Mi) + Grafana datasource;
+- [x] **S13 — PERF-5.3** Tempo in the obs stack (256Mi) + Grafana datasource;
       bump 8 services to purerest 0.10.0, `Tracing.console` → `Tracing.resource`
       + chart env `OTEL_EXPORTER_OTLP_ENDPOINT` (Tempo OTLP **HTTP** :4318), generator template;
       includes S29a: OrbStack VM 16 → 20 GiB, raise budget + ceilings
@@ -60,6 +60,10 @@ is not `[x]`, then stop again.
 - [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
 - [ ] **S16 — PERF-5.6** trace/span/correlation ids on every log line
       (fills milestone `correlation_id`)
+- [ ] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
+      (found in S13). **Decision:** here, or earlier beside S14?
+- [ ] **S16b — PERF-5.11** exemplars (purerest context bridge; found in S13).
+      **Decision:** fix now, or defer past Perf 5?
 - [ ] **S17 — PERF-5.7** `verify-tracing.sh`
 - [ ] **S18 — PERF-5.8** trace completeness under load
 
@@ -155,6 +159,9 @@ is not `[x]`, then stop again.
 - 2026-11-04 — S11: Tempo goes in the obs stack (every profile) at 256Mi, not
   local-infra at 0.5Gi. That takes `metrics` to 11.16Gi, over the 11Gi
   ceiling, so S29a is brought forward into S13 (VM → 20 GiB); the user's call.
+- 2026-11-04 — S13: two gaps found → PERF-5.10 (sync HTTP propagation, S16a)
+  and PERF-5.11 (exemplars, S16b), placed before `verify-tracing.sh`; your call
+  to move them.
 
 ## Step notes
 
@@ -231,3 +238,13 @@ any change to later steps.
   checked). Verified: local otelcol 0.139.0 received `demo-span` with `service.name`; Tracing 94%,
   TracingConfig 100%. No CHANGELOG entry yet (library only); add one in S13 when traces show.
   *For S13:* Tempo needs its OTLP HTTP receiver on 4318; services bump to 0.10.0.
+- 2026-11-04 **S13** — VM 20 GiB (node 19.6Gi); budget 16/15/3.5 Gi (e91382e). Tempo 2.10.10
+  (3.x skipped: new architecture), peak 179Mi, 0 restarts. 8 service tracks + generator track
+  archived (purerest 0.8.2 → 0.10.0; generator was on 0.7.3); `Tracing.resource` +
+  `TracingConfig.fromEnv`, malformed ratio fails startup. Values env 6feb8a3. Acceptance 53/53,
+  ledger OK, 0 restarts; all 8 `service.name`s in Tempo; trace → ES logs works (logs already had
+  `trace_id`). Tempo down → services fine, one `SEVERE: Failed to export` line per batch.
+  **Gaps:** checkout trace is order-service only (no `ClientTracing`) → S16a; exemplars none
+  (otel4s IOLocal vs Java `Context`) → S16b. Server spans are kind INTERNAL, not SERVER (purerest
+  `ServerTracing`; cosmetic, fold into S16a). *For S14:* sbt needs `GITHUB_TOKEN` from `gh auth token`
+  in background shells; health-probe spans dominate Tempo search (filter by route).

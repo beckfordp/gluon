@@ -1467,9 +1467,16 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       reads `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_TRACES_SAMPLER_ARG`. OTLP over
       **HTTP (:4318)**, not gRPC: the JDK HttpClient sender (no okhttp) has no gRPC.
       Services switch from `Tracing.console` in PERF-5.3.
-- [ ] PERF-5.3 — Tempo in the observability stack (`bin/obs`, 256Mi) +
+- [x] PERF-5.3 — Tempo in the observability stack (`bin/obs`, 256Mi) +
       OrbStack VM 16 → 20 GiB with the budget/ceiling raised; Grafana data source with
       trace → Kibana link by `trace_id` and exemplars on latency panels
+      *Done 2026-11-04: Tempo 2.10.10, peak 179Mi; budget 16 Gi containers, ceiling
+      15 Gi, stack 3.5 Gi (every profile now fits beside Gatling). 8 services on
+      purerest 0.10.0, `OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4318`; all 8 in Tempo.
+      Trace → logs via a Grafana Elasticsearch datasource (logs already carry
+      `trace_id`), with a `trace_id` link to Kibana (needs `bin/obs up logs|all`).
+      Deviation: exemplars configured (Prometheus storage, datasource, panels) but
+      none emitted — PERF-5.11. Found: sync HTTP calls start new traces — PERF-5.10.*
 - [ ] PERF-5.4 — write the active `traceparent` into `outbox_events.trace_parent`
       in all four producing services (order, payment,
       fulfilment, user); shared helper in purekafka so it's one call
@@ -1488,6 +1495,16 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       capture, outbox write, DB transaction, with `order.id` attribute and
       span events on status transitions; before PERF-5.7 so its trace
       assertion covers them (Q16)
+
+- [ ] PERF-5.10 — outgoing HTTP clients (order → inventory/payment, any
+      other service-to-service client) wrap in purerest `ClientTracing`, so a
+      sync call joins the caller's trace; check the server side continues the
+      incoming `traceparent`. Found in PERF-5.3: a checkout trace holds only
+      order-service spans. Before PERF-5.7
+- [ ] PERF-5.11 — exemplars: the OTel Java SDK's exemplar reservoir reads the
+      Java `Context`, which otel4s's IOLocal context doesn't set, so no
+      histogram carries a `trace_id`. Fix in purerest (context bridge, or
+      record exemplars explicitly); Grafana/Prometheus side done in PERF-5.3
 
 **Exit criteria:** one order's full lifecycle visible as one trace in
 Tempo, with jump-to-logs in Kibana.
