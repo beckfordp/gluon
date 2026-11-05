@@ -58,8 +58,8 @@ is not `[x]`, then stop again.
       `traceparent` header alias)
 - [ ] **S15 — PERF-5.5** consumers continue the trace
 - [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
-- [ ] **S16 — PERF-5.6** trace/span/correlation ids on every log line
-      (fills milestone `correlation_id`)
+- [ ] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
+      see 2026-11-05 decision)
 - [ ] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
       (found in S13). **Decision:** here, or earlier beside S14?
 - [ ] **S16b — PERF-5.11** exemplars (purerest context bridge; found in S13).
@@ -162,6 +162,9 @@ is not `[x]`, then stop again.
 - 2026-11-04 — S13: two gaps found → PERF-5.10 (sync HTTP propagation, S16a)
   and PERF-5.11 (exemplars, S16b), placed before `verify-tracing.sh`; your call
   to move them.
+- 2026-11-05 — `correlation_id` = `order_id` (account id in user-service), so S16
+  logs `trace_id`/`span_id` only and Milestones drops `correlation_id`. The envelope
+  field and Kafka header stay (payload contract); your call.
 
 ## Step notes
 

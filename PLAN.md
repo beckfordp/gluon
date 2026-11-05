@@ -1425,7 +1425,7 @@ spans and logs, never on metric labels.
 - [x] PERF-4.11 — milestone log lines (order placed, reserved,
       authorized, dispatched, captured, notified) with `order_id` +
       `correlation_id`, structured for Kibana (Q17)
-      *Done 2026-11-04 (`Milestones`); `correlation_id` is empty until PERF-5.6.*
+      *Done 2026-11-04 (`Milestones`); `correlation_id` stays empty: it equals `order_id` (decided 2026-11-05, PERF-5.6).*
 - [x] PERF-4.12 — **Christmas Rush** overview dashboard: order arrival rate,
       checkout p99 + outcomes, error rate, breaker states, consumer lag and
       event age per consumer group, fulfilment backlog vs dispatch rate,
@@ -1482,7 +1482,8 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       fulfilment, user); shared helper in purekafka so it's one call
 - [ ] PERF-5.5 — every Kafka consumer wraps handling in
       `KafkaTracing.traced` so the consumer span joins the producer's trace
-- [ ] PERF-5.6 — `trace_id` + `span_id` + `correlation_id` on every log line
+- [ ] PERF-5.6 — `trace_id` + `span_id` on every log line (no `correlation_id`:
+      it equals `order_id` today, decided 2026-11-05; envelope field stays, contract)
       (MDC), indexed as keyword fields in Kibana (Q17)
 - [ ] PERF-5.7 — `verify-tracing.sh`: one checkout + dispatch, assert a
       single trace id spans order → inventory → payment → fulfilment →
