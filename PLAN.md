@@ -1516,6 +1516,15 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       Java `Context`, which otel4s's IOLocal context doesn't set, so no
       histogram carries a `trace_id`. Fix in purerest (context bridge, or
       record exemplars explicitly); Grafana/Prometheus side done in PERF-5.3
+- [ ] PERF-5.12 — logging policy (ADR) + INFO as a debugging narrative: one
+      INFO line per decision point (entry with ids, branch taken + why, what was
+      written), fixed message text with values as fields, no PII; library
+      loggers (Kafka client, Flyway) → WARN; "ignoring unrelated event" →
+      DEBUG; drop "Received request" (span covers it); fix the missing
+      `target/asyncapi-docs` `FileService` ERROR flood (inventory, user,
+      notification, ~39k/day); per-service level via env var; check ES
+      retention. Found in PERF-5.5: an order trace with zero log lines. Check:
+      a dispatch trace shows its narrative via Grafana trace → logs
 
 **Exit criteria:** one order's full lifecycle visible as one trace in
 Tempo, with jump-to-logs in Kibana.

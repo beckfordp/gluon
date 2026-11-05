@@ -64,6 +64,7 @@ is not `[x]`, then stop again.
       (found in S13). **Decision:** here, or earlier beside S14?
 - [ ] **S16b — PERF-5.11** exemplars (purerest context bridge; found in S13).
       **Decision:** fix now, or defer past Perf 5?
+- [ ] **S16c — PERF-5.12** logging policy (ADR) + debugging INFO narrative
 - [ ] **S17 — PERF-5.7** `verify-tracing.sh`
 - [ ] **S18 — PERF-5.8** trace completeness under load
 
@@ -165,6 +166,9 @@ is not `[x]`, then stop again.
 - 2026-11-05 — `correlation_id` = `order_id` (account id in user-service), so S16
   logs `trace_id`/`span_id` only and Milestones drops `correlation_id`. The envelope
   field and Kafka header stay (payload contract); your call.
+- 2026-11-05 — S16c added: S15 trace `1ebf0332…` had zero log lines while ~39k
+  `FileService` ERRORs/day and Kafka client INFO drown the index. INFO becomes a
+  per-operation debugging narrative (decision points), noise goes to WARN/DEBUG.
 
 ## Step notes
 
