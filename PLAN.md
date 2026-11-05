@@ -1514,11 +1514,18 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       + gateway spans + `outbox.write`; consumers parent on `outbox.write`.
       A dispatch trace: 21 spans, 5 services.*
 
-- [ ] PERF-5.10 — outgoing HTTP clients (order → inventory/payment, any
+- [x] PERF-5.10 — outgoing HTTP clients (order → inventory/payment, any
       other service-to-service client) wrap in purerest `ClientTracing`, so a
       sync call joins the caller's trace; check the server side continues the
       incoming `traceparent`. Found in PERF-5.3: a checkout trace holds only
       order-service spans. Before PERF-5.7
+      *Done 2026-11-05: purerest v0.14.0 — `ClientTracing` opens a CLIENT span
+      (`<METHOD> <host>`, HTTP attributes, 5xx/error → Error) and sends its
+      `traceparent`; `ServerTracing` spans are SERVER kind. order (inventory,
+      payment), fulfilment (order) and notification (order, user) wrap their
+      clients; inventory/payment/user bumped. Checkout is one trace across
+      order, inventory, payment and the consumers. cart/catalog/generator stay
+      on older purerest (no service-to-service callers) until their next bump.*
 - [ ] PERF-5.11 — exemplars: the OTel Java SDK's exemplar reservoir reads the
       Java `Context`, which otel4s's IOLocal context doesn't set, so no
       histogram carries a `trace_id`. Fix in purerest (context bridge, or

@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S16a
+**Next step:** S16b
 
 ## Tier 1: unblock Perf 4
 
@@ -60,7 +60,7 @@ is not `[x]`, then stop again.
 - [x] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
 - [x] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
       see 2026-11-05 decision)
-- [ ] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
+- [x] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
       (found in S13). **Decision:** here, or earlier beside S14?
 - [ ] **S16b — PERF-5.11** exemplars (purerest context bridge; found in S13).
       **Decision:** fix now, or defer past Perf 5?
@@ -295,3 +295,16 @@ any change to later steps.
   internals non-compacted, Debezium RUNNING but silent → seeding failed; recovered by hand,
   rerun 53/53, ledger OK. TD-30 not seen again. Service repos' GitHub CI can't resolve 0.13.0
   (local-only). `bin/obs up logs` turns Grafana off — use `all`.
+- 2026-11-05 **S16a** — Decision moot (S14 already done) → done here. purerest **v0.14.0**
+  (local; track archived 0debb13): `ClientTracing` opens a CLIENT span `<METHOD> <host>` with
+  HTTP attributes, 5xx/error → Error, sends its own `traceparent`; `ServerTracing` SERVER kind,
+  5xx → Error. 6 service tracks archived: order/fulfilment/notification wrap the Main client;
+  inventory/payment/user bump only. cart/catalog/generator left on older purerest (INTERNAL
+  server spans; nobody calls them service-to-service). Fixed a flaky order-service PERF-5.5
+  consumer test (shared topic; 2/3 failed). Redeployed in pairs (TD-31: no Kafka restart).
+  Acceptance: run 1 seeding hit **TD-26**, run 2 51/53 during a host overload (load 48,
+  IntelliJ 5GB, k8s API down ~10 min, node NotReady), run 3 53/53, ledger OK, 0 restarts.
+  Traces: checkout 88af97ce… (order CLIENT → inventory/payment SERVER; shows TD-26: fulfilment
+  GETs the order before `order.create`); dispatch a155c23f… (notification → order + user).
+  TD-30 not seen. *Seen:* notification makes 2 lookups per event, 3 events per dispatch (6 calls)
+  — perf lead for S18+.

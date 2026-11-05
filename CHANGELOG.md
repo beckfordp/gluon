@@ -731,3 +731,9 @@ own line. See each repo's own `git log` for full detail either way.
   from → to), and the outbox write that publishes the event, with the
   consumers hanging off that write. A dispatch is now 21 spans across 5
   services instead of 12.
+- **Checkout is one trace.** Order-service's calls to inventory and payment,
+  fulfilment's call to order, and notification's order and user lookups now
+  each show as a client span with the called service's request beneath it.
+  A checkout trace runs order → inventory → payment → the Kafka consumers,
+  and Tempo marks HTTP spans as client/server rather than internal. The same
+  view shows TD-26 directly: fulfilment looks the order up before it exists.
