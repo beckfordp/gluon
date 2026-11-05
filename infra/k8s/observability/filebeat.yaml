@@ -2,12 +2,8 @@
 # gluon-logs-* (PLAN.md PERF-3.2). Per line:
 #   - JSON app logs (logback LogstashEncoder) become fields, incl. MDC
 #     trace_id/span_id from purerest's traceCorrelated logger
-#   - OpenTelemetry LoggingSpanExporter lines
-#       INFO: 'GET /health/ready' : <trace_id> <span_id> SERVER [tracer: ...] {...}
-#     are dissected into span_name/trace_id/span_id, so every request —
-#     even a smoke run's /health/ready, which logs nothing else — can be
-#     found by the trace id Gatling logged; their timestamp-header lines
-#     are dropped
+#     (spans themselves go to Tempo over OTLP since PERF-5.3; the old
+#     LoggingSpanExporter dissect was dropped in PERF-5.6)
 #   - anything else stays as `message`
 # `service.name` = the pod's `app` label. The stack's own pods are dropped,
 # so Filebeat never ships Elasticsearch's logs into Elasticsearch.
