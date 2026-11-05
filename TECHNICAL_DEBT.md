@@ -1248,3 +1248,29 @@ with `POST /connectors/<name>/restart?includeTasks=true&onlyFailed=true`.
 - [ ] TD-30.2: alert when a connector task is not RUNNING (Kafka Connect JMX
       task status via the existing exporter) — Grafana alert rule, ties into
       PERF-11.4.
+
+## TD-31 — Kafka OOMKilled wipes every topic; Connect then can't restart
+
+2026-11-05 14:39:57 UTC the `kafka` pod was `OOMKilled` (1Gi limit,
+`KAFKA_HEAP_OPTS=-Xms512m -Xmx512m`) while five services were rebuilding and
+redeploying. Its log dir is `/tmp/kafka-logs` in the container's writable
+layer, so the restart lost every topic and every consumer offset. The running
+Kafka Connect worker re-created `connect-configs`/`connect-status` by
+auto-create (`cleanup.policy=delete`) and `connect-offsets` not at all; its
+Debezium tasks still reported RUNNING but published nothing, so seeding failed
+20 min later (`PaymentAuthorized` row never reached `payment-events`). A
+restarted Connect worker refused to start (`status.storage.topic` must be
+compacted). Recovered by hand: scale Connect to 0, delete the three `connect-*`
+topics, scale up (re-created compacted), re-run the register Job. Apicurio
+(not Kafka-backed) was unaffected. Same silent-stall class as TD-30.
+
+### Tasks
+- [ ] TD-31.1: Kafka log dir on a volume that survives a container restart
+      (emptyDir at minimum; PVC if pod reschedules matter), so an OOM costs a
+      restart, not the data.
+- [ ] TD-31.2: find what pushes Kafka past 1Gi (heap 512m + direct/metaspace +
+      page cache accounting?) and size the limit or heap from a measurement.
+- [ ] TD-31.3: Connect internal topics created explicitly (compacted) at infra
+      start, or broker `auto.create.topics.enable=false`, so a wipe can't leave
+      wrongly configured internals.
+- [ ] TD-31.4: alert on Kafka restarts / Connect not publishing (with TD-30.2).

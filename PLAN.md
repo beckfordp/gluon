@@ -1492,9 +1492,13 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       Every outbox row now carries `trace_parent`. One dispatch is one trace:
       12 spans, 5 services, 3 Kafka hops. Checkout's sync calls still start
       separate traces (PERF-5.10).*
-- [ ] PERF-5.6 — `trace_id` + `span_id` on every log line (no `correlation_id`:
+- [x] PERF-5.6 — `trace_id` + `span_id` on every log line (no `correlation_id`:
       it equals `order_id` today, decided 2026-11-05; envelope field stays, contract)
       (MDC), indexed as keyword fields in Kibana (Q17)
+      *Done 2026-11-05: ids already stamped by purerest `traceCorrelated` and
+      keyword-mapped; purerest 0.13.0 `Milestones` drops `correlation_id`. 100% of
+      app log lines in an acceptance run carry `trace_id`; milestone lines join
+      their business span (PERF-5.9) by `span_id`.*
 - [ ] PERF-5.7 — `verify-tracing.sh`: one checkout + dispatch, assert a
       single trace id spans order → inventory → payment → fulfilment →
       capture → notification in Tempo (Q16)

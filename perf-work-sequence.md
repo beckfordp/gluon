@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S16
+**Next step:** S16a
 
 ## Tier 1: unblock Perf 4
 
@@ -58,7 +58,7 @@ is not `[x]`, then stop again.
       `traceparent` header alias)
 - [x] **S15 — PERF-5.5** consumers continue the trace
 - [x] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
-- [ ] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
+- [x] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
       see 2026-11-05 decision)
 - [ ] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
       (found in S13). **Decision:** here, or earlier beside S14?
@@ -284,3 +284,14 @@ any change to later steps.
   first run hit **TD-26** (fulfilment consumed `PaymentAuthorized` 130ms before the order could
   commit — now visible in trace 95c4d922…), rerun 53/53, ledger OK. Dispatch trace f2cd7d22…:
   21 spans, 5 services. *Seen:* `payment.record_authorization` took 109ms (perf lead for S18+).
+- 2026-11-05 **S16** — Mostly existed: purerest `traceCorrelated` already stamped
+  `trace_id`/`span_id`, ES maps both as keyword, `correlation_id` was on 0 lines. Done:
+  purerest **v0.13.0** `Milestones.log` drops `correlationId` (released locally: Actions release
+  failed 5x on setup-sbt's ampel download; user: release locally from now on); 5 service tracks
+  archived (0.13.0); Filebeat's dead LoggingSpanExporter dissect removed, Kibana shows `span_id`.
+  Coverage: 100% of 5,674 app log lines in the acceptance run carry `trace_id`; each milestone
+  line's `span_id` is its S15a business span in Tempo. **TD-31** (new): Kafka OOMKilled at 1Gi
+  during the redeploy wiped all topics (log dir in container `/tmp`); Connect re-auto-created its
+  internals non-compacted, Debezium RUNNING but silent → seeding failed; recovered by hand,
+  rerun 53/53, ledger OK. TD-30 not seen again. Service repos' GitHub CI can't resolve 0.13.0
+  (local-only). `bin/obs up logs` turns Grafana off — use `all`.
