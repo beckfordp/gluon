@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S15a
+**Next step:** S16
 
 ## Tier 1: unblock Perf 4
 
@@ -57,7 +57,7 @@ is not `[x]`, then stop again.
 - [x] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
       `traceparent` header alias)
 - [x] **S15 — PERF-5.5** consumers continue the trace
-- [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
+- [x] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
 - [ ] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
       see 2026-11-05 decision)
 - [ ] **S16a — PERF-5.10** `ClientTracing` on service-to-service HTTP clients
@@ -274,3 +274,13 @@ any change to later steps.
   All outbox rows now carry `trace_parent`. Dispatch trace a7197428…: 12 spans, 5 services,
   3 hops (fulfilment-events → payment capture → payment-events → order confirm → order-events).
   *For S15a:* span kinds: HTTP spans still INTERNAL (fold SERVER/CLIENT into S16a).
+- 2026-11-05 **S15a** — 5 service tracks archived (order, payment, inventory, fulfilment, user;
+  no purerest release). `*StoreTracing` decorators, outermost over the JourneyMetrics ones:
+  `order.create|transition`, `payment.record_*|expire` + `payment.gateway.*`,
+  `inventory.reserve|release|mark_shipped`, `fulfilment.create_task|transition`, with `order.id`
+  and `*.status_changed{from,to}` events; `outbox.write{event_type}` in each `insertOutbox`, so
+  consumers are its children. Behaviour change: a row written outside a span now gets its own
+  root trace (was NULL). skunk per-query spans not enabled (skunk pins otel4s 0.16). Acceptance:
+  first run hit **TD-26** (fulfilment consumed `PaymentAuthorized` 130ms before the order could
+  commit — now visible in trace 95c4d922…), rerun 53/53, ledger OK. Dispatch trace f2cd7d22…:
+  21 spans, 5 services. *Seen:* `payment.record_authorization` took 109ms (perf lead for S18+).

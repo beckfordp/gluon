@@ -1502,10 +1502,13 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       run, report % with complete traces; expose the exporter's dropped-span
       count (the batch processor drops silently when its queue fills) on
       Grafana (Q8, Q16)
-- [ ] PERF-5.9 — business spans (from PERF-4.10): reserve, authorize,
+- [x] PERF-5.9 — business spans (from PERF-4.10): reserve, authorize,
       capture, outbox write, DB transaction, with `order.id` attribute and
       span events on status transitions; before PERF-5.7 so its trace
       assertion covers them (Q16)
+      *Done 2026-11-05: store-decorator spans per step (= its DB transaction)
+      + gateway spans + `outbox.write`; consumers parent on `outbox.write`.
+      A dispatch trace: 21 spans, 5 services.*
 
 - [ ] PERF-5.10 — outgoing HTTP clients (order → inventory/payment, any
       other service-to-service client) wrap in purerest `ClientTracing`, so a

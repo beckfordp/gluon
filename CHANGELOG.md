@@ -725,3 +725,9 @@ own line. See each repo's own `git log` for full detail either way.
   confirmation rippling on (12 spans, 5 services, 3 Kafka hops). Checkout's
   calls from order to inventory and payment still start their own traces;
   that's next (PERF-5.10).
+- **Traces show the business steps.** Inside each request and Kafka handler,
+  a trace now shows what the service did: reserve, authorize (and the card
+  gateway call), capture, each order and fulfilment status change (with
+  from → to), and the outbox write that publishes the event, with the
+  consumers hanging off that write. A dispatch is now 21 spans across 5
+  services instead of 12.

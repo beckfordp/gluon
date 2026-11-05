@@ -1131,6 +1131,11 @@ Seen 2026-11-03 in a full acceptance run (order `dc2ee9c9…`: GET 404 at
 09:54:31.25, the POST completing in the same millisecond). Timing-dependent;
 the rerun passed 36/36. Sibling of TD-23 (cross-topic ordering).
 
+Seen again 2026-11-05 (S15a acceptance, order `fea926d8…`), now visible in Tempo
+(trace `95c4d922…`): authorize request 0–172ms, its `outbox.write` at 75ms,
+fulfilment's `payment-events process` at 305ms — before order-service could
+have committed after the 172ms response. Rerun passed.
+
 ### Tasks
 - [ ] TD-26.1: fulfilment-service treats `OrderLookup.NotFound` as transient
       for a bounded window (raise → existing DLQ retry with backoff), and only
