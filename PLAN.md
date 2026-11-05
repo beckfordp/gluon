@@ -1477,9 +1477,14 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       `trace_id`), with a `trace_id` link to Kibana (needs `bin/obs up logs|all`).
       Deviation: exemplars configured (Prometheus storage, datasource, panels) but
       none emitted — PERF-5.11. Found: sync HTTP calls start new traces — PERF-5.10.*
-- [ ] PERF-5.4 — write the active `traceparent` into `outbox_events.trace_parent`
+- [x] PERF-5.4 — write the active `traceparent` into `outbox_events.trace_parent`
       in all four producing services (order, payment,
       fulfilment, user); shared helper in purekafka so it's one call
+      *Done 2026-11-05: purerest/purekafka v0.11.0 `KafkaTracing.traceParent`; each
+      store's `insertOutbox` stamps it. Connectors publish it as `traceparent`
+      (`trace_parent:header:traceparent`). HTTP-driven rows carry it; consumer-driven
+      rows are NULL until PERF-5.5 and arrive as a null-valued `traceparent` header,
+      which the consumer must treat as absent.*
 - [ ] PERF-5.5 — every Kafka consumer wraps handling in
       `KafkaTracing.traced` so the consumer span joins the producer's trace
 - [ ] PERF-5.6 — `trace_id` + `span_id` on every log line (no `correlation_id`:

@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S14
+**Next step:** S15
 
 ## Tier 1: unblock Perf 4
 
@@ -54,7 +54,7 @@ is not `[x]`, then stop again.
       + chart env `OTEL_EXPORTER_OTLP_ENDPOINT` (Tempo OTLP **HTTP** :4318), generator template;
       includes S29a: OrbStack VM 16 → 20 GiB, raise budget + ceilings
       (PLAN.md, environments/local/README.md, `bin/lib/obs-budget.sh`)
-- [ ] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
+- [x] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
       `traceparent` header alias)
 - [ ] **S15 — PERF-5.5** consumers continue the trace
 - [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
@@ -251,3 +251,13 @@ any change to later steps.
   (otel4s IOLocal vs Java `Context`) → S16b. Server spans are kind INTERNAL, not SERVER (purerest
   `ServerTracing`; cosmetic, fold into S16a). *For S14:* sbt needs `GITHUB_TOKEN` from `gh auth token`
   in background shells; health-probe spans dominate Tempo search (filter by route).
+- 2026-11-05 **S14** — purerest v0.11.0 (`KafkaTracing.traceParent`, track archived 1d5d187);
+  order/payment/fulfilment/user tracks archived (purerest+purekafka → 0.11.0; store takes the
+  tracer, one `insertOutbox` helper per store; +1 test each). Connectors alias the header to
+  `traceparent`; ADR 0008 amended. Acceptance 53/53, ledger OK. Outbox: user 9/9, fulfilment
+  23/23 non-null; order 8/19, payment 40/49 (NULL = consumer-driven, e.g. OrderConfirmed,
+  PaymentCaptured). A PaymentAuthorized row's value is on Kafka and its trace in Tempo.
+  *For S15:* NULL rows arrive as a `traceparent` header with a null value — `extractCarrier`
+  must skip it (test it); consumers in order, payment, fulfilment, inventory, notification.
+  Restarts on cart/catalog/inventory/notification (2 each) are from this morning's OrbStack
+  start (08:55), not S14.
