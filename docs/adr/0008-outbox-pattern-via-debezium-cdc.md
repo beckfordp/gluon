@@ -186,3 +186,12 @@ connector, cleanup CronJob and `inventory-events` topic. The outbox pattern
 now applies to four producing services: order-service, payment-service,
 fulfilment-service and user-service. The original decision text above is
 kept as history.
+
+## Amendment — 2026-11-05 (PERF-5.4)
+
+The four producing services now write `trace_parent`: each outbox insert stores
+the active span's W3C `traceparent` (purekafka `KafkaTracing.traceParent`), or
+NULL when written outside a span. Each connector's EventRouter publishes it as
+a `traceparent` header (`trace_parent:header:traceparent`), the name the W3C
+propagator reads, so a consumer's `KafkaTracing.traced` can join the trace
+(PERF-5.5). `correlation_id` is unchanged.
