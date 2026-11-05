@@ -1223,3 +1223,23 @@ wildcard in the repos matches an open set or treats all errors alike.
 non-cancelling events explicitly; `OrderCancellationSuite` checks reason/actor
 agree for every event (258 tests green). Note: no service builds with
 `-Werror`/`-Wconf`, so a non-exhaustive match is still only a warning.
+
+## TD-30 — Debezium connector tasks stay FAILED after a dropped Postgres connection
+
+At 2026-11-05 11:27:09 UTC the order, user and fulfilment outbox connectors'
+replication connections reset in the same second (`Connection reset`, likely
+an OrbStack network blip; Postgres didn't restart). Each task's reconnect then
+failed (`Couldn't obtain encoding … connection attempt failed`), and Kafka
+Connect marked them FAILED, "will not recover until manually restarted". No
+alert fired; events silently stopped (seeding failed 45 min later: an order
+never confirmed because `DispatchConfirmed` never reached Kafka). Fixed by hand
+with `POST /connectors/<name>/restart?includeTasks=true&onlyFailed=true`.
+
+### Tasks
+- [ ] TD-30.1: Debezium retry settings on all four connectors
+      (`errors.max.retries`, `retriable.restart.connector.wait.ms`) so a
+      transient connection loss is retried instead of killing the task; prove
+      by breaking the connection (e.g. `pg_terminate_backend` on the walsender).
+- [ ] TD-30.2: alert when a connector task is not RUNNING (Kafka Connect JMX
+      task status via the existing exporter) — Grafana alert rule, ties into
+      PERF-11.4.

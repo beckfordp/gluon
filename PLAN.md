@@ -1485,8 +1485,13 @@ writes it (`OrderStore` documents it as always NULL), and no consumer calls
       (`trace_parent:header:traceparent`). HTTP-driven rows carry it; consumer-driven
       rows are NULL until PERF-5.5 and arrive as a null-valued `traceparent` header,
       which the consumer must treat as absent.*
-- [ ] PERF-5.5 — every Kafka consumer wraps handling in
+- [x] PERF-5.5 — every Kafka consumer wraps handling in
       `KafkaTracing.traced` so the consumer span joins the producer's trace
+      *Done 2026-11-05: purerest/purekafka v0.12.0 (CONSUMER-kind spans; null
+      `traceparent` = absent). 12 consumers in 5 services, span `<topic> process`.
+      Every outbox row now carries `trace_parent`. One dispatch is one trace:
+      12 spans, 5 services, 3 Kafka hops. Checkout's sync calls still start
+      separate traces (PERF-5.10).*
 - [ ] PERF-5.6 — `trace_id` + `span_id` on every log line (no `correlation_id`:
       it equals `order_id` today, decided 2026-11-05; envelope field stays, contract)
       (MDC), indexed as keyword fields in Kibana (Q17)

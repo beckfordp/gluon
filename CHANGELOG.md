@@ -718,3 +718,10 @@ own line. See each repo's own `git log` for full detail either way.
   20 GiB, so Grafana and Kibana now both fit beside a Gatling run. Not yet
   one trace per order: service-to-service calls and Kafka hops still start
   new traces (rest of Perf 5).
+- **Async hops join one trace.** Each Kafka event now carries the trace of the
+  request that caused it, and every consumer continues it. Dispatching an
+  order is one trace in Tempo: fulfilment's request, then inventory, payment,
+  order and notification handling it, then payment capture and order
+  confirmation rippling on (12 spans, 5 services, 3 Kafka hops). Checkout's
+  calls from order to inventory and payment still start their own traces;
+  that's next (PERF-5.10).

@@ -11,7 +11,7 @@ is not `[x]`, then stop again.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 
-**Next step:** S15
+**Next step:** S15a
 
 ## Tier 1: unblock Perf 4
 
@@ -56,7 +56,7 @@ is not `[x]`, then stop again.
       (PLAN.md, environments/local/README.md, `bin/lib/obs-budget.sh`)
 - [x] **S14 — PERF-5.4** traceparent into the outbox (+ Debezium
       `traceparent` header alias)
-- [ ] **S15 — PERF-5.5** consumers continue the trace
+- [x] **S15 — PERF-5.5** consumers continue the trace
 - [ ] **S15a — PERF-5.9** business spans (moved from PERF-4.10 in S10)
 - [ ] **S16 — PERF-5.6** trace/span ids on every log line (not `correlation_id`;
       see 2026-11-05 decision)
@@ -261,3 +261,12 @@ any change to later steps.
   must skip it (test it); consumers in order, payment, fulfilment, inventory, notification.
   Restarts on cart/catalog/inventory/notification (2 each) are from this morning's OrbStack
   start (08:55), not S14.
+- 2026-11-05 **S15** — purerest v0.12.0 (CONSUMER span kind; null `traceparent` already skipped,
+  now tested; track archived f166060). 5 service tracks archived: 12 consumers wrap handling in
+  `KafkaTracing.traced` (`<topic> process`), tracer threaded from `Main`; tests in order, payment,
+  notification (real Kafka); fulfilment/inventory have no Kafka harness → covered by those + live.
+  First acceptance failed at seeding: 3 Debezium tasks FAILED since 11:27 UTC (replication
+  connections reset, no auto-recovery) → **TD-30**; restarted by hand, rerun 53/53, ledger OK.
+  All outbox rows now carry `trace_parent`. Dispatch trace a7197428…: 12 spans, 5 services,
+  3 hops (fulfilment-events → payment capture → payment-events → order confirm → order-events).
+  *For S15a:* span kinds: HTTP spans still INTERNAL (fold SERVER/CLIENT into S16a).
