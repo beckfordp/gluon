@@ -737,3 +737,17 @@ own line. See each repo's own `git log` for full detail either way.
   A checkout trace runs order → inventory → payment → the Kafka consumers,
   and Tempo marks HTTP spans as client/server rather than internal. The same
   view shows TD-26 directly: fulfilment looks the order up before it exists.
+
+## 2026-11-08
+
+### Added
+- **Proposed: a Rust port of user-service as a spike (ADR 0028).** Services
+  only meet over REST, Kafka (JSON Schema in Apicurio), the outbox table,
+  Postgres and trace/metric/log conventions, so any of them could be
+  replaced by a drop-in in another language. A time-boxed spike (about 5
+  days, separate `user-service-rs` repo, chosen by a kustomize overlay)
+  tests that on the smallest producer. It reuses the Flyway migrations,
+  registered schemas and PBKDF2 settings, and must pass the unchanged
+  acceptance and E2E suites, keep one Tempo trace and the existing
+  dashboards, and record a Gatling run against the Scala baseline. A
+  follow-up ADR decides whether to go further.
