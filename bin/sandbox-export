@@ -367,7 +367,7 @@ def found_captures() -> list[str]:
     committed = GLUON / "tests" / "contract" / "contracts"
     for directory in sorted(Path.home().iterdir()):
         named = CAPTURE_DIR.match(directory.name)
-        if not directory.is_dir() or named is None:
+        if named is None or not directory.is_dir():
             continue
         if (committed / named["service"] / named["date"]).exists():
             continue
