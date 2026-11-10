@@ -1240,6 +1240,13 @@ alert fired; events silently stopped (seeding failed 45 min later: an order
 never confirmed because `DispatchConfirmed` never reached Kafka). Fixed by hand
 with `POST /connectors/<name>/restart?includeTasks=true&onlyFailed=true`.
 
+**Recurrence 2026-11-10 (different cause):** after restarting every
+`*-postgres` (emptyDir → empty DBs) then `bin/k8s-local-up`, all four tasks
+were FAILED: `Unable to create filtered publication dbz_publication … No table
+filters found`. The tasks started against the empty DBs before the services'
+Flyway migrations created the outbox tables. Same manual restart fixed it once
+the tables existed.
+
 ### Tasks
 - [ ] TD-30.1: Debezium retry settings on all four connectors
       (`errors.max.retries`, `retriable.restart.connector.wait.ms`) so a
@@ -1248,6 +1255,10 @@ with `POST /connectors/<name>/restart?includeTasks=true&onlyFailed=true`.
 - [ ] TD-30.2: alert when a connector task is not RUNNING (Kafka Connect JMX
       task status via the existing exporter) — Grafana alert rule, ties into
       PERF-11.4.
+- [ ] TD-30.3: after a DB wipe, connectors must not start before the outbox
+      tables exist — e.g. `bin/k8s-local-up` restarts FAILED tasks (or re-runs
+      the register Job) after the service rollouts; prove by wiping a
+      `*-postgres` and redeploying.
 
 ## TD-31 — Kafka OOMKilled wipes every topic; Connect then can't restart
 
