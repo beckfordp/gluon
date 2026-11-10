@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+# The Rust user-service (ADR 0028 decision 7), installed by bin/k8s-local-up
+# under the same release name, `user-service`, when USER_SERVICE_IMPL=rust.
+# The same env vars as user-service.values.yaml; the chart's JVM-only
+# settings blanked (the chart renders them only when non-empty).
+image:
+  repository: user-service-rs
+  tag: latest
+
+javaOpts: ""
+mallocArenaMax: ""
+
+env:
+  # Spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021), as the Scala service.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
+  - name: POSTGRES_HOST
+    value: user-postgres
+  - name: POSTGRES_DB
+    value: user
+  - name: POSTGRES_USER
+    value: user
+  - name: POSTGRES_PASSWORD
+    value: user

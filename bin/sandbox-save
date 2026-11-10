@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+"""Save the sandbox's work to one archive, so a teardown loses nothing (docs/sandbox.md).
+
+The archive holds:
+  repos/<name>.bundle     every commit, branch, tag and git note of each
+                          sandbox-only repo (git bundle --all)
+  wip/<name>.tar.gz       that repo's uncommitted and untracked files, if any
+  platform.tar.gz         gluon's own files (not the nested repos' contents)
+  MANIFEST.json           what was saved, the repo HEADs, the toolchain
+
+Usage:
+  bin/sandbox-save [--out DIR]   default DIR: /tmp/outputs
+
+Restore with bin/sandbox-restore <archive>.
+"""
+
+import argparse
+import json
+import subprocess
+import sys
+import tarfile
+import tempfile
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from sandbox import GLUON, SANDBOX_REPOS, platform_files
+
+
+def git(repo: Path, *args: str) -> str:
+    """Runs git in `repo`, returning stdout."""
+    return subprocess.run(
+        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=True
+    ).stdout
+
+
+def bundle_name(relative: Path) -> str:
+    """`tests/contract` → `tests-contract`."""
+    return "-".join(relative.parts)
+
+
+def uncommitted(repo: Path) -> list[str]:
+    """Modified, staged and untracked (not ignored) files, relative to the repo."""
+    names = git(repo, "ls-files", "--modified", "--others", "--exclude-standard").splitlines()
+    names += git(repo, "diff", "--cached", "--name-only").splitlines()
+    return sorted({name for name in names if (repo / name).is_file()})
+
+
+def save(out_dir: Path) -> Path:
+    """Writes the archive and returns its path."""
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    name = f"gluon-sandbox-{stamp}"
+    manifest: dict[str, object] = {"created": stamp, "repos": [], "toolchain": toolchain()}
+    repos: list[dict[str, object]] = []
+    with tempfile.TemporaryDirectory() as scratch:
+        staging = Path(scratch) / name
+        (staging / "repos").mkdir(parents=True)
+        (staging / "wip").mkdir()
+        for relative in SANDBOX_REPOS:
+            repo = GLUON / relative
+            if not (repo / ".git").is_dir():
+                print(f"skip      {relative}: not a git repo here")
+                continue
+            label = bundle_name(relative)
+            git(repo, "bundle", "create", str(staging / "repos" / f"{label}.bundle"), "--all")
+            wip = uncommitted(repo)
+            if wip:
+                with tarfile.open(staging / "wip" / f"{label}.tar.gz", "w:gz") as tar:
+                    for wip_file in wip:
+                        tar.add(repo / wip_file, arcname=wip_file)
+            repos.append(
+                {
+                    "path": str(relative),
+                    "bundle": f"repos/{label}.bundle",
+                    "head": git(repo, "rev-parse", "HEAD").strip(),
+                    "branch": git(repo, "rev-parse", "--abbrev-ref", "HEAD").strip(),
+                    "commits": int(git(repo, "rev-list", "--count", "--all").strip()),
+                    "uncommitted": wip,
+                }
+            )
+            state = f"{len(wip)} uncommitted file(s) kept in wip/" if wip else "clean"
+            print(f"bundled   {relative} @ {str(repos[-1]['head'])[:7]} ({state})")
+        files = platform_files()
+        with tarfile.open(staging / "platform.tar.gz", "w:gz") as tar:
+            for platform_file in files:
+                tar.add(GLUON / platform_file, arcname=str(platform_file))
+        print(f"archived  {len(files)} gluon platform files")
+        manifest["repos"] = repos
+        manifest["platform_files"] = len(files)
+        (staging / "MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        archive = out_dir / f"{name}.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            tar.add(staging, arcname=name)
+    return archive
+
+
+def toolchain() -> dict[str, str]:
+    """Versions worth knowing when restoring."""
+    versions = {}
+    for tool, argv in {"rustc": ["rustc", "--version"], "uv": ["uv", "--version"]}.items():
+        try:
+            done = subprocess.run(argv, capture_output=True, text=True, check=False)
+            versions[tool] = done.stdout.strip()
+        except OSError:
+            versions[tool] = "not installed"
+    return versions
+
+
+def main(argv: Sequence[str]) -> int:
+    """Parses arguments and saves."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--out", type=Path, default=Path("/tmp/outputs"), help="output directory")
+    args = parser.parse_args(argv)
+    archive = save(args.out)
+    size_kib = archive.stat().st_size // 1024
+    print(f"\nSaved {archive} ({size_kib} KiB). Restore: bin/sandbox-restore {archive}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

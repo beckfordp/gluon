@@ -742,12 +742,120 @@ own line. See each repo's own `git log` for full detail either way.
 
 ### Added
 - **Proposed: a Rust port of user-service as a spike (ADR 0028).** Services
-  only meet over REST, Kafka (JSON Schema in Apicurio), the outbox table,
-  Postgres and trace/metric/log conventions, so any of them could be
-  replaced by a drop-in in another language. A time-boxed spike (about 5
-  days, separate `user-service-rs` repo, chosen by a kustomize overlay)
-  tests that on the smallest producer. It reuses the Flyway migrations,
-  registered schemas and PBKDF2 settings, and must pass the unchanged
-  acceptance and E2E suites, keep one Tempo trace and the existing
-  dashboards, and record a Gatling run against the Scala baseline. A
-  follow-up ADR decides whether to go further.
+  only meet over wire contracts (REST, docs, the Kafka envelope and registry
+  schemas, the outbox table, the Postgres schema, env config, and
+  trace/metric/log conventions), so any of them could be replaced by a
+  drop-in written in another language. A black-box contract harness
+  (`tests/contract`, Python) is built first and must pass against the Scala
+  service before it judges a Rust one; in isolated mode, external
+  dependencies are stubbed over the wire. The port (`user-service-rs`) starts
+  from the current schema rather than the migration history, serves the same
+  OpenAPI and AsyncAPI docs (JSON and HTML), and is chosen in gluon-local by
+  an implementation switch in `bin/k8s-local-up`, keeping the Helm release
+  `user-service`. user-service has no consumer or HTTP client, so a throwaway
+  Rust consumer probe, run only inside the harness, covers that cost.
+  Incremental, about 10 working days. The performance comparison is a
+  follow-up. A follow-up ADR decides whether to go further.
+- **Rust Spike planned (ADR 0028).** New repo `services/user-service-rs`
+  with its own conductor setup (standard workflow with cargo commands, a
+  `rust.md` styleguide mirroring `scala-fp.md`, a proposed tech stack) and a
+  backlog of one track per unit it owns. `PLAN.md` gains a "Rust Spike"
+  section: seven units (`RUST-N.M`) covering the contract harness
+  (`tests/contract`), the port, docs parity, the gluon-local switch, the
+  consumer probe and the findings.
+- **Rust Spike: two environments (ADR 0028 revised).** The spike is developed
+  and tested in a sandbox with Python, Rust, Node and the PostgreSQL binaries
+  but no Docker, Kubernetes, GitHub or Scala build. The reference becomes the
+  specified contracts: documented contracts, Scala-generated OpenAPI/AsyncAPI
+  artifacts produced on the laptop on request, the Scala repo's test suites and
+  `verify-*.sh` scripts, and captures. The harness runs everything as local
+  processes, a sandbox CDC stack (Kafka, Connect, Debezium from Maven jars)
+  replaces cluster mode there, and a laptop pass (Rust Spike 5) confirms the
+  expectations against the Scala service and deploys to gluon-local.
+  `tests/contract` scaffolded (RUST-1.1): uv, pytest, ruff, `mypy --strict`,
+  CI in `scripts/ci.sh`.
+- **Sandbox setup recorded and scripted.** `docs/sandbox.md` records the Rust
+  spike's sandbox: what the image provides, what was installed (Rust via
+  rustup, vim from Ubuntu `.deb`s without root), reachable package sources, and
+  what was tried and dropped (sbt). `bin/sandbox-setup` rebuilds it
+  idempotently (`--check` reports only); `bin/sandbox-save` and
+  `bin/sandbox-restore` carry the sandbox-only repos (git bundles with notes,
+  uncommitted files) and gluon's own files across a teardown. Verified by a
+  simulated teardown and a save → restore round trip.
+- **`bin/sandbox-review`.** Text can't be pasted into the sandbox, so
+  reviewing a change is one short command: `bin/sandbox-review contract` (or
+  `rust`) opens a summary tab (`git status`, full diff) and every new or
+  changed file in vim, read-only; `--ci`, `--commit REV`, `--list`. Fixed the
+  same day: the desktop terminal runs as root while the repos belong to the
+  assistant's user, so git refused them ("dubious ownership") and the script
+  died with a traceback. It now trusts the repo for its own git calls only
+  (a throwaway global config), prints errors plainly, refuses `--ci` for
+  another user, and the vim wrapper falls back to the sandbox's `.vimrc`.
+  `docs/sandbox.md` records who runs what.
+- **Sandbox shortcuts.** `sr contract` runs `bin/sandbox-review contract`;
+  `cdw` opens a shell in `/workspace/gluon` with `cdw`/`sr` aliases (root's
+  shell files can't be written from the assistant's user, so these are
+  commands on the shared `PATH`). vim's `Tab` / `Shift-Tab` switch tabs, and
+  `bin/sandbox-setup` now manages `~/.vimrc` so changes like this reach it.
+- **RUST-1.2 done: the contract harness's isolated-mode runner.** In
+  `tests/contract`, `uv run pytest checks --target-cmd "…"` starts, per
+  session, a throwaway PostgreSQL 16 (the domain user, scram password over
+  TCP, `wal_level=logical`), an OTLP/HTTP stub that decodes protobuf and
+  OTLP/JSON spans, and the build under test with exactly its env-var
+  contract, in its own process group; everything is torn down in reverse,
+  even on a failed start. Proven against a stand-in target (73 tests, 100%
+  coverage; CI now starts local processes, still no Docker). Phase
+  verification is now a `scripts/verify-<track>.sh` reporting each result as
+  found, in both Rust Spike repos; `verify-isolated-runner.sh` passes.
+
+## 2026-11-09
+
+### Added
+- **Rust spike, harness groups (RUST-1.3–1.9).** `tests/contract` now checks
+  every contract group ADR 0028 lists, each check naming its source: REST (42,
+  incl. the UTF-16 and ASCII-whitespace edge cases), schema and stored formats
+  (6), outbox and envelope (5), traces (8), metrics (7), logs (16), config
+  (10), docs (22: the OpenAPI and AsyncAPI specs compared parsed, Swagger UI
+  and the AsyncAPI HTML byte for byte, responses conforming as the Scala ones
+  do), plus the real `user-events` record on a **sandbox CDC stack** (Kafka
+  3.8 KRaft, Connect, Debezium 3.0 from Maven Central jars; `bin/sandbox-setup
+  --only cdc`). The capture of 20261109 (Scala-generated artifacts and
+  behaviour, made on the laptop) is committed with its provenance.
+- **Rust spike, the service (RUST-2.2–4.2).** `services/user-service-rs`
+  passes every group in isolated mode: axum, sqlx (baseline migration), PBKDF2
+  and token parity, the outbox row in the signup transaction (payload schema
+  checked against `registry/` in CI), OTLP tracing, Prometheus metrics in the
+  OTel Java exporter's exact shape, logstash-style JSON logs, OpenAPI and
+  Swagger UI 5.20.7, AsyncAPI and its HTML. The `telemetry` crate holds the
+  purerest-equivalent parts.
+- **Rust spike, consumer probe (RUST-6.1–6.5).** `events-probe` (rdkafka)
+  consumes like notification-service: envelope handling, consumer and client
+  spans, purerest's retry and circuit breaker, purekafka's DLQ and stream
+  supervision, lag and event-age metrics. The harness's probe group (10
+  checks, on a restartable broker and a scriptable lookup stub) is green.
+- **Implicit behaviours recorded (RUST-1.9).** 25 behaviours no document
+  stated, each now a check; `system-design.md` updated for the gluon gaps
+  (`GET /users/{id}`'s UUID parsing, the outbox records' Kafka headers, the
+  AsyncAPI vs registry schema form, the two retry layers on consume-time
+  lookups).
+- **Sandbox tooling.** `bin/sandbox-setup` installs Node 24 (`node24`, for the
+  AsyncAPI HTML) and the CDC stack's jars (via Maven 3.9.9).
+
+## 2026-11-10
+
+### Added
+- **Rust spike, laptop pass prepared (RUST-5.1–5.3, not yet run).** The Rust
+  service's `Dockerfile`, `environments/local/user-service-rs.values.yaml`,
+  `USER_SERVICE_IMPL=rust bin/k8s-local-up user-service` (builds with `docker
+  build`, installs under the release name `user-service`; a switch resets the
+  `user` schema and Debezium's publication, then restarts the user outbox
+  connector — rehearsed on the sandbox CDC stack), and `bin/reset-data`
+  keeping `_sqlx_migrations`. `bin/verify-laptop-prep` checks what the sandbox
+  can: the switch's control flow with stand-in commands, the reset SQL on a
+  real Postgres, the values file, the Dockerfile's build steps natively.
+- **Spike verification.** `docs/rust-spike-verification.md` maps each ADR 0028
+  success criterion to how it is verified; `bin/verify-rust-spike` runs every
+  sandbox check in one go. Findings so far: `docs/rust-spike-findings.md`.
+- **Private data review** (`docs/private-data-report.md`). The capture's
+  issued tokens and a laptop path are now placeholders; the rest is example
+  test data, local-development defaults or the public project name.

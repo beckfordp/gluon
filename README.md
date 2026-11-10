@@ -41,6 +41,10 @@ gluon/
 order-service · inventory-service · payment-service · notification-service ·
 catalog-service · cart-service · user-service
 
+`user-service-rs` is an alternative Rust implementation of user-service, a
+spike per [ADR 0028](./docs/adr/0028-rust-port-spike-user-service.md)
+(`PLAN.md` "Rust Spike"); the Scala service stays the default.
+
 ## Demo data (local only)
 
 `bin/seed-demo-data` creates three demo customers (`ada.demo@example.com`,

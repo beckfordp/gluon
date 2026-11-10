@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # DEMO ONLY. Resets every service database and cache on the local gluon-local
 # cluster, then reseeds through the services' public APIs, so acceptance and
 # end-to-end runs start from a known, ledger-consistent baseline (TD-24).
 # Gluon has no production data: wrong data is fixed by reset + reseed, never
 # by data migrations. Never run this against a shared/production environment.
 #
-# Truncates every table except flyway_schema_history in each *-postgres
+# Truncates every table except the migration history (flyway_schema_history;
+# _sqlx_migrations for the Rust user-service, ADR 0028) in each *-postgres
 # database, purges every event topic (all records deleted; topics, consumer
 # offsets and Debezium's connect-* topics kept), flushes each *-redis,
 # removes bin/seed-demo-data's state manifest,
@@ -26,7 +28,7 @@ for arg in "$@"; do
     --yes) CONFIRMED=1 ;;
     --no-seed) SEED=0 ;;
     -h|--help)
-      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "Unknown argument: $arg" >&2; exit 2 ;;
   esac
@@ -49,7 +51,7 @@ for db in $(deployments postgres); do
     sh -c 'psql -v ON_ERROR_STOP=1 -q -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
 SELECT 'TRUNCATE ' || string_agg(format('%I.%I', schemaname, tablename), ', ') || ' CASCADE'
 FROM pg_tables
-WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'
+WHERE schemaname = 'public' AND tablename NOT IN ('flyway_schema_history', '_sqlx_migrations')
 HAVING count(*) > 0
 \gexec
 SQL

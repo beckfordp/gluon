@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+"""Restore the sandbox's work from a bin/sandbox-save archive (docs/sandbox.md).
+
+Repos: each sandbox-only repo missing from gluon is cloned from its bundle,
+with its git notes, and its saved uncommitted files are put back. A repo that
+already exists is never touched.
+
+Platform: gluon's own files are compared with the archive. By default the
+differences are only listed; --overwrite-platform writes the archive's
+versions (files that exist only locally are left alone).
+
+Usage:
+  bin/sandbox-restore ARCHIVE [--overwrite-platform] [--gluon-root DIR]
+
+Then run bin/sandbox-setup (toolchains, git identity, project dependencies).
+"""
+
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+from collections.abc import Sequence
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from sandbox import GLUON
+
+
+def git(*args: str) -> str:
+    """Runs git, returning stdout."""
+    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+
+
+def restore_repos(saved: Path, root: Path) -> None:
+    """Clones each bundled repo that is missing under `root`."""
+    manifest = json.loads((saved / "MANIFEST.json").read_text())
+    for repo in manifest["repos"]:
+        target = root / repo["path"]
+        if target.exists():
+            print(f"kept      {repo['path']}: already exists, not touched")
+            continue
+        bundle = saved / repo["bundle"]
+        git("clone", "--quiet", str(bundle), str(target))
+        git("-C", str(target), "fetch", "--quiet", "origin", "refs/notes/*:refs/notes/*")
+        git("-C", str(target), "checkout", "--quiet", repo["branch"])
+        git("-C", str(target), "remote", "remove", "origin")
+        wip = saved / "wip" / f"{Path(repo['bundle']).stem}.tar.gz"
+        if wip.is_file():
+            with tarfile.open(wip) as tar:
+                tar.extractall(target, filter="data")
+        head = git("-C", str(target), "rev-parse", "HEAD").strip()
+        check = "matches" if head == repo["head"] else f"DIFFERS from saved {repo['head'][:7]}"
+        extra = (
+            f", {len(repo['uncommitted'])} uncommitted file(s) put back" if wip.is_file() else ""
+        )
+        print(f"restored  {repo['path']} @ {head[:7]} ({check}{extra})")
+
+
+def restore_platform(saved: Path, root: Path, overwrite: bool) -> None:
+    """Lists, or with `overwrite` writes, platform files that differ from the archive."""
+    with tempfile.TemporaryDirectory() as scratch:
+        unpacked = Path(scratch)
+        with tarfile.open(saved / "platform.tar.gz") as tar:
+            tar.extractall(unpacked, filter="data")
+        changed = []
+        for source in sorted(p for p in unpacked.rglob("*") if p.is_file()):
+            relative = source.relative_to(unpacked)
+            target = root / relative
+            if target.is_file() and target.read_bytes() == source.read_bytes():
+                continue
+            changed.append((relative, "new" if not target.exists() else "differs"))
+            if overwrite:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+        verb = "wrote" if overwrite else "would write"
+        for relative, why in changed:
+            print(f"{verb:<9} {relative} ({why})")
+        if not changed:
+            print("platform  gluon's files already match the archive")
+        elif not overwrite:
+            print("\nRe-run with --overwrite-platform to write these.")
+
+
+def main(argv: Sequence[str]) -> int:
+    """Unpacks the archive and restores repos, then platform files."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("archive", type=Path, help="a gluon-sandbox-*.tar.gz from bin/sandbox-save")
+    parser.add_argument("--overwrite-platform", action="store_true", help="write differing files")
+    parser.add_argument("--gluon-root", type=Path, default=GLUON, help="default: this gluon")
+    args = parser.parse_args(argv)
+    with tempfile.TemporaryDirectory() as scratch:
+        with tarfile.open(args.archive) as tar:
+            tar.extractall(scratch, filter="data")
+        (saved,) = Path(scratch).iterdir()
+        restore_repos(saved, args.gluon_root)
+        restore_platform(saved, args.gluon_root, args.overwrite_platform)
+    print("\nNext: bin/sandbox-setup")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

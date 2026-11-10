@@ -1,0 +1,593 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+"""Set up (or check) the sandbox the Rust spike is developed in (ADR 0028).
+
+The sandbox image provides Python, uv, Java, Node, git and the PostgreSQL 16
+binaries; this script verifies those and installs everything the spike added on
+top, without root, into the home directory. It is idempotent: run it after a
+teardown, or any time, and it only installs what is missing. Every tool the
+spike adds to the sandbox is added here in the same change (docs/sandbox.md).
+
+Usage:
+  bin/sandbox-setup            install what is missing, then report
+  bin/sandbox-setup --check    report only; exit 1 if anything is missing
+  bin/sandbox-setup --only rust vim
+                               limit to the named steps
+
+Steps: network, image, rust, node, cdc, vim, shell, git-identity, projects.
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+from sandbox import GLUON, SANDBOX_REPOS
+
+HOME = Path.home()
+
+# --- What the sandbox needs, recorded in one place -------------------------
+
+PACKAGE_SOURCES = {
+    "PyPI": "https://pypi.org/simple/pip/",
+    "crates.io": "https://index.crates.io/config.json",
+    "Rust toolchains": "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init",
+    "npm": "https://registry.npmjs.org/typescript",
+    "Maven Central": "https://repo1.maven.org/maven2/org/apache/kafka/kafka_2.13/maven-metadata.xml",
+    "Ubuntu archive": "http://archive.ubuntu.com/ubuntu/",
+}
+
+IMAGE_TOOLS = ("java", "node", "npm", "git", "curl", "gcc", "python3", "uv")
+PG_TOOLS = ("initdb", "pg_ctl", "createdb", "psql", "postgres")
+PYTHON_VERSION = "3.13"
+
+RUSTUP_INIT_URL = "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"
+RUST_TOOLCHAIN = "1.99.1"
+"""Matches services/user-service-rs/rust-toolchain.toml (RUST-2.2)."""
+RUST_COMPONENTS = ("rustfmt", "clippy", "llvm-tools-preview")
+CARGO_TOOLS = {"cargo-llvm-cov": "0.9.1"}
+"""Cargo subcommands built from crates.io, pinned. Not cargo-audit: its advisory
+database is on GitHub, unreachable from the sandbox (docs/sandbox.md)."""
+CARGO_HOME = HOME / ".cargo"
+
+NODE_VERSION = "24.21.0"
+"""Node for the AsyncAPI HTML (RUST-4.2): @asyncapi/generator 3.x needs >= 24.11
+and the image has 22. npm's node-linux-x64 package (the official binary), run
+as `node24`; the image's npm drives it."""
+NODE_ROOT = HOME / ".local" / f"node-{NODE_VERSION}"
+
+KAFKA_VERSION = "3.8.0"
+"""As gluon-local's broker (infra/k8s/local-infra/kafka.yaml: apache/kafka:3.8.0)."""
+DEBEZIUM_VERSION = "3.0.0.Final"
+"""As gluon-local's Connect (kafka-connect.yaml: debezium/connect:3.0.0.Final, Connect 3.8)."""
+MAVEN_VERSION = "3.9.9"
+MAVEN_HOME = HOME / ".local" / f"apache-maven-{MAVEN_VERSION}"
+MAVEN_URL = (
+    "https://repo1.maven.org/maven2/org/apache/maven/apache-maven/"
+    f"{MAVEN_VERSION}/apache-maven-{MAVEN_VERSION}-bin.tar.gz"
+)
+CDC_HOME = HOME / ".local" / f"cdc-kafka-{KAFKA_VERSION}_debezium-{DEBEZIUM_VERSION}"
+"""The sandbox CDC stack's jars (RUST-1.8): kafka/ (broker and tools), connect/
+(the Connect runtime), plugins/debezium-connector-postgres/ (Connect's plugin.path).
+tests/contract's CDC group runs them (CONTRACT_CDC_HOME)."""
+SLF4J_BINDING = ("org.slf4j", "slf4j-reload4j", "1.7.36")
+CDC_SETS: dict[str, tuple[tuple[tuple[str, str, str], ...], bool]] = {
+    "kafka": (
+        (
+            ("org.apache.kafka", "kafka_2.13", KAFKA_VERSION),
+            ("org.apache.kafka", "kafka-tools", KAFKA_VERSION),
+            SLF4J_BINDING,
+        ),
+        False,
+    ),
+    "connect": (
+        (
+            ("org.apache.kafka", "connect-runtime", KAFKA_VERSION),
+            ("org.apache.kafka", "connect-json", KAFKA_VERSION),
+            ("org.apache.kafka", "connect-transforms", KAFKA_VERSION),
+            SLF4J_BINDING,
+        ),
+        False,
+    ),
+    # A Connect plugin: its own jars only (Kafka and SLF4J come from the runtime).
+    "plugins/debezium-connector-postgres": (
+        (("io.debezium", "debezium-connector-postgres", DEBEZIUM_VERSION),),
+        True,
+    ),
+}
+
+VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2")
+VIM_ROOT = HOME / ".local" / "vim-root"
+APT_STATE = HOME / ".local" / "apt"
+VIMRC = """\" Sandbox defaults for reading code (bin/sandbox-setup; rewritten by it)
+syntax on
+filetype plugin indent on
+set number ruler laststatus=2 hlsearch incsearch
+set background=dark
+\" Tab / Shift-Tab: next / previous tab page (bin/sandbox-review opens one per file)
+nnoremap <Tab> gt
+nnoremap <S-Tab> gT
+\" Terminals send ESC [ Z for Shift-Tab; make sure vim recognises it
+if !has('gui_running')
+  execute "set <S-Tab>=\\e[Z"
+endif
+"""
+MANAGED_MARK = "bin/sandbox-setup"
+"""A ~/.vimrc whose first line carries this is ours to rewrite; any other is left alone."""
+
+SHELL_ALIASES = """# Sandbox shell shortcuts (bin/sandbox-setup; rewritten by it). docs/sandbox.md.
+alias cdw='cd /workspace/gluon'
+alias sr='/workspace/gluon/bin/sandbox-review'
+"""
+SHELL_RC = """# Shell started by `cdw` (bin/sandbox-setup): your own bashrc, then the shortcuts.
+[ -f ~/.bashrc ] && . ~/.bashrc
+. {aliases}
+"""
+CDW = """#!/usr/bin/env bash
+# cdw (bin/sandbox-setup): a command can't change its caller's directory, so the
+# first cdw opens a shell in /workspace/gluon with the cdw/sr aliases loaded;
+# inside it, cdw is a plain cd. `exit` returns to the shell you started from.
+cd /workspace/gluon || exit 1
+exec bash --rcfile {rc} -i
+"""
+SR = """#!/usr/bin/env bash
+# sr (bin/sandbox-setup): bin/sandbox-review, short to type.
+exec /workspace/gluon/bin/sandbox-review "$@"
+"""
+
+GIT_IDENTITY = {"user.name": "gluon sandbox", "user.email": "sandbox@gluon.local"}
+
+
+# --- Reporting --------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Result:
+    """One line of the report: a step, its outcome, and a detail."""
+
+    step: str
+    status: str  # OK, INSTALLED, MISSING, INFO
+    detail: str
+
+
+def run(argv: Sequence[str], *, cwd: Path | None = None, env: dict[str, str] | None = None) -> str:
+    """Runs a command, returning stdout; raises with stderr on failure."""
+    done = subprocess.run(
+        list(argv), cwd=cwd, env=env, capture_output=True, text=True, check=False, timeout=900
+    )
+    if done.returncode != 0:
+        raise RuntimeError(f"{' '.join(argv)} failed ({done.returncode}): {done.stderr.strip()}")
+    return done.stdout
+
+
+def first_line(argv: Sequence[str]) -> str:
+    """The first line of a command's output, or '' if it can't run."""
+    try:
+        return run(argv).splitlines()[0].strip()
+    except (OSError, RuntimeError, IndexError, subprocess.TimeoutExpired):
+        return ""
+
+
+def bin_dir() -> Path:
+    """Where wrappers and links go: SANDBOX_BIN, else the first writable ~/.local/bin on PATH."""
+    if explicit := os.environ.get("SANDBOX_BIN"):
+        return Path(explicit)
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        path = Path(entry)
+        if path.name == "bin" and path.parent.name == ".local" and os.access(path, os.W_OK):
+            return path
+    return HOME / ".local" / "bin"
+
+
+# --- Steps ------------------------------------------------------------------
+
+
+def step_network(_install: bool) -> list[Result]:
+    """The package sources installs need (report only)."""
+    results = []
+    for name, url in PACKAGE_SOURCES.items():
+        try:
+            request = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(request, timeout=15) as response:
+                status = response.status
+        except OSError as error:
+            results.append(Result("network", "MISSING", f"{name} unreachable: {error}"))
+            continue
+        results.append(Result("network", "OK", f"{name} ({status})"))
+    return results
+
+
+def step_image(_install: bool) -> list[Result]:
+    """What the sandbox image provides; verified, never installed here."""
+    results = []
+    for tool in IMAGE_TOOLS:
+        found = shutil.which(tool)
+        results.append(
+            Result("image", "OK", f"{tool}: {found}")
+            if found
+            else Result("image", "MISSING", f"{tool} not on PATH (image-provided; can't install)")
+        )
+    python = first_line(["uv", "python", "find", PYTHON_VERSION])
+    results.append(
+        Result("image", "OK", f"Python {PYTHON_VERSION}: {python}")
+        if python
+        else Result(
+            "image",
+            "MISSING",
+            f"uv can't find Python {PYTHON_VERSION} (expected under /opt/uv-python)",
+        )
+    )
+    pg_ctl = shutil.which("pg_ctl")
+    if pg_ctl is None:
+        results.append(Result("image", "MISSING", "PostgreSQL binaries: pg_ctl not on PATH"))
+        return results
+    pg_bin = Path(pg_ctl).resolve().parent
+    missing = [tool for tool in PG_TOOLS if not (pg_bin / tool).is_file()]
+    version = first_line([str(pg_bin / "postgres"), "--version"])
+    if missing or " 16." not in version:
+        results.append(
+            Result("image", "MISSING", f"PostgreSQL 16 in {pg_bin}: lacks {missing}, {version!r}")
+        )
+    else:
+        results.append(Result("image", "OK", f"{version} in {pg_bin}"))
+    return results
+
+
+def step_rust(install: bool) -> list[Result]:
+    """Rust via rustup (pinned toolchain, components, cargo tools), linked onto the PATH."""
+    cargo_bin = CARGO_HOME / "bin"
+    present = (cargo_bin / "cargo").is_file() and all(
+        (cargo_bin / tool).is_file() for tool in ("rustfmt", "cargo-clippy")
+    )
+    status = "OK"
+    if not present:
+        if not install:
+            return [
+                Result("rust", "MISSING", "rustup toolchain not installed (run without --check)")
+            ]
+        with tempfile.TemporaryDirectory() as scratch:
+            init = Path(scratch) / "rustup-init"
+            urllib.request.urlretrieve(RUSTUP_INIT_URL, init)
+            init.chmod(0o755)
+            components = [arg for c in RUST_COMPONENTS for arg in ("-c", c)]
+            run(
+                [
+                    str(init),
+                    "-y",
+                    "--profile",
+                    "minimal",
+                    "--default-toolchain",
+                    RUST_TOOLCHAIN,
+                    "--no-modify-path",
+                    *components,
+                ]
+            )
+        status = "INSTALLED"
+    rustup = str(cargo_bin / "rustup")
+    toolchain = ["--toolchain", RUST_TOOLCHAIN]
+    if RUST_TOOLCHAIN not in run([rustup, "toolchain", "list"]):
+        if not install:
+            return [Result("rust", "MISSING", f"toolchain {RUST_TOOLCHAIN} not installed")]
+        run([rustup, "toolchain", "install", RUST_TOOLCHAIN, "--profile", "minimal"])
+        status = "INSTALLED"
+    installed = run([rustup, "component", "list", "--installed", *toolchain])
+    missing = [c for c in RUST_COMPONENTS if c.removesuffix("-preview") not in installed]
+    if missing:
+        if not install:
+            return [Result("rust", "MISSING", f"rustup components missing: {', '.join(missing)}")]
+        run([rustup, "component", "add", *missing, *toolchain])
+        status = "INSTALLED"
+    for tool, version in CARGO_TOOLS.items():
+        subcommand = tool.removeprefix("cargo-")
+        if version not in first_line([str(cargo_bin / tool), subcommand, "--version"]):
+            if not install:
+                return [Result("rust", "MISSING", f"{tool} {version} not installed")]
+            run([str(cargo_bin / "cargo"), "install", tool, "--version", version, "--locked"])
+            status = "INSTALLED"
+    if install:
+        link_all(cargo_bin, bin_dir())
+    elif not all(
+        (bin_dir() / tool).exists() for tool in ("cargo", "rustc", "rustfmt", "cargo-clippy")
+    ):
+        return [Result("rust", "MISSING", f"toolchain installed but not linked into {bin_dir()}")]
+    version = first_line([str(cargo_bin / "rustc"), "--version"])
+    tools = ", ".join(f"{tool} {v}" for tool, v in CARGO_TOOLS.items())
+    return [Result("rust", status, f"{version}; {tools}; linked into {bin_dir()}")]
+
+
+def step_node(install: bool) -> list[Result]:
+    """Node 24 from npm's node-linux-x64 into ~/.local, linked onto the PATH as node24."""
+    node = NODE_ROOT / "bin" / "node"
+    status = "OK"
+    if first_line([str(node), "--version"]) != f"v{NODE_VERSION}":
+        if not install:
+            return [
+                Result(
+                    "node", "MISSING", f"Node {NODE_VERSION} not installed (run without --check)"
+                )
+            ]
+        with tempfile.TemporaryDirectory() as scratch:
+            run(["npm", "pack", f"node-linux-x64@{NODE_VERSION}", "--silent"], cwd=Path(scratch))
+            tarball = Path(scratch) / f"node-linux-x64-{NODE_VERSION}.tgz"
+            run(["tar", "xzf", str(tarball), "-C", scratch])
+            shutil.rmtree(NODE_ROOT, ignore_errors=True)
+            shutil.copytree(Path(scratch) / "package", NODE_ROOT, symlinks=True)
+        status = "INSTALLED"
+    link = bin_dir() / "node24"
+    if install:
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.unlink(missing_ok=True)
+        link.symlink_to(node)
+    elif not link.exists():
+        return [Result("node", "MISSING", f"Node {NODE_VERSION} installed but no {link}")]
+    return [Result("node", status, f"v{NODE_VERSION} at {node}, as {link}")]
+
+
+def cdc_pom(name: str, artifacts: Sequence[tuple[str, str, str]], plugin: bool) -> str:
+    """A throwaway pom whose runtime dependencies are one CDC jar set."""
+    exclusions = (
+        "<exclusions><exclusion><groupId>org.apache.kafka</groupId><artifactId>*</artifactId>"
+        "</exclusion><exclusion><groupId>org.slf4j</groupId><artifactId>*</artifactId>"
+        "</exclusion></exclusions>"
+        if plugin
+        else ""
+    )
+    dependencies = "".join(
+        f"<dependency><groupId>{g}</groupId><artifactId>{a}</artifactId><version>{v}</version>"
+        f"{exclusions}</dependency>"
+        for g, a, v in artifacts
+    )
+    return (
+        '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+        f"<groupId>gluon.sandbox</groupId><artifactId>cdc-{name.replace('/', '-')}</artifactId>"
+        f"<version>1</version><dependencies>{dependencies}</dependencies></project>"
+    )
+
+
+def step_cdc(install: bool) -> list[Result]:
+    """Kafka, Kafka Connect and Debezium's Postgres connector as jars from Maven Central."""
+    marker = CDC_HOME / "COMPLETE"
+    status = "OK"
+    if not marker.is_file():
+        if not install:
+            return [Result("cdc", "MISSING", f"jars not in {CDC_HOME} (run without --check)")]
+        mvn = MAVEN_HOME / "bin" / "mvn"
+        if not mvn.is_file():
+            with tempfile.TemporaryDirectory() as scratch:
+                tarball = Path(scratch) / "maven.tar.gz"
+                urllib.request.urlretrieve(MAVEN_URL, tarball)
+                run(["tar", "xzf", str(tarball), "-C", str(MAVEN_HOME.parent)])
+        shutil.rmtree(CDC_HOME, ignore_errors=True)
+        for name, (artifacts, plugin) in CDC_SETS.items():
+            with tempfile.TemporaryDirectory() as scratch:
+                (Path(scratch) / "pom.xml").write_text(cdc_pom(name, artifacts, plugin))
+                run(
+                    [
+                        str(mvn),
+                        "-q",
+                        "-B",
+                        "dependency:copy-dependencies",
+                        "-DincludeScope=runtime",
+                        f"-DoutputDirectory={CDC_HOME / name}",
+                    ],
+                    cwd=Path(scratch),
+                )
+        marker.write_text(f"kafka {KAFKA_VERSION}, debezium {DEBEZIUM_VERSION}\n")
+        status = "INSTALLED"
+    counts = ", ".join(
+        f"{name} {len(list((CDC_HOME / name).glob('*.jar')))} jars" for name in CDC_SETS
+    )
+    return [
+        Result(
+            "cdc",
+            status,
+            f"Kafka {KAFKA_VERSION}, Debezium {DEBEZIUM_VERSION} in {CDC_HOME}: {counts}",
+        )
+    ]
+
+
+def step_vim(install: bool) -> list[Result]:
+    """vim 9.1 from Ubuntu's .debs, unpacked without root, with vim/view wrappers."""
+    vim = VIM_ROOT / "usr" / "bin" / "vim.basic"
+    status = "OK"
+    if not vim.is_file():
+        if not install:
+            return [Result("vim", "MISSING", "vim not unpacked (run without --check)")]
+        apt_opts = [
+            "-o",
+            f"Dir::State::Lists={APT_STATE / 'lists'}",
+            "-o",
+            f"Dir::Cache={APT_STATE / 'cache'}",
+            "-o",
+            "Debug::NoLocking=1",
+            "-o",
+            f"APT::Sandbox::User={os.environ.get('USER') or Path.home().name}",
+        ]
+        for sub in ("lists/partial", "cache/archives/partial", "deb"):
+            (APT_STATE / sub).mkdir(parents=True, exist_ok=True)
+        run(["apt-get", *apt_opts, "update"])
+        debs = APT_STATE / "deb"
+        for old in debs.glob("*.deb"):
+            old.unlink()
+        run(["apt-get", *apt_opts, "download", *VIM_PACKAGES], cwd=debs)
+        shutil.rmtree(VIM_ROOT, ignore_errors=True)
+        VIM_ROOT.mkdir(parents=True)
+        for deb in sorted(debs.glob("*.deb")):
+            run(["dpkg-deb", "-x", str(deb), str(VIM_ROOT)])
+        status = "INSTALLED"
+    runtime = next((VIM_ROOT / "usr" / "share" / "vim").glob("vim[0-9]*"), None)
+    if runtime is None:
+        return [Result("vim", "MISSING", f"no vim runtime under {VIM_ROOT}")]
+    target = bin_dir()
+    if not install:
+        if not ((target / "vim").is_file() and (target / "view").is_file()):
+            return [Result("vim", "MISSING", f"vim unpacked but no vim/view wrappers in {target}")]
+        vimrc = HOME / ".vimrc"
+        current = vimrc.read_text(encoding="utf-8") if vimrc.exists() else ""
+        if current != VIMRC and (not current or MANAGED_MARK in current.split("\n", 1)[0]):
+            return [Result("vim", "MISSING", f"{vimrc} missing or out of date")]
+        version = first_line([str(target / "vim"), "--version"])
+        return [Result("vim", "OK", f"{version}; vim, view in {target}; read-only: vim -M <file>")]
+    target.mkdir(parents=True, exist_ok=True)
+    write_executable(
+        target / "vim",
+        "#!/usr/bin/env bash\n"
+        "# vim unpacked from Ubuntu's .debs by bin/sandbox-setup (no root in the sandbox).\n"
+        f'export VIMRUNTIME="{runtime}"\n'
+        f'export LD_LIBRARY_PATH="{VIM_ROOT}/usr/lib/x86_64-linux-gnu'
+        '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n'
+        # The desktop terminal runs as root, whose HOME has no .vimrc: use this one.
+        f'[ -f "$HOME/.vimrc" ] || export VIMINIT="source {HOME / ".vimrc"}"\n'
+        f'exec "{vim}" "$@"\n',
+    )
+    write_executable(target / "view", '#!/usr/bin/env bash\nexec vim -R "$@"\n')
+    vimrc = HOME / ".vimrc"
+    if not vimrc.exists() or MANAGED_MARK in vimrc.read_text(encoding="utf-8").split("\n", 1)[0]:
+        vimrc.write_text(VIMRC, encoding="utf-8")
+    version = first_line([str(target / "vim"), "--version"])
+    return [Result("vim", status, f"{version}; vim, view in {target}; read-only: vim -M <file>")]
+
+
+def step_shell(install: bool) -> list[Result]:
+    """`sr` and `cdw` on the PATH: root's shell files can't be written, so commands, not aliases."""
+    target = bin_dir()
+    aliases, rc = target / "sandbox-aliases", target / "sandbox-shellrc"
+    wanted = {
+        aliases: SHELL_ALIASES,
+        rc: SHELL_RC.format(aliases=aliases),
+        target / "cdw": CDW.format(rc=rc),
+        target / "sr": SR,
+    }
+    stale = [
+        path for path, text in wanted.items() if not path.is_file() or path.read_text() != text
+    ]
+    if stale and not install:
+        names = ", ".join(path.name for path in stale)
+        return [Result("shell", "MISSING", f"{names} missing or out of date in {target}")]
+    for path, text in wanted.items():
+        write_executable(path, text)
+    status = "INSTALLED" if stale else "OK"
+    return [Result("shell", status, f"sr, cdw in {target} (cdw opens a shell with the aliases)")]
+
+
+def step_git_identity(install: bool) -> list[Result]:
+    """A repo-local commit identity in each sandbox-only repo."""
+    results = []
+    for relative in SANDBOX_REPOS:
+        repo = GLUON / relative
+        if not (repo / ".git").is_dir():
+            results.append(Result("git-identity", "INFO", f"{repo.relative_to(GLUON)} not present"))
+            continue
+        unset = [
+            key for key in GIT_IDENTITY if not first_line(["git", "-C", str(repo), "config", key])
+        ]
+        if unset and not install:
+            results.append(
+                Result("git-identity", "MISSING", f"{repo.relative_to(GLUON)}: {unset} unset")
+            )
+            continue
+        for key in unset:
+            run(["git", "-C", str(repo), "config", key, GIT_IDENTITY[key]])
+        status = "INSTALLED" if unset else "OK"
+        results.append(
+            Result(
+                "git-identity", status, f"{repo.relative_to(GLUON)}: {GIT_IDENTITY['user.name']}"
+            )
+        )
+    return results
+
+
+def step_projects(install: bool) -> list[Result]:
+    """Each sandbox repo's dependencies, from its lock file."""
+    results = []
+    contract = GLUON / "tests" / "contract"
+    if (contract / "uv.lock").is_file():
+        venv_ok = (contract / ".venv" / "bin" / "python").is_file()
+        if install:
+            run(["uv", "sync", "--locked", "--quiet"], cwd=contract)
+            results.append(
+                Result(
+                    "projects", "OK" if venv_ok else "INSTALLED", "tests/contract: uv sync --locked"
+                )
+            )
+        else:
+            results.append(
+                Result("projects", "OK", "tests/contract: .venv present")
+                if venv_ok
+                else Result("projects", "MISSING", "tests/contract: no .venv (run without --check)")
+            )
+    rust_repo = GLUON / "services" / "user-service-rs"
+    if (rust_repo / "Cargo.lock").is_file():
+        if install:
+            run([str(CARGO_HOME / "bin" / "cargo"), "fetch", "--locked"], cwd=rust_repo)
+        results.append(Result("projects", "OK", "services/user-service-rs: cargo fetch --locked"))
+    if not results:
+        results.append(Result("projects", "INFO", "no sandbox project with a lock file yet"))
+    return results
+
+
+# --- Helpers ----------------------------------------------------------------
+
+
+def link_all(source_dir: Path, target_dir: Path) -> None:
+    """Symlinks every executable in `source_dir` into `target_dir`, replacing stale links."""
+    target_dir.mkdir(parents=True, exist_ok=True)
+    for source in sorted(source_dir.iterdir()):
+        link = target_dir / source.name
+        if link.is_symlink() or not link.exists():
+            link.unlink(missing_ok=True)
+            link.symlink_to(source)
+
+
+def write_executable(path: Path, content: str) -> None:
+    """Writes a small script and makes it executable."""
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o755)
+
+
+STEPS: dict[str, Callable[[bool], list[Result]]] = {
+    "network": step_network,
+    "image": step_image,
+    "rust": step_rust,
+    "node": step_node,
+    "cdc": step_cdc,
+    "vim": step_vim,
+    "shell": step_shell,
+    "git-identity": step_git_identity,
+    "projects": step_projects,
+}
+
+
+def main(argv: Sequence[str]) -> int:
+    """Runs the selected steps and prints the report; 1 if anything is missing."""
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--check", action="store_true", help="report only, install nothing")
+    parser.add_argument("--only", nargs="+", choices=list(STEPS), help="run only these steps")
+    args = parser.parse_args(argv)
+    results: list[Result] = []
+    for name in args.only or list(STEPS):
+        try:
+            results.extend(STEPS[name](not args.check))
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+            results.append(Result(name, "MISSING", f"failed: {error}"))
+    for result in results:
+        print(f"{result.status:<10} {result.step:<13} {result.detail}")
+    missing = [r for r in results if r.status == "MISSING"]
+    print(f"\n{len(missing)} missing." if missing else "\nSandbox ready.")
+    if str(bin_dir()) not in os.environ.get("PATH", "").split(os.pathsep):
+        print(f"Note: add {bin_dir()} to PATH.")
+    return 1 if missing else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

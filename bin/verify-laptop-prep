@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+"""Verify, in the sandbox, the laptop pieces of the Rust spike (PLAN.md RUST-5.1-5.3).
+
+The sandbox has no Docker, Helm or cluster, so these run for real only on the
+laptop. What can be checked here is checked here, each result printed as found:
+
+1. bin/k8s-local-up's implementation switch, run with stand-in docker,
+   kubectl, helm and sbt commands that record what they were asked to do:
+   which image is built and how, which values file is installed under which
+   release, and that a switch (and only a switch) resets the user schema
+   before the deploy and restarts the user outbox connector after it.
+2. bin/reset-data's truncation SQL, run on a throwaway PostgreSQL 16 holding
+   the Rust service's schema: every table emptied except the migration
+   histories (flyway_schema_history, _sqlx_migrations).
+3. environments/local/user-service-rs.values.yaml: the same env vars as the
+   Scala service's values, the user-service-rs image, javaOpts and
+   mallocArenaMax blanked.
+4. The Rust Dockerfile's build steps, natively: the release binaries build and
+   the AsyncAPI HTML its docs stage renders equals the Scala build's capture.
+
+Usage: bin/verify-laptop-prep [--skip-docker-steps]
+"""
+
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+GLUON = Path(__file__).resolve().parent.parent
+RUST = GLUON / "services" / "user-service-rs"
+CAPTURE = GLUON / "tests/contract/contracts/user-service/20261109"
+
+results: list[tuple[bool, str]] = []
+
+
+def check(ok: bool, what: str) -> None:
+    """Records and prints one result."""
+    results.append((ok, what))
+    print(f"{'ok  ' if ok else 'FAIL'} {what}", flush=True)
+
+
+STAND_IN = """#!/usr/bin/env bash
+# Stand-in for {name}: records its arguments (and stdin) and answers as needed.
+echo "{name} $*" >> "$CALLS"
+if [ "{name}" = kubectl ] && [ "$1" = get ] && [ "$2" = deployment/user-service ]; then
+  printf '%s' "${{DEPLOYED_IMAGE:-}}"
+fi
+if [ "{name}" = kubectl ] && [ "$1" = exec ]; then cat > /dev/null 2>&1 || true; fi
+if [ "{name}" = kubectl ] && [ "$1" = config ]; then echo orbstack; fi
+exit 0
+"""
+
+
+def run_switch(impl: str, deployed: str) -> list[str]:
+    """bin/k8s-local-up user-service with stand-ins; the commands it ran."""
+    with tempfile.TemporaryDirectory() as scratch:
+        fake_bin = Path(scratch) / "bin"
+        fake_bin.mkdir()
+        for name in ("docker", "kubectl", "helm", "sbt"):
+            path = fake_bin / name
+            path.write_text(STAND_IN.format(name=name))
+            path.chmod(0o755)
+        calls = Path(scratch) / "calls"
+        calls.touch()
+        env = {
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "CALLS": str(calls),
+            "USER_SERVICE_IMPL": impl,
+            "DEPLOYED_IMAGE": deployed,
+            "GITHUB_TOKEN": "x",
+            "GITHUB_ACTOR": "x",
+        }
+        # Run a copy of bin/ so the real registry-reload isn't invoked.
+        bin_copy = Path(scratch) / "gluon-bin"
+        shutil.copytree(GLUON / "bin", bin_copy, ignore=shutil.ignore_patterns("__pycache__"))
+        (bin_copy / "registry-reload").write_text("#!/usr/bin/env bash\nexit 0\n")
+        (bin_copy / "registry-reload").chmod(0o755)
+        script = bin_copy / "k8s-local-up"
+        text = script.read_text().replace(
+            'GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"', f'GLUON_DIR="{GLUON}"'
+        )
+        script.write_text(text)
+        done = subprocess.run(
+            ["bash", str(script), "user-service"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=60,
+        )
+        check(
+            done.returncode == 0,
+            f"USER_SERVICE_IMPL={impl} with {deployed or 'nothing'} deployed: runs to the end",
+        )
+        if done.returncode != 0:
+            print(done.stdout[-2000:], done.stderr[-2000:])
+        return [line for line in calls.read_text().splitlines() if line]
+
+
+def index_of(calls: list[str], *needles: str) -> int:
+    """The first call containing every needle, or -1."""
+    return next((i for i, c in enumerate(calls) if all(n in c for n in needles)), -1)
+
+
+def verify_switch() -> None:
+    print("== 1. bin/k8s-local-up's implementation switch (stand-in commands) ==")
+    calls = run_switch("rust", "user-service:latest")
+    build = index_of(calls, "docker build -t user-service-rs:latest", str(RUST))
+    reset = index_of(calls, "kubectl exec", "deploy/user-postgres", "DROP SCHEMA public CASCADE")
+    helm = index_of(calls, "helm upgrade --install user-service", "user-service-rs.values.yaml")
+    restart = index_of(
+        calls, "kubectl exec", "deploy/kafka-connect", "user-outbox-connector/restart"
+    )
+    check(build >= 0, "rust: the image is built from services/user-service-rs with docker build")
+    check(index_of(calls, "sbt") < 0, "rust: sbt isn't run for user-service")
+    check(
+        0 <= reset < helm, "rust, switching from Scala: the user schema is reset before the deploy"
+    )
+    check(
+        index_of(calls, "DROP PUBLICATION IF EXISTS dbz_publication") >= 0,
+        "the reset drops Debezium's publication",
+    )
+    check(helm >= 0, "rust: installed as release user-service with user-service-rs.values.yaml")
+    check(helm < restart, "rust, switching: the outbox connector is restarted after the deploy")
+
+    calls = run_switch("rust", "user-service-rs:latest")
+    check(index_of(calls, "DROP SCHEMA") < 0, "rust again (no switch): nothing is reset")
+    check(
+        index_of(calls, "connectors/user-outbox-connector/restart") < 0,
+        "rust again: no connector restart",
+    )
+
+    calls = run_switch("scala", "user-service-rs:latest")
+    check(index_of(calls, "sbt Docker/publishLocal") >= 0, "scala: built with sbt as before")
+    check(
+        index_of(
+            calls,
+            "helm upgrade --install user-service",
+            "environments/local/user-service.values.yaml",
+        )
+        >= 0,
+        "scala: its own values file",
+    )
+    check(
+        index_of(calls, "DROP SCHEMA") >= 0,
+        "scala, switching back from Rust: the user schema is reset",
+    )
+
+    calls = run_switch("scala", "")
+    check(index_of(calls, "DROP SCHEMA") < 0, "first deploy (nothing running): nothing is reset")
+
+
+SEED = """
+CREATE TABLE _sqlx_migrations (version BIGINT PRIMARY KEY, description TEXT);
+INSERT INTO _sqlx_migrations VALUES (20261109000000, 'baseline');
+CREATE TABLE flyway_schema_history (installed_rank INT PRIMARY KEY);
+INSERT INTO flyway_schema_history VALUES (1);
+INSERT INTO user_account (id, email, password_hash)
+  VALUES (gen_random_uuid(), 'a@example.com', 'x');
+INSERT INTO outbox_events (id, aggregate_id, payload, correlation_id)
+  VALUES (gen_random_uuid(), 'a', '{}', 'a');
+"""
+COUNTS = """
+SELECT (SELECT count(*) FROM _sqlx_migrations)
+  || ' ' || (SELECT count(*) FROM flyway_schema_history)
+  || ' ' || (SELECT count(*) FROM user_account) || ' ' || (SELECT count(*) FROM outbox_events)
+"""
+
+
+def verify_reset_data() -> None:
+    print("== 2. bin/reset-data keeps both migration histories ==")
+    script = (GLUON / "bin/reset-data").read_text()
+    sql = script.split("<<'SQL'\n", 1)[1].split("\nSQL\n", 1)[0]
+    pg_ctl = shutil.which("pg_ctl")
+    if pg_ctl is None:
+        check(False, "pg_ctl on the PATH")
+        return
+    pg_bin = Path(pg_ctl).resolve().parent
+    baseline = next(RUST.glob("crates/user-service/migrations/*_baseline.sql"))
+    with tempfile.TemporaryDirectory() as scratch:
+        data, sock = Path(scratch) / "db", Path(scratch)
+        subprocess.run(
+            [pg_bin / "initdb", "-D", data, "-U", "user", "-A", "trust"],
+            check=True,
+            capture_output=True,
+        )
+        port = "55999"
+        subprocess.run(
+            [
+                pg_bin / "pg_ctl",
+                "-D",
+                data,
+                "-w",
+                "-l",
+                Path(scratch) / "log",
+                "-o",
+                f"-c port={port} -c listen_addresses='' -c unix_socket_directories={sock}",
+                "start",
+            ],
+            check=True,
+            capture_output=True,
+        )
+        try:
+            psql = [
+                str(pg_bin / "psql"),
+                "-X",
+                "-q",
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-h",
+                str(sock),
+                "-p",
+                port,
+                "-U",
+                "user",
+                "-d",
+                "postgres",
+            ]
+            subprocess.run([*psql, "-f", str(baseline)], check=True, capture_output=True)
+            subprocess.run(
+                [*psql, "-c", SEED],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(psql, input=sql, text=True, check=True, capture_output=True)
+            counts = subprocess.run(
+                [*psql, "-tA", "-c", COUNTS], text=True, check=True, capture_output=True
+            ).stdout.split()
+        finally:
+            subprocess.run(
+                [pg_bin / "pg_ctl", "-D", data, "-m", "immediate", "stop"], capture_output=True
+            )
+    check(
+        counts[:2] == ["1", "1"],
+        "migration histories kept "
+        f"(_sqlx_migrations {counts[0]}, flyway_schema_history {counts[1]})",
+    )
+    check(
+        counts[2:] == ["0", "0"],
+        f"everything else truncated (user_account {counts[2]}, outbox_events {counts[3]})",
+    )
+
+
+def values(path: Path) -> dict:
+    """A values file, parsed with the harness's PyYAML."""
+    out = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--no-sync",
+            "python",
+            "-c",
+            "import json,sys,yaml; print(json.dumps(yaml.safe_load(open(sys.argv[1]))))",
+            str(path),
+        ],
+        cwd=GLUON / "tests/contract",
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return json.loads(out)
+
+
+def verify_values() -> None:
+    print("== 3. environments/local/user-service-rs.values.yaml ==")
+    scala = values(GLUON / "environments/local/user-service.values.yaml")
+    rust = values(GLUON / "environments/local/user-service-rs.values.yaml")
+    check(
+        rust["image"] == {"repository": "user-service-rs", "tag": "latest"},
+        "image user-service-rs:latest",
+    )
+    check(rust["env"] == scala["env"], "the same env vars as user-service.values.yaml")
+    check(
+        rust.get("javaOpts") == "" and rust.get("mallocArenaMax") == "",
+        "javaOpts and mallocArenaMax blanked",
+    )
+
+
+def verify_docker_steps() -> None:
+    print("== 4. The Dockerfile's build steps, natively ==")
+    dockerfile = (RUST / "Dockerfile").read_text()
+    check(
+        "cargo build --release --locked -p user-service --bin user-service --bin asyncapi-spec"
+        in dockerfile,
+        "the Dockerfile builds the two release binaries",
+    )
+    done = subprocess.run(
+        [
+            "cargo",
+            "build",
+            "-q",
+            "--release",
+            "--locked",
+            "-p",
+            "user-service",
+            "--bin",
+            "user-service",
+            "--bin",
+            "asyncapi-spec",
+        ],
+        cwd=RUST,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=1200,
+    )
+    check(done.returncode == 0, "cargo build --release of user-service and asyncapi-spec")
+    if done.returncode != 0:
+        print(done.stderr[-1500:])
+        return
+    size = (RUST / "target/release/user-service").stat().st_size
+    check(True, f"release binary: {size / 1_000_000:.1f} MB")
+    with tempfile.TemporaryDirectory() as scratch:
+        html = Path(scratch) / "html"
+        generated = subprocess.run(
+            [str(RUST / "scripts/asyncapi-html.sh"), str(html)],
+            cwd=RUST,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=900,
+        )
+        same = generated.returncode == 0 and all(
+            (html / name).read_bytes() == (CAPTURE / "asyncapi-html" / name).read_bytes()
+            for name in (
+                "index.html",
+                "js/app.js",
+                "js/asyncapi-ui.min.js",
+                "css/asyncapi.min.css",
+                "css/global.min.css",
+            )
+        )
+        check(
+            same, "the docs stage's HTML (cli 6.2.0 + html-template 3.5.6) equals the Scala build's"
+        )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--skip-docker-steps", action="store_true", help="skip the slow native build (4)"
+    )
+    args = parser.parse_args()
+    verify_switch()
+    verify_reset_data()
+    verify_values()
+    if not args.skip_docker_steps:
+        verify_docker_steps()
+    failed = [what for ok, what in results if not ok]
+    print()
+    if failed:
+        print(f"FAIL: {len(failed)} of {len(results)} checks failed")
+        return 1
+    print(f"PASS: laptop preparation verified as far as the sandbox allows ({len(results)} checks)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

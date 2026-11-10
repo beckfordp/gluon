@@ -31,3 +31,8 @@ target/
 .metals/
 .bloop/
 .seed-demo-data.state.json
+
+# Python build output from the platform scripts (bin/lib, infra/k8s/observability/dashboards)
+__pycache__/
+*.py[cod]
+.venv/

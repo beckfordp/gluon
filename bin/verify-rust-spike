@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+"""Verify the Rust spike in the sandbox, end to end (ADR 0028; docs/rust-spike-verification.md).
+
+Runs every check the sandbox can run, one step at a time, printing each
+step's outcome as it finishes, then maps the results onto ADR 0028's success
+criteria (the laptop-only ones are listed as such). Logs go to a run
+directory, printed at the start.
+
+Steps:
+  1. sandbox     bin/sandbox-setup --check (toolchains, Node 24, CDC jars, repos)
+  2. harness-ci  tests/contract scripts/ci.sh (unit + integration tests, lint, types)
+  3. rust-ci     services/user-service-rs scripts/ci.sh (fmt, clippy, tests, coverage)
+  4. build       the Rust service and probe, and the AsyncAPI HTML
+  5. contract    every contract group against the Rust build, in one session
+  6. tracks      every track's scripts/verify-*.sh (--skip-ci: CI ran above)
+  7. laptop-prep bin/verify-laptop-prep (the laptop pieces, as far as the sandbox can)
+
+Usage:
+  bin/verify-rust-spike            everything (about an hour)
+  bin/verify-rust-spike --quick    steps 1-5 and 7 without its release build (~20 min)
+  bin/verify-rust-spike --only contract tracks
+
+Run from the sandbox desktop's root terminal too: it re-runs itself as the
+repos' owner, as every verify script does.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import time
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+
+GLUON = Path(__file__).resolve().parent.parent
+CONTRACT = GLUON / "tests" / "contract"
+RUST = GLUON / "services" / "user-service-rs"
+OWNER_BIN = Path("/home/claude/.local/bin")
+
+RUST_TRACK_SCRIPTS = [
+    "verify-rust-ci",
+    "verify-service-start",
+    "verify-readiness",
+    "verify-auth",
+    "verify-users-cors",
+    "verify-outbox",
+    "verify-tracing",
+    "verify-metrics",
+    "verify-logs",
+    "verify-openapi",
+    "verify-asyncapi",
+    "verify-probe",
+]
+CONTRACT_TRACK_SCRIPTS = [
+    "verify-isolated-runner",
+    "verify-rest-group",
+    "verify-schema-group",
+    "verify-outbox-group",
+    "verify-telemetry-groups",
+    "verify-docs-group",
+    "verify-cdc-group",
+    "verify-probe-stubs",
+    "verify-probe-group",
+    "verify-implicit-behaviours",
+    "verify-cluster-mode",
+]
+
+
+@dataclass
+class Step:
+    """One step's outcome."""
+
+    name: str
+    ok: bool
+    summary: str
+    detail: list[str] = field(default_factory=list)
+    groups: dict[str, bool] = field(default_factory=dict)
+    """For the contract step: each group's outcome (all its checks green)."""
+
+
+def as_owner() -> None:
+    """Re-executes as the repos' owner when run as root (never writes as root)."""
+    owner = RUST.stat().st_uid
+    if os.getuid() == owner:
+        return
+    if os.getuid() != 0:
+        sys.exit(f"FAIL run as the owner of {RUST}")
+    import pwd
+
+    entry = pwd.getpwuid(owner)
+    print(f"== re-running as {entry.pw_name} (the repos' owner) ==", flush=True)
+    path = f"{OWNER_BIN}:{entry.pw_dir}/.cargo/bin:{os.environ.get('PATH', '')}"
+    os.execvp(
+        "runuser",
+        [
+            "runuser",
+            "-u",
+            entry.pw_name,
+            "--",
+            "env",
+            f"HOME={entry.pw_dir}",
+            f"PATH={path}",
+            "LANG=C.UTF-8",
+            sys.executable,
+            __file__,
+            *sys.argv[1:],
+        ],
+    )
+
+
+def run(log: Path, argv: list[str], cwd: Path, timeout: int = 3600) -> tuple[int, str]:
+    """Runs a command, output to `log`; (exit code, output)."""
+    started = time.monotonic()
+    with log.open("w") as out:
+        try:
+            done = subprocess.run(
+                argv, cwd=cwd, stdout=out, stderr=subprocess.STDOUT, timeout=timeout, check=False
+            )
+            code = done.returncode
+        except subprocess.TimeoutExpired:
+            code = 124
+    text = log.read_text(errors="replace")
+    print(f"     ({time.monotonic() - started:.0f} s, log {log})", flush=True)
+    return code, text
+
+
+def last_line(text: str) -> str:
+    lines = [line for line in text.splitlines() if line.strip()]
+    return lines[-1] if lines else "(no output)"
+
+
+def step_sandbox(logs: Path) -> Step:
+    code, text = run(
+        logs / "sandbox.log", [str(GLUON / "bin" / "sandbox-setup"), "--check"], GLUON, 600
+    )
+    missing = [line for line in text.splitlines() if line.startswith("MISSING")]
+    return Step("sandbox", code == 0, last_line(text), missing)
+
+
+def step_ci(logs: Path, name: str, repo: Path) -> Step:
+    code, text = run(logs / f"{name}.log", [str(repo / "scripts" / "ci.sh")], repo)
+    if name == "harness-ci":
+        found = re.findall(r"(\d+ passed).*?\n|Total coverage: ([\d.]+%)", text)
+        passed = next((p for p, _ in found if p), "?")
+        coverage = next((c for _, c in found if c), "?")
+        summary = f"{passed}, coverage {coverage}"
+    else:
+        total = next((line for line in text.splitlines() if line.startswith("TOTAL")), "")
+        summary = f"line coverage {total.split()[-4] if total else '?'}"
+        if "SKIP cargo-audit" in text:
+            summary += "; cargo-audit SKIP (its database is on GitHub)"
+    return Step(name, code == 0, summary, [] if code == 0 else text.splitlines()[-10:])
+
+
+def step_build(logs: Path) -> Step:
+    code, text = run(
+        logs / "build.log",
+        ["cargo", "build", "-q", "--locked", "-p", "user-service", "-p", "events-probe"],
+        RUST,
+    )
+    if code != 0:
+        return Step("build", False, "cargo build failed", text.splitlines()[-10:])
+    code, text = run(logs / "asyncapi-html.log", [str(RUST / "scripts" / "asyncapi-html.sh")], RUST)
+    return Step(
+        "build",
+        code == 0,
+        "user-service, events-probe, AsyncAPI HTML" if code == 0 else "asyncapi-html.sh failed",
+        [] if code == 0 else text.splitlines()[-10:],
+    )
+
+
+def step_contract(logs: Path) -> Step:
+    argv = [
+        "uv",
+        "run",
+        "--no-sync",
+        "pytest",
+        "checks",
+        "-p",
+        "no:cacheprovider",
+        "-rA",
+        "--tb=line",
+        "-q",
+        "--target-cmd",
+        str(RUST / "target/debug/user-service"),
+        "--target-cwd",
+        str(RUST),
+        "--target-name",
+        "user-service-rs",
+        "--probe-cmd",
+        str(RUST / "target/debug/events-probe"),
+    ]
+    code, text = run(logs / "contract.log", argv, CONTRACT)
+    outcomes = re.findall(
+        r"^(PASSED|FAILED|ERROR) checks/(test_\w+)\.py::(\S+)", text, re.MULTILINE
+    )
+    per_group: Counter[str] = Counter()
+    green: Counter[str] = Counter()
+    failed = []
+    for outcome, group, test in outcomes:
+        per_group[group] += 1
+        if outcome == "PASSED":
+            green[group] += 1
+        else:
+            failed.append(f"{group}::{test}")
+    groups = ", ".join(
+        f"{g.removeprefix('test_')} {green[g]}/{n}" for g, n in sorted(per_group.items())
+    )
+    total = sum(per_group.values())
+    ok = code == 0 and total > 0 and not failed
+    by_group = {g.removeprefix("test_"): green[g] == n for g, n in per_group.items()}
+    summary = f"{sum(green.values())}/{total} green — {groups}"
+    return Step("contract", ok, summary, failed, by_group)
+
+
+def step_tracks(logs: Path) -> Step:
+    failed, passed = [], 0
+    for repo, scripts in ((RUST, RUST_TRACK_SCRIPTS), (CONTRACT, CONTRACT_TRACK_SCRIPTS)):
+        for script in scripts:
+            args = [str(repo / "scripts" / f"{script}.sh")]
+            if script != "verify-rust-ci":
+                args.append("--skip-ci")
+            print(f"     {repo.name}/scripts/{script}.sh", flush=True)
+            code, text = run(logs / f"{repo.name}-{script}.log", args, repo)
+            line = last_line(text)
+            print(f"     {'ok  ' if code == 0 else 'FAIL'} {line}", flush=True)
+            if code == 0:
+                passed += 1
+            else:
+                failed.append(f"{repo.name}/{script}: {line}")
+    return Step(
+        "tracks", not failed, f"{passed} of {passed + len(failed)} track scripts pass", failed
+    )
+
+
+def step_laptop_prep(logs: Path, quick: bool) -> Step:
+    argv = [str(GLUON / "bin" / "verify-laptop-prep")] + (["--skip-docker-steps"] if quick else [])
+    code, text = run(logs / "laptop-prep.log", argv, GLUON)
+    fails = [line for line in text.splitlines() if line.startswith("FAIL")]
+    return Step("laptop-prep", code == 0, last_line(text), fails)
+
+
+CRITERIA = [
+    ("C1  the harness green against the Rust service, isolated mode", ["contract", "harness-ci"]),
+    ("C10 the consumer probe group green", ["contract:probe"]),
+    (
+        "C8  (sandbox part) the metric families, labels and buckets dashboards query",
+        ["contract:metrics"],
+    ),
+    ("C3  (sandbox part) cluster mode, against a started service", ["harness-ci"]),
+    ("--  Rust CI: fmt, clippy, tests, coverage; payload schema = registry", ["rust-ci"]),
+    ("--  every track's verify script", ["tracks"]),
+    ("--  the laptop pieces: image build steps, switch, reset-data, values", ["laptop-prep"]),
+    ("--  the sandbox reproducible (bin/sandbox-setup)", ["sandbox"]),
+]
+LAPTOP = [
+    "C2  the harness green against the Scala service (B2)",
+    "C3  cluster mode green for the deployed implementation, both ways (B4, B9)",
+    "C4  bin/run-acceptance and user-service's verify-auth.sh unchanged (B5)",
+    "C5  the welcome email sent (B6)",
+    "C6  one sign-up → notification trace in Tempo (B7)",
+    "C7  the Rust service's logs in Kibana by trace_id (B7)",
+    "C8  the Service dashboard's panels (B8)",
+    "C9  image size, startup time, idle memory in the cluster (B9)",
+]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--quick", action="store_true", help="skip the track scripts and the release build"
+    )
+    parser.add_argument(
+        "--only",
+        nargs="+",
+        choices=["sandbox", "harness-ci", "rust-ci", "build", "contract", "tracks", "laptop-prep"],
+    )
+    args = parser.parse_args()
+    as_owner()
+    os.environ["PATH"] = f"{OWNER_BIN}:{Path.home() / '.cargo/bin'}:{os.environ.get('PATH', '')}"
+    logs = Path(f"/tmp/rust-spike-verification-{time.strftime('%Y%m%d-%H%M%S')}")
+    logs.mkdir(parents=True)
+    print(f"Rust spike verification — logs in {logs}\n", flush=True)
+    wanted = args.only or ["sandbox", "harness-ci", "rust-ci", "build", "contract"] + (
+        [] if args.quick else ["tracks"]
+    ) + ["laptop-prep"]
+    if (
+        "contract" in wanted
+        and "build" not in wanted
+        and not (RUST / "target/debug/events-probe").exists()
+    ):
+        wanted.insert(wanted.index("contract"), "build")
+    steps: dict[str, Step] = {}
+    actions = {
+        "sandbox": lambda: step_sandbox(logs),
+        "harness-ci": lambda: step_ci(logs, "harness-ci", CONTRACT),
+        "rust-ci": lambda: step_ci(logs, "rust-ci", RUST),
+        "build": lambda: step_build(logs),
+        "contract": lambda: step_contract(logs),
+        "tracks": lambda: step_tracks(logs),
+        "laptop-prep": lambda: step_laptop_prep(logs, args.quick),
+    }
+    for number, name in enumerate(wanted, 1):
+        print(f"== {number}. {name} ==", flush=True)
+        step = actions[name]()
+        steps[name] = step
+        print(f"{'ok  ' if step.ok else 'FAIL'} {name}: {step.summary}", flush=True)
+        for line in step.detail[:20]:
+            print(f"       {line}", flush=True)
+    print("\n== ADR 0028 success criteria ==")
+    for criterion, needs in CRITERIA:
+        outcomes = []
+        for need in needs:
+            name, _, group = need.partition(":")
+            if name in steps:
+                step = steps[name]
+                outcomes.append(step.groups.get(group, False) if group else step.ok)
+        state = "not run" if not outcomes else ("MET" if all(outcomes) else "NOT MET")
+        print(f"{state:<8} {criterion}")
+    for criterion in LAPTOP:
+        print(f"{'LAPTOP':<8} {criterion}")
+    print("(LAPTOP: docs/rust-spike-verification.md, Part B)")
+    failed = [s.name for s in steps.values() if not s.ok]
+    print()
+    if failed:
+        print(f"FAIL: {', '.join(failed)} (logs in {logs})")
+        return 1
+    print(f"PASS: every sandbox check passed ({len(steps)} steps; logs in {logs})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

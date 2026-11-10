@@ -57,7 +57,15 @@ library test fixtures only and are not reused.
   fulfilment events, which carry only `orderId`) and user-service
   `GET /users/{id}` (any event without an email). Resilience-wrapped, with a
   bounded retry then DLQ; the Kafka offset is committed only after the send
-  succeeds or the recipient is permanently `unresolved` (ADR 0025).
+  succeeds or the recipient is permanently `unresolved` (ADR 0025). Two retry
+  layers multiply: purerest's HTTP retry (5xx, refused connections and
+  timeouts only — a connection reset mid-response is not retried there, and
+  an exhausted 5xx comes back as the response) runs inside purekafka's
+  processing retry, so a lookup that keeps failing is attempted up to
+  `(1 + user-client retries) × (1 + dlq-retry retries)` times before the record
+  is dead-lettered; with the defaults (3 and 3, breaker threshold 5) the
+  breaker opens at the fifth failed call and the remaining attempts fail
+  fast without calling (measured with the Rust consumer probe, ADR 0028).
 
 Payment is **no longer fully async** (resolves the "Payment auth timing"
 open design question below, previously deferred): authorization moves to
@@ -295,7 +303,11 @@ resolution, ADM-3; callee: user-service, **built 2026-11-02**,
 - `200`: `{"userId": "string (UUID)", "email": "string", "createdAt": "ISO-8601 instant"}`
   — the normalized email address stored at signup.
 - `400`: plain-text path-decode failure — the id is not a valid UUID
-  (tapir decodes the path; no JSON error body).
+  (tapir decodes the path; no JSON error body). "Valid" is what
+  `java.util.UUID.fromString` accepts: five dash-separated hex groups of any
+  length up to 36 characters in all, so `1-2-3-4-5` decodes (and then 404s)
+  while the 32-digit undashed, braced and `urn:uuid:` forms are `400`s
+  (found by the Rust spike, ADR 0028; checked in `tests/contract`).
 - `404`: `{"error": "string"}` — no account with that id.
 - Unauthenticated local/demo read (ADM-3/ADR 0025 caveat); publishes nothing.
 
@@ -440,7 +452,9 @@ below isn't registered; this document is its only specification.
 
 Each Kafka service serves its own AsyncAPI 3.0 docs (ADR 0010, TD-19): raw
 spec at `/docs/asyncapi.json`, HTML at `/docs/asyncapi/`, built from the
-same `Schema[T]` the registry gets. Each topic shows as `SEND` (produced) or
+same `Schema[T]` the registry gets, though not in the same form: the AsyncAPI
+payload is JSON Schema 2020-12 and open (no `additionalProperties`), the
+registry's is draft-07 and closed. Each topic shows as `SEND` (produced) or
 `RECEIVE` (consumed), and mirrors carry the producer's descriptions via
 `bin/registry-scala`. For the contract itself, the registry wins.
 inventory-service consumes `OrderCancelled` and `DispatchConfirmed`, so its
@@ -466,6 +480,12 @@ keeps its own identical copy of the case class:
 inventory-service publishes no events; it consumes `order-events:
 OrderCancelled` and `fulfilment-events: DispatchConfirmed`, and its bulk
 reserve is keyed by `orderId`.
+
+**Kafka headers** on outbox-published events (Debezium's Outbox Event Router
+as `infra/k8s/local-infra/debezium-connectors-register.yaml` configures it):
+`id` (the outbox row's id, which the router always adds), `traceparent` (the
+row's `trace_parent`; present with no value when the row has none) and
+`correlation_id`. Seen on the sandbox CDC stack (ADR 0028, RUST-1.8).
 
 A consumer with an `eventType` it doesn't recognize on a topic it
 subscribes to (e.g. payment-service seeing a hypothetical future
@@ -792,7 +812,7 @@ remains a dev-only UX aid on the same result model. Source:
 (gitignored here, like `services/*` — see `../README.md`'s "Layout").
 
 ## Open design questions
-See adr/ for decisions (0001-0026). Revisit this section as new questions
+See adr/ for decisions (0001-0028). Revisit this section as new questions
 come up (e.g. serialization format/registry impl for ADR 0003, MSK/
 ElastiCache/RDS confirmation ADR).
 
