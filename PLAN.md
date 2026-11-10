@@ -2351,3 +2351,288 @@ gluon-local.
       `docs/rust-spike-verification.md`, `bin/verify-rust-spike`.*
 
 **Exit criteria:** findings reviewed and the follow-up ADR proposed.
+
+---
+
+## Rust Port — notification-service
+
+The second Rust port ([ADR 0029](./docs/adr/0029-after-the-rust-spike.md),
+option 3, edges inward): notification-service, wire-compatible with the Scala
+service, which stays the default. Built in the sandbox in **sessions**
+`RPN-N`, then verified on the laptop. Findings and the exit criteria:
+[`docs/rust-spike-findings.md`](./docs/rust-spike-findings.md).
+
+**Session rules:**
+- About an hour each, 3–4 turns with the sandbox model; never more than two
+  hours. A session that runs over is split at its first green check.
+- Each session's check is written first and seen failing for the stated
+  reason, then turned green. "Done when" names the script that prints `PASS`.
+- Each session ends with a review, a commit in its repo (a conductor track,
+  newTrack → implement → review → archive) and `bin/sandbox-save`.
+- `bin/sandbox-export --session RPN-N` copies only the current session's plan
+  to the sandbox, as `SANDBOX-PLAN.md`; `PLAN.md` itself doesn't travel.
+- The sandbox has no Scala, Docker, Kubernetes or GitHub; anything needing
+  them waits for the laptop sessions (`RPN-L…`).
+
+**Inputs:** the capture `contracts/notification-service/20261110` (laptop,
+2026-11-10: 20 `sent_email` rows covering every consumer path, 4 dead-lettered
+records, 13 trace exports, 45 stub lookups, readiness with Postgres paused,
+stopped and back); the Scala sources of notification-service and
+purerest/purekafka (`lib/purerest`), exported read-only.
+
+**Repos:** `tests/contract`, `services/user-service-rs`,
+`services/notification-service-rs` (new), `lib/gluon-rs` (new: the shared
+Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
+
+### RPN-0 — Re-verify user-service-rs after RUST-5.0
+
+**Repos:** `services/user-service-rs`, `tests/contract`. **Time:** ~45 min.
+
+- [ ] RPN-0 — confirm the laptop's RUST-5.0 changes hold on Linux:
+      `docs.yaml` Content-Type without charset, the metrics scope check
+      without JVM scopes, and `verify_as_owner`'s BSD `stat` fallback (the
+      GNU path must still be taken on Linux)
+
+**Done when:** both repos' `scripts/ci.sh` PASS; `verify-yaml-content-type.sh`
+and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
+(129/129).
+
+### RPN-1 — Capture into the harness
+
+**Repos:** `tests/contract`.
+
+- [ ] RPN-1 — commit `contracts/notification-service/20261110` with
+      `PROVENANCE.md` and `CAPTURE.md` (from `CAPTURE.sh`); decode the OTLP
+      exports to JSON beside the raw bodies; start
+      `docs/implicit-behaviours.md` entries for notification-service (first
+      one: `/health/ready` hangs while Postgres is paused, 503 when it is
+      stopped)
+
+**Done when:** `scripts/verify-ns-capture.sh` PASS: every `http/*.txt`
+parses as an exchange, every OTLP body decodes, every `.jsonl` line is JSON,
+the DLQ dumps parse, and `sent_email` rows match the capture's scenario list.
+
+### RPN-2 — Exit criteria and `bin/verify-port`
+
+**Repos:** `gluon` (`bin/`, `docs/ports/`).
+
+- [ ] RPN-2 — `docs/ports/notification-service.criteria.json` (id,
+      description, environment `sandbox|laptop`, command) and
+      `bin/verify-port <service> --env sandbox|laptop`, printing MET / NOT
+      MET / LAPTOP and exiting 1 on any NOT MET for the current environment
+
+**Done when:** `bin/verify-port notification-service --env sandbox` runs and
+lists every criterion NOT MET or LAPTOP; its own test shows the exit codes.
+
+### RPN-3 — `telemetry` to `lib/gluon-rs`
+
+**Repos:** `lib/gluon-rs` (new), `services/user-service-rs`.
+
+- [ ] RPN-3 — create `lib/gluon-rs` (cargo workspace, `ci.sh`, conductor),
+      move `telemetry` there, user-service-rs depends on it by path; add the
+      repo to `SANDBOX_REPOS`
+
+**Done when:** both repos' `ci.sh` PASS; the harness 129/129 against
+user-service-rs.
+
+### RPN-4 — Consumer pieces to `lib/gluon-rs`
+
+**Repos:** `lib/gluon-rs`, `services/user-service-rs`.
+
+- [ ] RPN-4 — move the probe's envelope handling, DLQ, stream supervisor and
+      lag into a `gluon-kafka` crate; the probe uses it
+
+**Done when:** both `ci.sh` PASS; probe group 10/10; harness 129/129.
+
+### RPN-5 — Harness for more than one service
+
+**Repos:** `tests/contract`.
+
+- [ ] RPN-5 — service name as a parameter: env contract, Postgres login,
+      captures per service, check groups selected per service
+
+**Done when:** `ci.sh` PASS; user-service's 129 green; the notification env
+contract unit test green.
+
+### RPN-6 — Scaffold notification-service-rs
+
+**Repos:** `services/notification-service-rs` (new).
+
+- [ ] RPN-6 — repo, `/conductor:setup` (standard workflow, Rust styleguide),
+      `scripts/ci.sh` (fmt, clippy, tests, coverage gate), workspace on
+      `lib/gluon-rs`; add to `SANDBOX_REPOS`
+
+**Done when:** `ci.sh` PASS on an empty service that starts and stops.
+
+### RPN-7 — Schema and health
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-7 — schema group (V1/V2 equivalent, `sent_email` as Flyway built
+      it) and health checks red; then sqlx migrations, `/health`,
+      `/health/ready` with a Postgres ping (decide whether the paused-Postgres
+      hang is contract)
+
+**Done when:** schema and health checks green.
+
+### RPN-8 — `/emails` checks
+
+**Repos:** `tests/contract`.
+
+- [ ] RPN-8 — REST group from the capture: filters (customer, order, both,
+      none, empty, repeated, unknown), newest first, 404 / 405, trailing
+      slash, HEAD, CORS
+
+**Done when:** the group is red against the scaffold for the stated reason
+(404), and green against the capture's exchanges.
+
+### RPN-9 — `/emails`
+
+**Repos:** `services/notification-service-rs`.
+
+- [ ] RPN-9 — the route, the store's list query, CORS
+
+**Done when:** REST group green.
+
+### RPN-10 — Kafka fixtures
+
+**Repos:** `tests/contract`.
+
+- [ ] RPN-10 — produce with key and headers (incl. null values), an
+      order-service stub beside the user stub, a DLQ reader, consumer-group
+      offsets
+
+**Done when:** fixture self-tests green against the sandbox Kafka.
+
+### RPN-11 — `user-events`
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-11 — checks (welcome email, duplicate eventId, unrelated type,
+      undecodable envelope and payload → DLQ, null value skipped) red; then
+      the consumer on `gluon-kafka` and the logging transport
+
+**Done when:** `user-events` group green.
+
+### RPN-12 — Audited send
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-12 — claim, then mark sent / failed / unresolved; a duplicate of a
+      sent or unresolved row isn't sent again, pending/failed rows are retried
+
+**Done when:** audit-state checks green; `sent_email` rows equal the
+capture's (ids and times aside).
+
+### RPN-13 — Recipient resolution
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-13 — customer, guest fallback, user 400 → guest, unknown customer,
+      unknown order (ADR 0025, ADM-10)
+
+**Done when:** resolution group green.
+
+### RPN-14 — Transient lookup failure
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-14 — HTTP retry inside the processing retry, breaker opening, row
+      marked failed, record dead-lettered
+
+**Done when:** failure group green; call counts match system-design's
+formula and the capture's stub log.
+
+### RPN-15 — `order-events`
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-15 — confirmed, payment failed, cancelled with each reason
+      (customer, auth_expired, stale, operator, none, unknown)
+
+**Done when:** `order-events` group green; subjects and bodies byte-equal to
+the capture.
+
+### RPN-16 — `payment-events` and `fulfilment-events`
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-16 — captured, failed, unknown order; dispatched (items, non-ASCII
+      product name), dispatch failed, missing items → DLQ
+
+**Done when:** both groups green.
+
+### RPN-17 — Traces
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-17 — consume span parented on `traceparent`, client spans for the
+      lookups propagating it, `/emails` server span
+
+**Done when:** traces group green against the capture's spans.
+
+### RPN-18 — Metrics
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-18 — HTTP server and client, email journey, event age, lag, DLQ,
+      stream restarts, breaker
+
+**Done when:** metrics group green; text format exact.
+
+### RPN-19 — Logs
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-19 — field order, the message catalogue from `stdout.log`, outcome
+      fields (`sent`, `duplicate`, `unresolved`)
+
+**Done when:** logs group green.
+
+### RPN-20 — OpenAPI
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-20 — `/emails` and health in tapir's shape, Swagger UI paths
+
+**Done when:** docs group green on OpenAPI and Swagger UI.
+
+### RPN-21 — AsyncAPI
+
+**Repos:** `tests/contract`, `services/notification-service-rs`.
+
+- [ ] RPN-21 — AsyncAPI JSON (receive channels, payload schemas) and HTML
+
+**Done when:** docs group fully green.
+
+### RPN-22 — Laptop preparation
+
+**Repos:** `services/notification-service-rs`, `gluon` (`bin/`,
+`environments/`).
+
+- [ ] RPN-22 — Dockerfile, `notification-service-rs.values.yaml`,
+      `NOTIFICATION_SERVICE_IMPL=rust` in `bin/k8s-local-up`,
+      `bin/verify-laptop-prep` extended
+
+**Done when:** `bin/verify-laptop-prep` PASS.
+
+### RPN-23 — Sandbox exit
+
+**Repos:** all of the above.
+
+- [ ] RPN-23 — every sandbox criterion met; `bin/sandbox-save`
+
+**Done when:** `bin/verify-port notification-service --env sandbox` shows
+every sandbox criterion MET and the rest LAPTOP.
+
+### RPN-L1 — Laptop verification
+
+**Environment:** laptop.
+
+- [ ] RPN-L1 — `bin/sandbox-import`; `bin/verify-port notification-service
+      --env laptop`: the harness against Scala, cluster mode, acceptance,
+      notification-service's 13 `verify-*.sh`, Tempo, Kibana, dashboard;
+      then switch back to Scala and repeat
+
+**Exit criteria:** `bin/verify-port notification-service --env laptop` all
+MET, in both directions of the switch.
