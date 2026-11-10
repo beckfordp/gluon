@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Export GITHUB_TOKEN/GITHUB_ACTOR for sbt (resolving purerestlib from
 # GitHub Packages — see bin/generate-service, bin/k8s-local-up) from the
 # gh CLI's own stored credentials (macOS Keychain-backed) — no token typed
