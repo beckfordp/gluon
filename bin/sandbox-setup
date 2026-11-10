@@ -15,10 +15,11 @@ Usage:
   bin/sandbox-setup --only rust vim
                                limit to the named steps
 
-Steps: network, image, rust, node, cdc, vim, shell, git-identity, projects.
+Steps: network, image, rust, node, cdc, vim, shell, git-init, git-identity, projects.
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -144,6 +145,8 @@ exec /workspace/gluon/bin/sandbox-review "$@"
 """
 
 GIT_IDENTITY = {"user.name": "gluon sandbox", "user.email": "sandbox@gluon.local"}
+EXPORT_MANIFEST = "EXPORT-MANIFEST.json"
+"""Written by bin/sandbox-export: each repo's laptop commit, and the captures it added."""
 
 
 # --- Reporting --------------------------------------------------------------
@@ -478,6 +481,53 @@ def step_shell(install: bool) -> list[Result]:
     return [Result("shell", status, f"sr, cdw in {target} (cdw opens a shell with the aliases)")]
 
 
+def export_manifest() -> dict:
+    """bin/sandbox-export's EXPORT-MANIFEST.json at gluon's root, or {} without one."""
+    try:
+        return json.loads((GLUON / EXPORT_MANIFEST).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def step_git_init(install: bool) -> list[Result]:
+    """A git repo in each exported sandbox repo, with the export as its baseline commit.
+
+    The export carries no .git; without one, bin/sandbox-save skips the repo. The
+    baseline leaves the export's new captures untracked, so its tree is the laptop
+    commit's and later sandbox commits replay onto it (docs/sandbox.md).
+    """
+    results = []
+    manifest = export_manifest()
+    heads = {Path(repo["path"]): repo["head"] for repo in manifest.get("repos", [])}
+    captures = [Path(capture["path"]) for capture in manifest.get("captures", [])]
+    for relative in SANDBOX_REPOS:
+        repo = GLUON / relative
+        if not repo.is_dir():
+            results.append(Result("git-init", "INFO", f"{relative} not present"))
+            continue
+        if (repo / ".git").is_dir():
+            results.append(Result("git-init", "OK", f"{relative}: git repo"))
+            continue
+        if not install:
+            results.append(
+                Result("git-init", "MISSING", f"{relative}: not a git repo (run without --check)")
+            )
+            continue
+        run(["git", "init", "--quiet", "-b", "main"], cwd=repo)
+        for key, value in GIT_IDENTITY.items():
+            run(["git", "config", key, value], cwd=repo)
+        run(["git", "add", "-A"], cwd=repo)
+        for capture in captures:
+            if capture.is_relative_to(relative):
+                untracked = str(capture.relative_to(relative))
+                run(["git", "rm", "-r", "--cached", "--quiet", untracked], cwd=repo)
+        head = heads.get(relative, "unknown")[:7]
+        message = f"chore(sandbox): baseline from laptop export @ {head}"
+        run(["git", "commit", "--quiet", "-m", message], cwd=repo)
+        results.append(Result("git-init", "INSTALLED", f"{relative}: baseline @ {head}"))
+    return results
+
+
 def step_git_identity(install: bool) -> list[Result]:
     """A repo-local commit identity in each sandbox-only repo."""
     results = []
@@ -561,6 +611,7 @@ STEPS: dict[str, Callable[[bool], list[Result]]] = {
     "cdc": step_cdc,
     "vim": step_vim,
     "shell": step_shell,
+    "git-init": step_git_init,
     "git-identity": step_git_identity,
     "projects": step_projects,
 }
