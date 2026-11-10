@@ -16,7 +16,8 @@ RUST="$GLUON/services/user-service-rs"
 CONTRACT="$GLUON/tests/contract"
 EXPECTED_CHECKS=128
 
-cd "$RUST"
+cd "$RUST" || exit 1
+# shellcheck source=SCRIPTDIR/../services/user-service-rs/scripts/lib/verify.sh
 . scripts/lib/verify.sh
 verify_as_owner "$SELF" "$@"
 PATH="/home/claude/.local/bin:$HOME/.cargo/bin:$PATH"
