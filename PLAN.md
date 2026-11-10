@@ -2222,12 +2222,17 @@ fixes).
 
 **Depends on:** Rust Spikes 1–4 (and 6, if done).
 
-- [ ] RUST-5.0 — the harness against the Scala service in isolated mode:
+- [x] RUST-5.0 — the harness against the Scala service in isolated mode:
       confirms every expectation drawn from the reference; any difference is
       fixed in the harness (or raised as a contract gap) before anything
       else
-      *Ready 2026-11-10: the command is in `docs/rust-spike-verification.md`
-      (laptop part, step 2). Not run.*
+      *Done 2026-11-10 (gluon-contract `scala-confirmation_20261110`,
+      user-service-rs `yaml-content-type_20261110`): 119/119 green against the
+      staged Scala service (CDC 3/3), 129/129 against Rust. Two harness
+      expectations were wrong, not Scala: the metrics scope check now leaves
+      out the JVM runtime scopes, and `/docs/docs.yaml` is `application/yaml`
+      with no charset (the Rust service changed to match). Rerun with
+      `tests/contract/scripts/verify-scala-confirmation.sh`.*
 - [ ] RUST-5.1 — `environments/local/user-service-rs.values.yaml`: image
       `user-service-rs`, the same env vars as `user-service.values.yaml`,
       `javaOpts` and `mallocArenaMax` blanked; the Rust service's Dockerfile

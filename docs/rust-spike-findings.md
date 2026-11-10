@@ -1,10 +1,11 @@
 # Rust spike findings (ADR 0028; PLAN.md RUST-7.1)
 
-**State: sandbox work complete, laptop pass not yet run.** Everything ADR 0028
-plans for the sandbox is done and green (Rust Spikes 1–4 and 6). The laptop
-pass (Rust Spike 5: the harness against the Scala service, the image, the
-gluon-local deployment, Tempo, Kibana, the dashboards) is prepared but not
-run, so the criteria that need it are open. This document is updated after
+**State: sandbox work complete, laptop pass under way.** Everything ADR 0028
+plans for the sandbox is done and green (Rust Spikes 1–4 and 6). On the
+laptop, the harness is confirmed against the Scala service (RUST-5.0,
+2026-11-10); the rest of the pass (Rust Spike 5: the image, the gluon-local
+deployment, Tempo, Kibana, the dashboards) is prepared but not run, so the
+criteria that need it are open. This document is updated after
 that pass; figures marked *(laptop)* come from it.
 
 How each success criterion is verified, and by which script:
@@ -134,12 +135,36 @@ Measured in the sandbox (4 vCPU), release build:
   where the harness's expectations are first confirmed against Scala, and
   where the image, the switch and the cluster criteria are first exercised.
 
+## The laptop pass
+
+**RUST-5.0, the harness against the Scala service (2026-11-10).** 117 of 119
+green on the first run; both reds were harness expectations Scala doesn't
+meet, so the harness changed, not the reference:
+- **Metrics scopes.** Scala also reports under `cats.effect.runtime` and
+  `io.opentelemetry.runtime-telemetry-java8`, fixed instrumentation names that
+  `USER_SERVICE_NAME` doesn't set (the capture's `metrics.txt` has them too).
+  The check now leaves them out; Rust, with no JVM, has none.
+- **`/docs/docs.yaml` Content-Type.** Scala sends `application/yaml`, no
+  charset. The `; charset=UTF-8` came from reading tapir's source, as the
+  capture has no GET headers for that path (`docs-yaml-headers.txt` is the
+  HEAD → 405); the Rust service had copied it and now matches Scala.
+
+After both: 119/119 against Scala, 129/129 against Rust. Found on the way:
+- user-service-rs's `verify-*.sh` stopped at once on macOS (GNU `stat -c` in
+  `verify_as_owner`); fixed with a BSD fallback.
+- cargo-audit, always `SKIP` in the sandbox (no GitHub), runs on the laptop
+  and fails: RUSTSEC-2026-0459 (`libsqlite3-sys`) and RUSTSEC-2023-0071
+  (`rsa`), in `Cargo.lock` only through sqlx's SQLite and MySQL drivers and
+  not compiled, and RUSTSEC-2024-0449 (`unsafe-libyaml` unmaintained, dev-only
+  through `serde_yaml`). In user-service-rs's backlog; RUST-5.6 (Actions green)
+  needs it.
+
 ## Success criteria
 
 | Criterion (ADR 0028) | State |
 |---|---|
 | Harness green against Rust, isolated mode, sandbox | **Met** (119 checks) |
-| Harness green against Scala, laptop | Open (RUST-5.0) |
+| Harness green against Scala, laptop | **Met** (119 checks, 2026-11-10) |
 | Cluster mode green for the deployed implementation | Open (RUST-5.4) |
 | `bin/run-acceptance`, user-service `verify-auth.sh` unchanged, Rust deployed | Open (laptop) |
 | notification-service sends the welcome email | Open (laptop) |

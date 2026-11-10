@@ -859,3 +859,11 @@ own line. See each repo's own `git log` for full detail either way.
 - **Private data review** (`docs/private-data-report.md`). The capture's
   issued tokens and a laptop path are now placeholders; the rest is example
   test data, local-development defaults or the public project name.
+
+### Fixed
+- **Rust spike, harness confirmed against Scala (RUST-5.0).** The laptop run
+  against the staged Scala service: 119/119 after two harness corrections —
+  the metrics scope check leaves out the JVM runtime scopes, and
+  `/docs/docs.yaml` is `application/yaml` with no charset (user-service-rs
+  changed to match). `tests/contract/scripts/verify-scala-confirmation.sh`
+  reruns it; user-service-rs's verify scripts now run on macOS.

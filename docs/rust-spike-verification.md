@@ -57,7 +57,7 @@ It prints each step's result as it finishes, then the criteria table with
 |---|---|---|---|
 | `sandbox` | `bin/sandbox-setup --check` | toolchains (Rust 1.99.1, cargo-llvm-cov), Node 24, the CDC jars, repos and dependencies present | reproducibility |
 | `harness-ci` | `tests/contract/scripts/ci.sh` | ruff, `mypy --strict`, unit and integration tests (runner, OTLP stub, Postgres, CDC stack, broker outage, switch rehearsal, cluster mode), coverage ≥ 80% | C1, C3 |
-| `rust-ci` | `services/user-service-rs/scripts/ci.sh` | fmt, clippy `-D warnings`, all tests (incl. the payload schema equal to `registry/user-service/registry.json`), coverage ≥ 80%; cargo-audit prints `SKIP` (its database is on GitHub) | C1 |
+| `rust-ci` | `services/user-service-rs/scripts/ci.sh` | fmt, clippy `-D warnings`, all tests (incl. the payload schema equal to `registry/user-service/registry.json`), coverage ≥ 80%; cargo-audit prints `SKIP` in the sandbox (its database is on GitHub), and on the laptop fails on three advisories (user-service-rs backlog) | C1 |
 | `build` | `cargo build` of the service and the probe; `scripts/asyncapi-html.sh` | builds; the AsyncAPI HTML rendered | — |
 | `contract` | `pytest checks` against the Rust build, every group in one session (the CDC stack and a broker start on demand) | all 129 checks green; the summary line shows each group's count | C1, C8 (families), C10 |
 | `tracks` | every track's `scripts/verify-*.sh` in both repos (listed below) | each ends `PASS` | C1, C10 |
@@ -135,7 +135,9 @@ uv run pytest checks -rA --ignore checks/test_probe.py \
 
 Passes when every check is green (the probe group is Rust-only; the CDC group
 needs the jars from `bin/sandbox-setup --only cdc`, or add
-`--ignore checks/test_cdc.py`). Any red check is a harness expectation the
+`--ignore checks/test_cdc.py`). Or in one go, staging included:
+`tests/contract/scripts/verify-scala-confirmation.sh`. *Run 2026-11-10: 119/119
+(see `rust-spike-findings.md`).* Any red check is a harness expectation the
 Scala service doesn't meet: fix the check (or record a contract gap) before
 anything else, then re-run Part A's `contract` step in the sandbox.
 
