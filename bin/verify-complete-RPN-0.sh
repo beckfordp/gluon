@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Verifies sandbox session RPN-0 (PLAN.md, Rust Port — notification-service):
-# every script its "Done when" names, each printed PASS or FAIL as it finishes.
+# every script its "Done when" names, each printed PASS or FAIL as it finishes,
+# after building the AsyncAPI HTML their docs checks need.
 #   1. tests/contract scripts/ci.sh
 #   2. services/user-service-rs scripts/ci.sh
 #   3. services/user-service-rs scripts/verify-yaml-content-type.sh
@@ -41,6 +42,13 @@ run() {
     FAILED=$((FAILED + 1))
   fi
 }
+
+# Setup, not a criterion: the docs checks in 1 and 3 need the AsyncAPI HTML
+# the service serves from target/asyncapi-docs, which a clean target/ lacks
+echo "     setup: user-service-rs scripts/asyncapi-html.sh"
+if ! (cd "$RUST" && scripts/asyncapi-html.sh) > "$LOGS/asyncapi-html.log" 2>&1; then
+  echo "WARN setup failed, the docs checks will fail (log: $LOGS/asyncapi-html.log)"
+fi
 
 run "tests/contract scripts/ci.sh" contract-ci.log "$CONTRACT" scripts/ci.sh
 run "user-service-rs scripts/ci.sh" rust-ci.log "$RUST" scripts/ci.sh
