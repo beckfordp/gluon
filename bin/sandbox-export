@@ -20,7 +20,11 @@ allowed match with the reason it's fine, for the sandbox reviewer.
 
 Usage:
   bin/sandbox-export [--out DIR] [--clean] [--capture SERVICE=DIR ...]
-                     [--no-auto-captures] [--no-archive] [--session RPN-N]
+                     [--no-auto-captures] [--no-archive] [--session RPN-N] [--yes]
+
+First, untracked files and build output (BUILD_DIRS) in those repos are listed
+and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY never are.
+Binary files outside ALLOWED_BINARIES stop the export.
 
 PLAN.md stays on the laptop; SANDBOX-PLAN.md carries the Rust Port section's
 rules and the one session (default: the first unchecked sandbox session).
@@ -145,8 +149,23 @@ RULES = (
     Rule("private ip", "IP-like numbers in minified upstream JS",
          "Version strings and constants in vendored Swagger UI / AsyncAPI UI bundles.",
          re.compile(r"."), only_in=VENDORED),
+    Rule("*", "The scan's own patterns and allow-rules in `bin/sandbox-export`",
+         "The scanner has to name what it looks for and what it allows.",
+         re.compile(r"."), only_in=re.compile(r"^bin/sandbox-export$")),
 )
 """Every allowed kind of match; EXPORT-REVIEW.md reproduces this table."""
+
+ALLOWED_BINARIES = (
+    (re.compile(r"/assets/swagger-ui/favicon-\d+x\d+\.png$"), "Swagger UI's favicons, vendored with its webjar and served by `/docs`."),
+    (re.compile(r"^tests/contract/contracts/[^/]+/\d{8}/otlp/\d+\.pb$"), "Captured OTLP trace exports (protobuf), decoded by the harness."),
+)
+"""The only binary files an export may hold; anything else stops it."""
+
+BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
+"""Build-output directory names offered for removal before an export."""
+
+KEPT = frozenset({".claude", ".venv", "node_modules"})
+"""Never removed: assistant state and dev environments (none is exported)."""
 
 LEFT_OUT = (
     ("`.git` in every repo", "No history leaves the laptop; early harness history holds pre-redaction capture values."),
@@ -233,20 +252,61 @@ def session_plan(session: str | None) -> tuple[str, str]:
 
 
 def dirty(repo: Path) -> list[str]:
-    """Uncommitted changes and untracked files, bar what is never exported or LOCAL_ONLY."""
-    changes = []
-    for line in git(repo, "status", "--porcelain", "--untracked-files=all").splitlines():
-        relative = Path(line[3:].strip('"'))
-        if line.startswith("??") and (excluded(relative) or (repo == GLUON and relative in LOCAL_ONLY)):
-            continue
-        changes.append(line)
-    return changes
+    """Uncommitted changes to tracked files (untracked ones are `removable`)."""
+    return git(repo, "status", "--porcelain", "--untracked-files=no").splitlines()
+
+
+def removable(repo: Path) -> list[Path]:
+    """Untracked files and build-output directories in `repo`, bar KEPT and LOCAL_ONLY.
+
+    In gluon, the nested repos' directories are ignored as a whole and never offered.
+    """
+    def offered(relative: Path) -> bool:
+        if any(part in KEPT for part in relative.parts):
+            return False
+        if repo == GLUON and (relative in LOCAL_ONLY or relative.parts[0] in NESTED_REPO_DIRS):
+            return False
+        return True
+
+    untracked = [Path(p) for p in git(repo, "ls-files", "-z", "--others", "--exclude-standard").split("\0") if p]
+    ignored = git(repo, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
+    build = [Path(p) for p in ignored.split("\0") if p.endswith("/") and Path(p).name in BUILD_DIRS]
+    return [repo / p for p in sorted({*untracked, *build}) if offered(p)]
+
+
+def size(path: Path) -> int:
+    """Bytes under `path`."""
+    if path.is_file():
+        return path.stat().st_size
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
+
+
+def clean(repos: Sequence[Path], yes: bool) -> None:
+    """Lists untracked files and build output, and removes them once confirmed; stops if not."""
+    found = [path for repo in repos for path in removable(repo)]
+    if not found:
+        print("clean     no untracked files or build output")
+        return
+    total = 0
+    for path in found:
+        total += (bytes_ := size(path))
+        kind = "dir " if path.is_dir() else "file"
+        print(f"remove?   {kind} {path.relative_to(GLUON)} ({bytes_ / 2**20:.1f} MiB)")
+    prompt = f"Remove these {len(found)} ({total / 2**20:.0f} MiB)? [y/N] "
+    if not yes:
+        if not sys.stdin.isatty():
+            raise SystemExit("Not removed: no terminal to confirm; re-run with --yes, or remove them yourself")
+        if input(prompt).strip().lower() not in ("y", "yes"):
+            raise SystemExit("Not removed; nothing exported")
+    for path in found:
+        shutil.rmtree(path) if path.is_dir() and not path.is_symlink() else path.unlink()
+    print(f"removed   {len(found)} paths ({total / 2**20:.0f} MiB)")
 
 
 def rule_for(check: str, match: str, line: str, relative: Path) -> Rule | None:
     """The allow-rule that explains this match, if any."""
     for rule in RULES:
-        if rule.check != check or not rule.pattern.search(match):
+        if rule.check not in (check, "*") or not rule.pattern.search(match):
             continue
         if rule.only_in is not None and not rule.only_in.search(relative.as_posix()):
             continue
@@ -256,15 +316,22 @@ def rule_for(check: str, match: str, line: str, relative: Path) -> Rule | None:
     return None
 
 
-def scan(staging: Path) -> tuple[list[str], Counter[Rule]]:
-    """Unexplained matches (`path:line: check: match`) and how often each rule allowed one."""
+def scan(staging: Path) -> tuple[list[str], Counter[Rule], Counter[str]]:
+    """Unexplained matches and binaries (`path:line: check: match`), how often each rule
+    allowed a match, and how many binaries each ALLOWED_BINARIES reason covers."""
     findings: list[str] = []
     allowed: Counter[Rule] = Counter()
+    binaries: Counter[str] = Counter()
     for path in sorted(p for p in staging.rglob("*") if p.is_file()):
         relative = path.relative_to(staging)
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
+            why = next((w for pattern, w in ALLOWED_BINARIES if pattern.search(relative.as_posix())), None)
+            if why is None:
+                findings.append(f"{relative}: binary file")
+            else:
+                binaries[why] += 1
             continue
         for number, line in enumerate(text.splitlines(), 1):
             for check, pattern in CHECKS.items():
@@ -274,7 +341,7 @@ def scan(staging: Path) -> tuple[list[str], Counter[Rule]]:
                         findings.append(f"{relative}:{number}: {check}: {match.group(0)[:80]}")
                     else:
                         allowed[rule] += 1
-    return findings, allowed
+    return findings, allowed, binaries
 
 
 def copy(files: list[Path], source: Path, target: Path) -> None:
@@ -328,7 +395,7 @@ def add_capture(spec: str, staging: Path) -> dict[str, object]:
     return {"service": service, "path": target.as_posix(), "source": source.name, "files": len(files)}
 
 
-def review(manifest: dict[str, object], allowed: Counter[Rule]) -> str:
+def review(manifest: dict[str, object], allowed: Counter[Rule], binaries: Counter[str]) -> str:
     """EXPORT-REVIEW.md: what the export holds and why what looks private isn't."""
     lines = [
         "# Export review",
@@ -362,6 +429,8 @@ def review(manifest: dict[str, object], allowed: Counter[Rule]) -> str:
             "|---|---|---|",
         ]
         lines += [f"| {where} | {was} | {now} |" for where, was, now in CAPTURE_EDITS]
+    lines += ["", "## Binary files", "", "| Files | Why they're allowed |", "|---|---|"]
+    lines += [f"| {count} | {why} |" for why, count in binaries.items()] or ["| 0 | — |"]
     lines += ["", "## Left out", "", "| What | Why |", "|---|---|"]
     lines += [f"| {what} | {why} |" for what, why in LEFT_OUT]
     lines += [
@@ -420,13 +489,13 @@ def export(out: Path, captures: Sequence[str], clean: bool, session: str | None)
         manifest["captures"] = [add_capture(spec, staging) for spec in captures]
         for capture in manifest["captures"]:  # type: ignore[union-attr]
             print(f"captured  {capture['path']} ({capture['files']} files)")
-        findings, allowed = scan(staging)
+        findings, allowed, binaries = scan(staging)
         if findings:
             print("\n".join(findings))
             raise SystemExit(f"\n{len(findings)} unexplained private-data match(es); nothing written.")
         print(f"scanned   {sum(allowed.values())} allowed matches, none unexplained")
         (staging / MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n")
-        (staging / REVIEW).write_text(review(manifest, allowed))
+        (staging / REVIEW).write_text(review(manifest, allowed, binaries))
         empty(out, clean)
         out.mkdir(parents=True, exist_ok=True)
         for item in staging.iterdir():
@@ -458,6 +527,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
     parser.add_argument("--session", help="PLAN.md session for SANDBOX-PLAN.md (default: next unchecked)")
+    parser.add_argument("--yes", action="store_true", help="remove untracked files and build output unasked")
     args = parser.parse_args(argv)
     out = args.out.expanduser().resolve()
     if out == GLUON or GLUON in out.parents:
@@ -467,6 +537,7 @@ def main(argv: Sequence[str]) -> int:
         captures += [spec for spec in found_captures() if spec not in captures]
     if out.exists() and any(out.iterdir()) and not args.clean and not (out / MANIFEST).is_file():
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
+    clean([GLUON, *(GLUON / r for r in EXPORT_REPOS)], args.yes)
     export(out, captures, args.clean, args.session)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:
