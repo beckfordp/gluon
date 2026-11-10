@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Minimal local Alertmanager (ADM-4). The null receiver intentionally drops
 # notifications: alerts are visible in the Prometheus and Alertmanager UIs,
 # which is what the local demo needs. Add a receiver (webhook/Slack/email)

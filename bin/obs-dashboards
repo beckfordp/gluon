@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Generate the gluon Grafana dashboards from code (ADR 0027,
 # infra/k8s/observability/dashboards/). Grafana provisions the committed JSON
 # with allowUiUpdates: false, so this is the only way to change a dashboard.

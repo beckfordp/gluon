@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Filebeat DaemonSet: gluon-local container logs -> Elasticsearch
 # gluon-logs-* (PLAN.md PERF-3.2). Per line:
 #   - JSON app logs (logback LogstashEncoder) become fields, incl. MDC

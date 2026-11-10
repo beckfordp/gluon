@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Elasticsearch + Kibana for gluon-local logs (PLAN.md PERF-3.2), same
 # versions and single-node, security-off shape as purerest's
 # docker-compose observability profile. Filebeat (filebeat.yaml) ships to

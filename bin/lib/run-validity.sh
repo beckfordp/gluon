@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Run-validity evaluation for bin/run-perf (PLAN.md PERF-2.4, laptop-budget
 # rules). Source it, then call `run_validity_evaluate <samples-dir>`.
 #

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Single-node, KRaft-mode broker — local-dev-only, mirrors the KRaft config
 # every service's own docker-compose.yml already uses (e.g.
 # services/inventory-service/docker-compose.yml), with one deliberate

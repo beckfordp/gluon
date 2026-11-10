@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Single Kafka Connect worker, running the Debezium Postgres connector
 # plugin (bundled in the debezium/connect image, no custom Dockerfile) —
 # local-dev-only, mirrors kafka.yaml's single-broker/single-worker shape.

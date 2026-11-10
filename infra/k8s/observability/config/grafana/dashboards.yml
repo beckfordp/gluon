@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Grafana dashboard provider (grafana.yaml): one subdirectory per folder
 # (1-Overview, 2-Services, 3-Platform — ADR 0027), each mounted from its own
 # grafana-dashboards-* ConfigMap; subdirectory names become Grafana folders.

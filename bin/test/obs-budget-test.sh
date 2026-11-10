@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Fixture tests for bin/lib/obs-budget.sh (PERF-3.4): pod lists as
 # `kubectl get pods -o json` returns them, checked against the observability
 # stack's 3.5Gi share and the namespace's 15Gi (16Gi minus Gatling's 1Gi).

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Tempo for gluon-local (ADR 0021, PLAN.md PERF-5.3): single binary, local
 # disk, 1-day retention. Services export OTLP over HTTP (:4318; purerest
 # 0.10.0 has no gRPC sender); Grafana queries :3200.

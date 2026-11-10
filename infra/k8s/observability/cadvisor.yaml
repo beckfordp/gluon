@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # cAdvisor for pod CPU, memory and CFS throttling (PLAN.md PERF-3.3, Q2/Q6).
 #
 # Not the kubelet's built-in cAdvisor: OrbStack's node runs Docker via

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Run the Playwright acceptance suite (PLAN.md ACC-6.2, ADR 0020) against
 # gluon-local: gshop driven in Chromium against the real services.
 #

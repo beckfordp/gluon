@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Thin wrapper around tools/codegen so callers don't need the sbt incantation.
 # Applies a field-spec to an already-generated service directory.
 #

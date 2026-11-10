@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 image:
   repository: cart-service
   tag: latest

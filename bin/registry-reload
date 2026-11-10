@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Load the committed registry/ export into the local cluster's Apicurio
 # (TD-18). Rebuilds the apicurio-registry-export ConfigMap from
 # registry/<producer>/registry.json plus bin/registry-restore (the sidecar

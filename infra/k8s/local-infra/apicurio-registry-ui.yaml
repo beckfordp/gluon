@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Apicurio Registry's web console (ADR 0003's Rework 5 follow-up) - a
 # genuinely separate container image from the backend in Apicurio 3.x, not
 # bundled into one image at all (confirmed via Apicurio's own docs/GitHub);

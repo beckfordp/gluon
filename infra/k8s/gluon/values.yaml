@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Defaults for the generic Gluon workload chart. Every real value below is
 # overridden per workload by its own small values fragment under
 # gluon/environments/<env>/<name>.values.yaml — nothing workload-specific

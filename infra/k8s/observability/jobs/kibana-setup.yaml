@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # One-shot Kibana setup (PLAN.md PERF-3.2), as purerest's compose
 # `kibana-setup`: Kibana has no file-based provisioning, so the gluon-logs
 # data view, default index and a saved search go in through its API.

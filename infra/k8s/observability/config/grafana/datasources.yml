@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Grafana datasource provisioning (grafana.yaml). uid `prometheus` is what
 # every dashboard in dashboards/ references.
 apiVersion: 1

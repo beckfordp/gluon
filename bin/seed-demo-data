@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # DEMO ONLY. Seeds gshop's demo customers and orders through the services'
 # public APIs, the same style as catalog-service's scripts/seed-watches.sh.
 # Never run this against a shared/production environment.

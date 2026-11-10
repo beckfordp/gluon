@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Shared builders for the gluon dashboards (ADR 0027).
 
 Every dashboard is `dashboard(...)` over rows of panels from `ts`/`stat`/

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Generate all six Gluon services in one run, applying each one's
 # field-spec where it has one (via bin/generate-service). Sequential,
 # stops on the first failure — including bin/generate-service's own

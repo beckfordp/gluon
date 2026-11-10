@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # DEMO ONLY (ADM-9). Live end-to-end check of the Admin console's backend on
 # the local gluon-local cluster, through the same public APIs gshop's
 # Operations console calls. Never run against a shared/production cluster.

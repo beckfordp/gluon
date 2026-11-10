@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Minimal Alertmanager for the opt-in observability stack (ADM-4). Pairs with
 # rule_files in config/prometheus.yml; the null receiver means alerts are
 # visible in the UI but not delivered anywhere.

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Tempo for gluon-local (ADR 0021, PLAN.md PERF-5.3), in every bin/obs
 # profile. Config in config/tempo.yaml (configMapGenerator). Traces live on
 # an emptyDir: a restart loses them, as Prometheus's do.

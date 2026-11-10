@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # kube-state-metrics for gluon-local only (PLAN.md PERF-3.3, Q2/Q6):
 # restarts, last-terminated reason (OOMKilled), requests/limits, and
 # kube_pod_info's `uid`, which joins cAdvisor's `pod_uid` to pod names.

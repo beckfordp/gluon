@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Laptop-budget check for the observability stack (PLAN.md PERF-3.4). Source
 # it, then call `obs_budget_evaluate <pods.json>` with the output of
 # `kubectl -n gluon-local get pods -o json`.

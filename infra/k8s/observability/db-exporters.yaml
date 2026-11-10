@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Postgres and Redis exporters (PLAN.md PERF-3.1), one multi-target
 # exporter each rather than one per instance (7 Postgres + 3 Redis would be
 # 10 pods). Prometheus passes the instance as ?target= (config/prometheus.yml)

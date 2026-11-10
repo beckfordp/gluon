@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Registers the four per-service outbox connectors against the Kafka
 # Connect worker (kafka-connect.yaml) via its REST API - Debezium has no
 # manifest-based way to declare a connector, only POST /connectors, so a

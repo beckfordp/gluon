@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Hourly housekeeping for each service's outbox_events table (ADR 0008).
 # Purely time-based, not consumption-tracked - Debezium reads the WAL,
 # not this table's current contents, so a row's job is done the instant

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Generate the gluon Grafana dashboards (ADR 0027).
 
     python generate.py            # write JSON into config/grafana/dashboards/<folder>/

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Checks inventory's reservation invariant on gluon-local (TD-24): every SKU's
 # quantity_reserved equals the sum of its `active` order_reservations lines.
 # Prints each drifted SKU and exits 1 if any; exits 0 when consistent.

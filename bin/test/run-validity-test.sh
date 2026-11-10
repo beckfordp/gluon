@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Fixture tests for bin/lib/run-validity.sh (PERF-2.4): one valid run, then
 # one run breaking each rule. Each case builds a samples dir and asserts the
 # exit status (0 valid, 3 invalid) and which rule validity.txt flags.

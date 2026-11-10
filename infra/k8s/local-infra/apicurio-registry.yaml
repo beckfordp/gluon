@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Apicurio Registry (ADR 0003's Rework 5): compatibility-check backend for
 # each Kafka event's JSON Schema, derived from the same tapir `Schema[T]`
 # already used for AsyncAPI generation (ADR 0010). Checked/registered at

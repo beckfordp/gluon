@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Broker-side Kafka consumer-group lag per topic/partition (PLAN.md
 # PERF-3.1, Q3/Q14): cross-checks purekafka's own in-process lag gauge.
 # Kafka Connect/Debezium metrics come from Connect's JMX agent instead

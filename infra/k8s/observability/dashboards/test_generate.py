@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Generator tests (ADR 0027): run with `bin/obs-dashboards --test`."""
 import json
 import re

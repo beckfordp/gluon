@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Run one Gatling simulation in-cluster (PLAN.md PERF-2.2, ADR 0019 §2) as a
 # k8s Job in gluon-local, then copy its results to local disk. Port-forwards
 # bottleneck real load, so only smoke checks use them.

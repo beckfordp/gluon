@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Filebeat config for filebeat.yaml (see its header for what each step is
 # for). A configMapGenerator in kustomization.yaml, so edits roll the
 # DaemonSet on `bin/obs up`.

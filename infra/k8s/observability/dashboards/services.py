@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Level 2 — one templated Service dashboard plus the two journey dashboards (≤20 panels each)."""
 from lib import R, about, dashboard, service_var, stat, timeline, to_service, ts
 

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Level 1 — Christmas Rush: is the order journey healthy right now? (≤12 panels)"""
 from lib import POD_JOIN, R, SERVICE_PODS, about, dashboard, stat, to_dashboard, to_pod, to_service, ts
 

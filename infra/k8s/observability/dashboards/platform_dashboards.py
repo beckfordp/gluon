@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 """Level 3 — platform (USE: utilisation, saturation, errors) dashboards (≤20 panels each)."""
 from lib import POD_JOIN, R, about, dashboard, pod_var, service_var, stat, timeline, to_service, ts
 

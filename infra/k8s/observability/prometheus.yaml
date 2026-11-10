@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Prometheus for gluon-local (PLAN.md PERF-3.1). Scrapes:
 #   - every service, found by Kubernetes service discovery on an
 #     EndpointSlice port named `metrics` (infra/k8s/gluon's Service already

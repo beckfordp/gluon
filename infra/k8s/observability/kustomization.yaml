@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Opt-in observability stack for gluon-local (PLAN.md Performance 3,
 # PERF-3.1–3.4, PERF-5.3): Prometheus + exporters, Elasticsearch/Kibana/Filebeat,
 # Grafana, Tempo. Managed by bin/obs up|down, never by bin/k8s-local-up — it costs

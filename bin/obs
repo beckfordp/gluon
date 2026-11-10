@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Opt-in observability stack for gluon-local (PLAN.md PERF-3.1–3.4, PERF-5.3):
 # Prometheus + exporters, Elasticsearch/Kibana/Filebeat, Grafana, Tempo. Kept out
 # of bin/k8s-local-up because it costs ~3.3Gi of the 16Gi laptop budget

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Grafana for gluon-local (PLAN.md PERF-3.3). Datasource and dashboards are
 # provisioned from files in config/grafana/ (configMapGenerators in
 # kustomization.yaml, so a regenerated dashboard rolls Grafana on

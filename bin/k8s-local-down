@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # Tear down everything bin/k8s-local-up deployed — all 6 service Helm
 # releases, the shared local infra, and the gluon-local namespace itself.
 set -euo pipefail
