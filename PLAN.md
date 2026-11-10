@@ -2395,7 +2395,7 @@ Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
 
 **Done when:** both repos' `scripts/ci.sh` PASS; `verify-yaml-content-type.sh`
 and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
-(129/129).
+(128/128).
 
 ### RPN-1 — Capture into the harness
 
@@ -2432,7 +2432,7 @@ lists every criterion NOT MET or LAPTOP; its own test shows the exit codes.
       move `telemetry` there, user-service-rs depends on it by path; add the
       repo to `SANDBOX_REPOS`
 
-**Done when:** both repos' `ci.sh` PASS; the harness 129/129 against
+**Done when:** both repos' `ci.sh` PASS; the harness 128/128 against
 user-service-rs.
 
 ### RPN-4 — Consumer pieces to `lib/gluon-rs`
@@ -2442,7 +2442,7 @@ user-service-rs.
 - [ ] RPN-4 — move the probe's envelope handling, DLQ, stream supervisor and
       lag into a `gluon-kafka` crate; the probe uses it
 
-**Done when:** both `ci.sh` PASS; probe group 10/10; harness 129/129.
+**Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
 
 ### RPN-5 — Harness for more than one service
 
