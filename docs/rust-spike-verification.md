@@ -59,7 +59,7 @@ It prints each step's result as it finishes, then the criteria table with
 | `harness-ci` | `tests/contract/scripts/ci.sh` | ruff, `mypy --strict`, unit and integration tests (runner, OTLP stub, Postgres, CDC stack, broker outage, switch rehearsal, cluster mode), coverage ≥ 80% | C1, C3 |
 | `rust-ci` | `services/user-service-rs/scripts/ci.sh` | fmt, clippy `-D warnings`, all tests (incl. the payload schema equal to `registry/user-service/registry.json`), coverage ≥ 80%; cargo-audit prints `SKIP` in the sandbox (its database is on GitHub), and on the laptop fails on three advisories (user-service-rs backlog) | C1 |
 | `build` | `cargo build` of the service and the probe; `scripts/asyncapi-html.sh` | builds; the AsyncAPI HTML rendered | — |
-| `contract` | `pytest checks` against the Rust build, every group in one session (the CDC stack and a broker start on demand) | all 129 checks green; the summary line shows each group's count | C1, C8 (families), C10 |
+| `contract` | `pytest checks` against the Rust build, every group in one session (the CDC stack and a broker start on demand) | all 128 checks green; the summary line shows each group's count | C1, C8 (families), C10 |
 | `tracks` | every track's `scripts/verify-*.sh` in both repos (listed below) | each ends `PASS` | C1, C10 |
 | `laptop-prep` | `bin/verify-laptop-prep` | the switch's control flow (stand-in docker/kubectl/helm/sbt), `reset-data`'s SQL on a real Postgres, the values file, the Dockerfile's build steps run natively (release build, HTML equal to the Scala build's) | prepares C3–C8 |
 

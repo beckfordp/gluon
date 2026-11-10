@@ -2363,8 +2363,8 @@ service, which stays the default. Built in the sandbox in **sessions**
 [`docs/rust-spike-findings.md`](./docs/rust-spike-findings.md).
 
 **Session rules:**
-- About an hour each, 3–4 turns with the sandbox model; never more than two
-  hours. A session that runs over is split at its first green check.
+- About an hour each, at least 5 turns with the sandbox model; never more
+  than two hours. A session that runs over is split at its first green check.
 - Each session's check is written first and seen failing for the stated
   reason, then turned green. "Done when" names the script that prints `PASS`.
 - Each session ends with a review, a commit in its repo (a conductor track,
