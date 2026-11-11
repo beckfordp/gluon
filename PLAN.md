@@ -2369,7 +2369,8 @@ service, which stays the default. Built in the sandbox in **sessions**
 - Each session's check is written first and seen failing for the stated
   reason, then turned green. "Done when" names the script that prints `PASS`.
 - Each session ends with a review, a commit in its repo (a conductor track,
-  newTrack → implement → review → archive) and `bin/sandbox-save`.
+  newTrack → implement → review → archive; `tests/contract` commits directly,
+  no track) and `bin/sandbox-save`.
 - `bin/sandbox-export --session RPN-N` copies only the current session's plan
   to the sandbox, as `SANDBOX-PLAN.md`; `PLAN.md` itself doesn't travel.
 - The sandbox has no Scala, Docker, Kubernetes or GitHub; anything needing
@@ -2426,13 +2427,12 @@ not for listed ones; and `--session` picks RPN-1 once this is ticked.
 
 ### RPN-1 — Capture into the harness
 
-**Repos:** `tests/contract`. **Time:** ~1.5 hours.
+**Repos:** `tests/contract`. **Time:** ~1 hour.
 
-- [ ] RPN-1 — commit `contracts/notification-service/20261111` (recaptured
-      2026-11-11 after RPN-0's commit was lost: `PROVENANCE.md` and a
-      ruff-clean `stub.py` now come with the capture) and
-      `CAPTURE.md` (from `CAPTURE.sh`); decode the OTLP
-      exports to JSON beside the raw bodies; start
+- [ ] RPN-1 — the capture `contracts/notification-service/20261111` and its
+      `CAPTURE.md` are committed on the laptop (recaptured 2026-11-11 after
+      RPN-0's commit was lost); write `scripts/verify-ns-capture.sh`; decode
+      the OTLP exports to JSON beside the raw bodies; start
       `docs/implicit-behaviours.md` entries for notification-service (first
       one: `/health/ready` hangs while Postgres is paused, 503 when it is
       stopped)
@@ -2442,7 +2442,7 @@ not for listed ones; and `--session` picks RPN-1 once this is ticked.
 `scripts/verify-ns-capture.sh` (every `http/*.txt` parses as an exchange,
 every OTLP body decodes, every `.jsonl` line is JSON, the DLQ dumps parse, and
 `sent_email` rows match the capture's scenario list); the capture,
-`CAPTURE.md` and each OTLP body's decoded `.json` committed; the
+`CAPTURE.md` (already in) and each OTLP body's decoded `.json` committed; the
 implicit-behaviours entry; nothing uncommitted.
 
 ### RPN-L0 — Create notification-service-rs
