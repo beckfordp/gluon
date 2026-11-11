@@ -2397,24 +2397,31 @@ Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
 and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
 (128/128).
 
-### RPN-0.1 — Export everything, warn on unsaved repos
+### RPN-0.1 — Export the ports, warn on unsaved repos
 
 **Laptop.** **Repos:** `gluon` (`bin/`, `docs/`). **Time:** ~1 hour.
 From the RPN-0 retro: a hand-picked export left out `services/user-service`
 and four checks failed for it.
 
-- [ ] RPN-0.1 — `bin/sandbox-export` exports every nested repo under
-      `NESTED_REPO_DIRS` instead of the fixed `EXPORT_REPOS` (scan allow-rules
-      as the first full run needs them); `bin/sandbox-save` warns about any git
-      repo under gluon not in `SANDBOX_REPOS`; `SESSION_HEADING` accepts
-      dotted sessions (`RPN-0.1`); `docs/sandbox.md` updated, incl. the import
-      flow now that all work is on `main`: fetch the bundle into a local
+- [ ] RPN-0.1 — `bin/sandbox-export` derives its repos from a `PORTS` table
+      in `bin/lib/sandbox.py` (Scala service → Rust service: `user-service`,
+      `notification-service`) plus the shared repos (`tests/contract`,
+      `lib/purerest`), replacing the hand-picked `EXPORT_REPOS`; a Rust
+      service is exported once it exists on the laptop; exported files are
+      checked for paths to nested repos the export leaves out (warned, listed
+      in `EXPORT-REVIEW.md`, allow-list for laptop-only scripts);
+      `structure101-settings.java.hsw` gitignored; `bin/sandbox-save` warns
+      about any git repo under gluon not in `SANDBOX_REPOS`; `SESSION_HEADING`
+      accepts dotted sessions (`RPN-0.1`); `docs/sandbox.md` updated, incl. the
+      import flow now that all work is on `main`: fetch the bundle into a local
       `sandbox-import` branch, rebase, review, `--ff-only` into `main`, push,
       delete the branch (never pushed)
 
 **Done when:** `bin/verify-complete-RPN-0.1.sh` PASS: an export carries every
-nested repo, `sandbox-save` prints the warning for an unlisted git repo and
-not for listed ones, and `--session` picks RPN-1 once this is ticked.
+repo `PORTS` names (that exists) and the shared repos, and no other; the
+reference check warns for an unexported repo path and not for an exported or
+allowed one; `sandbox-save` prints the warning for an unlisted git repo and
+not for listed ones; and `--session` picks RPN-1 once this is ticked.
 
 ### RPN-1 — Capture into the harness
 
