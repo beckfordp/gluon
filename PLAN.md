@@ -2407,7 +2407,10 @@ and four checks failed for it.
       `NESTED_REPO_DIRS` instead of the fixed `EXPORT_REPOS` (scan allow-rules
       as the first full run needs them); `bin/sandbox-save` warns about any git
       repo under gluon not in `SANDBOX_REPOS`; `SESSION_HEADING` accepts
-      dotted sessions (`RPN-0.1`); `docs/sandbox.md` updated
+      dotted sessions (`RPN-0.1`); `docs/sandbox.md` updated, incl. the import
+      flow now that all work is on `main`: fetch the bundle into a local
+      `sandbox-import` branch, rebase, review, `--ff-only` into `main`, push,
+      delete the branch (never pushed)
 
 **Done when:** `bin/verify-complete-RPN-0.1.sh` PASS: an export carries every
 nested repo, `sandbox-save` prints the warning for an unlisted git repo and
