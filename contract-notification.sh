@@ -18,10 +18,27 @@ KC=nscap-kafka; PG=nscap-pg
 : "${GITHUB_TOKEN:=$(gh auth token)}"; : "${GITHUB_ACTOR:=beckfordp}"
 export GITHUB_TOKEN GITHUB_ACTOR
 
-{ echo "notification-service commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)";
-  echo "dirty: $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') files";
-  echo "captured: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; java -version 2>&1 | head -1;
-  echo "kafka image: apache/kafka:3.8.0; postgres image: postgres:16"; } > "$OUT/PROVENANCE.txt"
+{ echo "# Provenance — notification-service capture $(basename "$OUT" | sed 's/.*-//')"
+  echo
+  echo "Produced on the laptop by \`CAPTURE.sh\` (this directory; ADR 0029, the"
+  echo "notification-service port): the Scala service staged and run against fresh"
+  echo "Kafka and Postgres containers and \`stub.py\`, every consumer path driven."
+  echo
+  echo '```'
+  echo "notification-service commit: $(git rev-parse HEAD 2>/dev/null || echo unknown)"
+  echo "dirty: $(git status --porcelain 2>/dev/null | wc -l | tr -d ' ') files"
+  echo "captured: $(date -u +%Y-%m-%dT%H:%M:%SZ)"; java -version 2>&1 | head -1
+  echo "kafka image: apache/kafka:3.8.0; postgres image: postgres:16"
+  echo '```'
+  echo
+  echo "## Notes"
+  echo
+  echo "- Kafka and Postgres were created empty for the capture and removed after,"
+  echo "  so every row, offset and id here is throwaway example data."
+  echo "- The users and orders are \`stub.py\`'s fixtures (\`example.com\` addresses)."
+  echo "- The DLQ records under \`kafka/\` are the capture's deliberate failure"
+  echo "  paths (undecodable envelopes and payloads, the always-500 user lookup),"
+  echo "  not faults."; } > "$OUT/PROVENANCE.md"
 
 # 1. Build: compile first (cold stage races the AsyncAPI generator)
 sbt clean compile stage
@@ -67,52 +84,105 @@ cat > "$OUT/stub.py" <<'PY'
 # SPDX-License-Identifier: MIT
 # Stand-in user-service / order-service / OTLP receiver for the capture.
 # Every request is appended to requests.jsonl; trace exports are kept raw.
-import json, sys, threading, time
+import json
+import sys
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 out = sys.argv[1]
 U_OK, U_GONE, U_FLAKY = sys.argv[2:5]
 O_CUST, O_GUEST, O_NOGUEST, O_GONE = sys.argv[5:9]
-users = {U_OK: (200, {"userId": U_OK, "email": "ada@example.com", "createdAt": "2026-11-01T09:00:00Z"}),
-         U_GONE: (404, {"error": "User not found"}), U_FLAKY: (500, None)}
+users = {
+    U_OK: (200, {"userId": U_OK, "email": "ada@example.com", "createdAt": "2026-11-01T09:00:00Z"}),
+    U_GONE: (404, {"error": "User not found"}),
+    U_FLAKY: (500, None),
+}
+
+
 def order(oid, cust, guest):
-    return (200, {"orderId": oid, "customerId": cust, "guestEmail": guest, "status": "confirmed",
-                  "totalCents": 4999, "items": [], "createdAt": "2026-11-01T10:00:00Z"})
-orders = {O_CUST: order(O_CUST, U_OK, None), O_GUEST: order(O_GUEST, U_GONE, "guest@example.com"),
-          O_NOGUEST: order(O_NOGUEST, U_GONE, None), O_GONE: (404, {"error": "Order not found"})}
-lock = threading.Lock(); n = [0]
+    return (
+        200,
+        {
+            "orderId": oid,
+            "customerId": cust,
+            "guestEmail": guest,
+            "status": "confirmed",
+            "totalCents": 4999,
+            "items": [],
+            "createdAt": "2026-11-01T10:00:00Z",
+        },
+    )
+
+
+orders = {
+    O_CUST: order(O_CUST, U_OK, None),
+    O_GUEST: order(O_GUEST, U_GONE, "guest@example.com"),
+    O_NOGUEST: order(O_NOGUEST, U_GONE, None),
+    O_GONE: (404, {"error": "Order not found"}),
+}
+lock = threading.Lock()
+n = [0]
+
+
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    def log_message(self, *a): pass
+
+    def log_message(self, *a):
+        pass
+
     def record(self, body):
-        with lock:
-            with open(f"{out}/requests.jsonl", "a") as f:
-                f.write(json.dumps({"at": time.time(), "method": self.command, "path": self.path,
-                                    "headers": [[k, v] for k, v in self.headers.items()],
-                                    "body_bytes": len(body)}) + "\n")
+        entry = {
+            "at": time.time(),
+            "method": self.command,
+            "path": self.path,
+            "headers": [[k, v] for k, v in self.headers.items()],
+            "body_bytes": len(body),
+        }
+        with lock, open(f"{out}/requests.jsonl", "a") as f:
+            f.write(json.dumps(entry) + "\n")
+
     def reply(self, code, body, ctype="application/json"):
-        data = b"" if body is None else (body if isinstance(body, bytes) else json.dumps(body).encode())
+        if body is None:
+            data = b""
+        else:
+            data = body if isinstance(body, bytes) else json.dumps(body).encode()
         self.send_response(code)
-        if data: self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(data))); self.end_headers(); self.wfile.write(data)
+        if data:
+            self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         self.record(b"")
         parts = self.path.split("?")[0].strip("/").split("/")
         table = {"users": users, "orders": orders}.get(parts[0]) if len(parts) == 2 else None
-        if table is None: return self.reply(404, None)
+        if table is None:
+            return self.reply(404, None)
         # Unknown ids: 400 for a non-UUID (as user-service does), else 404.
-        code, body = table.get(parts[1], (400, {"error": "Invalid id"}) if len(parts[1]) != 36 else (404, None))
+        unknown = (400, {"error": "Invalid id"}) if len(parts[1]) != 36 else (404, None)
+        code, body = table.get(parts[1], unknown)
         self.reply(code, body)
+
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         self.record(body)
         if self.path == "/v1/traces":
+            ext = "json" if "json" in self.headers.get("Content-Type", "") else "pb"
             with lock:
-                n[0] += 1; ext = "json" if "json" in self.headers.get("Content-Type", "") else "pb"
-                open(f"{out}/otlp/{n[0]:04d}.{ext}", "wb").write(body)
+                n[0] += 1
+                with open(f"{out}/otlp/{n[0]:04d}.{ext}", "wb") as f:
+                    f.write(body)
             return self.reply(200, b"", "application/x-protobuf")
         self.reply(404, None)
+
+
 ThreadingHTTPServer(("127.0.0.1", 18090), H).serve_forever()
 PY
+# The capture is committed to tests/contract, whose CI lints it.
+(cd "$(dirname "$SELF")/tests/contract" && uv run ruff check "$OUT/stub.py" \
+  && uv run ruff format --check "$OUT/stub.py")
 python3 "$OUT/stub.py" "$OUT" "$U_OK" "$U_GONE" "$U_FLAKY" "$O_CUST" "$O_GUEST" "$O_NOGUEST" "$O_GONE" &
 STUBPID=$!
 
