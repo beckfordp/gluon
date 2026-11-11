@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Export gluon and the repos a sandbox task needs, for upload (docs/sandbox.md).
+"""Export gluon and the repos the sandbox ports need, for upload (docs/sandbox.md).
 
 Laptop side; the reverse of bin/sandbox-save. Re-runnable: with no arguments it
 replaces the previous export in DEFAULT_OUT and writes DEFAULT_OUT.tar.gz.
+
+The nested repos exported are bin/lib/sandbox.py's SHARED_REPOS and both sides of
+each of its PORTS (the Rust side once it exists on the laptop). Exported files
+naming another nested repo are listed as warnings: a script the sandbox runs may
+need that repo too.
 
 The export holds each repo's tracked files as committed: no .git, no build
 output, nothing untracked, and none of EXPORT_EXCLUDES. Every repo must be
@@ -48,7 +53,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, NESTED_REPO_DIRS, PLATFORM_EXCLUDES
+from sandbox import GLUON, NESTED_REPO_DIRS, PLATFORM_EXCLUDES, export_repos, git_repos
 
 DEFAULT_OUT = GLUON.parent / "sandbox" / "workspace" / "gluon"
 """Where the upload is staged on the laptop."""
@@ -60,8 +65,8 @@ SANDBOX_PLAN = "SANDBOX-PLAN.md"
 PLAN_SECTION = "## Rust Port — notification-service"
 """The PLAN.md section whose sessions run in the sandbox."""
 
-SESSION_HEADING = re.compile(r"^### (RPN-[\w]+) — ", re.M)
-"""A session's heading in that section; laptop sessions are `RPN-L…`."""
+SESSION_HEADING = re.compile(r"^### (RPN-[\w.]+) — ", re.M)
+"""A session's heading in that section (`RPN-1`, `RPN-0.1`); laptop sessions are `RPN-L…`."""
 
 LOCAL_ONLY = frozenset({Path("contract.sh"), Path("contract-notification.sh")})
 """Untracked gluon files allowed at export: the laptop capture scripts, which travel
@@ -69,18 +74,6 @@ inside their captures as CAPTURE.sh."""
 
 NOT_EXPORTED = frozenset({Path("PLAN.md")})
 """gluon files that stay on the laptop: the sandbox gets SANDBOX_PLAN instead."""
-
-EXPORT_REPOS = (
-    Path("tests") / "contract",
-    Path("services") / "user-service-rs",
-    Path("services") / "user-service",
-    Path("services") / "notification-service",
-    Path("lib") / "purerest",
-)
-"""Nested repos exported beside gluon's own files: the harness, the Rust service, the
-Scala user-service it replaces (the harness's schema check applies its migrations;
-bin/verify-laptop-prep switches bin/k8s-local-up back to it), the service being
-ported, and purerest/purekafka as the reference for the shared layer."""
 
 EXPORT_EXCLUDES = PLATFORM_EXCLUDES | {".claude", ".bsp", "structure101-settings.java.hsw"}
 """Names never exported: VCS data, build output, editor and assistant state."""
@@ -164,6 +157,14 @@ ALLOWED_BINARIES = (
 )
 """The only binary files an export may hold; anything else stops it."""
 
+REF_ALLOWED = (
+    (re.compile(r"^bin/(?:codegen|generate-service|run-acceptance|run-perf|reset-data)$"),
+     "Laptop-only scripts: the service generator, the acceptance and perf runners, the full-stack reseed."),
+    (re.compile(r"^(?:bin/lib/obs-budget\.sh|infra/k8s/.*\.ya?ml|lib/purerest/build\.sbt)$"),
+     "Comments pointing at another service as an example."),
+)
+"""Files whose references to repos not exported are known to be harmless, and why."""
+
 BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
 """Build-output directory names offered for removal before an export."""
 
@@ -175,7 +176,7 @@ LEFT_OUT = (
     ("Build output: `target/`, `.bsp/`, `node_modules/`, `.venv/`, `__pycache__/`", "Transient, and `.bsp/sbt.json` holds laptop paths."),
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and assistant state; `.idea` holds laptop paths."),
-    ("Other gluon repos (`frontends/`, `tools/`, the other services)", "Not needed for the notification-service port."),
+    ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
     ("`PLAN.md`", "Replaced by `SANDBOX-PLAN.md`: only the current session's plan travels."),
 )
 """What the export leaves out and why; reproduced in EXPORT-REVIEW.md."""
@@ -347,6 +348,31 @@ def scan(staging: Path) -> tuple[list[str], Counter[Rule], Counter[str]]:
     return findings, allowed, binaries
 
 
+def unexported_refs(staging: Path, exported: Sequence[Path]) -> tuple[list[str], Counter[str]]:
+    """References in non-Markdown files to nested repos not in `exported` (`path:line: repo`),
+    and how many references each REF_ALLOWED reason covers. Prose mentions are left out."""
+    others = [repo.as_posix() for repo in git_repos() if repo not in exported]
+    found: list[str] = []
+    allowed: Counter[str] = Counter()
+    if not others:
+        return found, allowed
+    pattern = re.compile(r"\b(" + "|".join(map(re.escape, others)) + r")\b")
+    for path in sorted(p for p in staging.rglob("*") if p.is_file() and p.suffix != ".md"):
+        relative = path.relative_to(staging).as_posix()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        why = next((w for allowed_file, w in REF_ALLOWED if allowed_file.search(relative)), None)
+        for number, line in enumerate(text.splitlines(), 1):
+            for match in pattern.finditer(line):
+                if why is None:
+                    found.append(f"{relative}:{number}: {match.group(1)}")
+                else:
+                    allowed[why] += 1
+    return found, allowed
+
+
 def copy(files: list[Path], source: Path, target: Path) -> None:
     """Copies `files` (relative to `source`) under `target`, keeping modes."""
     for relative in files:
@@ -398,7 +424,9 @@ def add_capture(spec: str, staging: Path) -> dict[str, object]:
     return {"service": service, "path": target.as_posix(), "source": source.name, "files": len(files)}
 
 
-def review(manifest: dict[str, object], allowed: Counter[Rule], binaries: Counter[str]) -> str:
+def review(
+    manifest: dict[str, object], allowed: Counter[Rule], binaries: Counter[str], ref_allowed: Counter[str]
+) -> str:
     """EXPORT-REVIEW.md: what the export holds and why what looks private isn't."""
     lines = [
         "# Export review",
@@ -434,6 +462,15 @@ def review(manifest: dict[str, object], allowed: Counter[Rule], binaries: Counte
         lines += [f"| {where} | {was} | {now} |" for where, was, now in CAPTURE_EDITS]
     lines += ["", "## Binary files", "", "| Files | Why they're allowed |", "|---|---|"]
     lines += [f"| {count} | {why} |" for why, count in binaries.items()] or ["| 0 | — |"]
+    lines += ["", "## References to repos not exported", ""]
+    refs = manifest["unexported_refs"]
+    if refs:
+        lines += ["Files the sandbox may run that name a repo it doesn't have; check each:", ""]
+        lines += [f"- `{ref}`" for ref in refs]  # type: ignore[union-attr]
+    else:
+        lines += ["None outside the files below."]
+    lines += ["", "| References | Why they're fine |", "|---|---|"]
+    lines += [f"| {count} | {why} |" for why, count in ref_allowed.items()] or ["| 0 | — |"]
     lines += ["", "## Left out", "", "| What | Why |", "|---|---|"]
     lines += [f"| {what} | {why} |" for what, why in LEFT_OUT]
     lines += [
@@ -465,7 +502,8 @@ def review(manifest: dict[str, object], allowed: Counter[Rule], binaries: Counte
 
 def export(out: Path, captures: Sequence[str], clean: bool, session: str | None) -> dict[str, object]:
     """Stages and scans the export, then empties `out` and writes it there; returns its manifest."""
-    repos = [GLUON, *(GLUON / r for r in EXPORT_REPOS)]
+    nested = export_repos()
+    repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
     if unclean:
         lines = "\n".join(f"  {repo}: {change}" for repo, changes in unclean.items() for change in changes)
@@ -497,8 +535,12 @@ def export(out: Path, captures: Sequence[str], clean: bool, session: str | None)
             print("\n".join(findings))
             raise SystemExit(f"\n{len(findings)} unexplained private-data match(es); nothing written.")
         print(f"scanned   {sum(allowed.values())} allowed matches, none unexplained")
+        refs, ref_allowed = unexported_refs(staging, nested)
+        manifest["unexported_refs"] = refs
+        for ref in refs:
+            print(f"warn      {ref}: names a repo not exported")
         (staging / MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n")
-        (staging / REVIEW).write_text(review(manifest, allowed, binaries))
+        (staging / REVIEW).write_text(review(manifest, allowed, binaries, ref_allowed))
         empty(out, clean)
         out.mkdir(parents=True, exist_ok=True)
         for item in staging.iterdir():
@@ -540,7 +582,7 @@ def main(argv: Sequence[str]) -> int:
         captures += [spec for spec in found_captures() if spec not in captures]
     if out.exists() and any(out.iterdir()) and not args.clean and not (out / MANIFEST).is_file():
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
-    clean([GLUON, *(GLUON / r for r in EXPORT_REPOS)], args.yes)
+    clean([GLUON, *(GLUON / r for r in export_repos())], args.yes)
     export(out, captures, args.clean, args.session)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:

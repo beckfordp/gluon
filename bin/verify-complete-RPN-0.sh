@@ -69,9 +69,9 @@ import importlib.machinery, importlib.util, sys
 loader = importlib.machinery.SourceFileLoader("sandbox_export", "bin/sandbox-export")
 module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
 loader.exec_module(module)
-repos = [str(repo) for repo in module.EXPORT_REPOS]
-print("EXPORT_REPOS:", ", ".join(repos))
-sys.exit(0 if "services/user-service" in repos else "services/user-service not in EXPORT_REPOS")'
+repos = [str(repo) for repo in module.export_repos()]
+print("export_repos():", ", ".join(repos))
+sys.exit(0 if "services/user-service" in repos else "services/user-service not in export_repos()")'
 
 # The spike's contract step prints "<green>/<total> green — <groups>"
 GREEN="$(grep -oE '[0-9]+/[0-9]+ green' "$LOGS/rust-spike.log" | tail -n 1 | cut -d' ' -f1)"

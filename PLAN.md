@@ -2403,7 +2403,7 @@ and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
 From the RPN-0 retro: a hand-picked export left out `services/user-service`
 and four checks failed for it.
 
-- [ ] RPN-0.1 — `bin/sandbox-export` derives its repos from a `PORTS` table
+- [x] RPN-0.1 — `bin/sandbox-export` derives its repos from a `PORTS` table
       in `bin/lib/sandbox.py` (Scala service → Rust service: `user-service`,
       `notification-service`) plus the shared repos (`tests/contract`,
       `lib/purerest`), replacing the hand-picked `EXPORT_REPOS`; a Rust

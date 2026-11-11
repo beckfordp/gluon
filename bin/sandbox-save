@@ -14,6 +14,9 @@ Usage:
   bin/sandbox-save [--out DIR]   default DIR: /tmp/outputs
 
 Restore with bin/sandbox-restore <archive>.
+
+A git repo under gluon that isn't in SANDBOX_REPOS isn't saved; it's named in a
+warning at the end, to be added to bin/lib/sandbox.py's PORTS or SANDBOX_REPOS.
 """
 
 import argparse
@@ -27,7 +30,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, SANDBOX_REPOS, platform_files
+from sandbox import GLUON, SANDBOX_REPOS, git_repos, platform_files
 
 
 def git(repo: Path, *args: str) -> str:
@@ -47,6 +50,11 @@ def uncommitted(repo: Path) -> list[str]:
     names = git(repo, "ls-files", "--modified", "--others", "--exclude-standard").splitlines()
     names += git(repo, "diff", "--cached", "--name-only").splitlines()
     return sorted({name for name in names if (repo / name).is_file()})
+
+
+def unsaved(root: Path = GLUON) -> list[Path]:
+    """Git repos under `root` that a save leaves out: not in SANDBOX_REPOS."""
+    return [repo for repo in git_repos(root) if repo not in SANDBOX_REPOS]
 
 
 def save(out_dir: Path) -> Path:
@@ -120,6 +128,8 @@ def main(argv: Sequence[str]) -> int:
     archive = save(args.out)
     size_kib = archive.stat().st_size // 1024
     print(f"\nSaved {archive} ({size_kib} KiB). Restore: bin/sandbox-restore {archive}")
+    for repo in unsaved():
+        print(f"WARN      {repo}: git repo not in SANDBOX_REPOS (bin/lib/sandbox.py); not saved")
     return 0
 
 
