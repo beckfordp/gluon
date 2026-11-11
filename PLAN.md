@@ -2397,6 +2397,22 @@ Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
 and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
 (128/128).
 
+### RPN-0.1 — Export everything, warn on unsaved repos
+
+**Laptop.** **Repos:** `gluon` (`bin/`, `docs/`). **Time:** ~1 hour.
+From the RPN-0 retro: a hand-picked export left out `services/user-service`
+and four checks failed for it.
+
+- [ ] RPN-0.1 — `bin/sandbox-export` exports every nested repo under
+      `NESTED_REPO_DIRS` instead of the fixed `EXPORT_REPOS` (scan allow-rules
+      as the first full run needs them); `bin/sandbox-save` warns about any git
+      repo under gluon not in `SANDBOX_REPOS`; `SESSION_HEADING` accepts
+      dotted sessions (`RPN-0.1`); `docs/sandbox.md` updated
+
+**Done when:** `bin/verify-complete-RPN-0.1.sh` PASS: an export carries every
+nested repo, `sandbox-save` prints the warning for an unlisted git repo and
+not for listed ones, and `--session` picks RPN-1 once this is ticked.
+
 ### RPN-1 — Capture into the harness
 
 **Repos:** `tests/contract`.
