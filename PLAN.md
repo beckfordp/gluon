@@ -2375,7 +2375,7 @@ service, which stays the default. Built in the sandbox in **sessions**
   them waits for the laptop sessions (`RPN-L…`).
 
 **Inputs:** the capture `contracts/notification-service/20261110` (laptop,
-2026-11-10: 20 `sent_email` rows covering every consumer path, 4 dead-lettered
+2026-11-10: 20 `sent_email` rows covering every consumer path, 5 dead-lettered
 records, 13 trace exports, 45 stub lookups, readiness with Postgres paused,
 stopped and back); the Scala sources of notification-service and
 purerest/purekafka (`lib/purerest`), exported read-only.
@@ -2388,7 +2388,7 @@ Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
 
 **Repos:** `services/user-service-rs`, `tests/contract`. **Time:** ~45 min.
 
-- [ ] RPN-0 — confirm the laptop's RUST-5.0 changes hold on Linux:
+- [x] RPN-0 — confirm the laptop's RUST-5.0 changes hold on Linux:
       `docs.yaml` Content-Type without charset, the metrics scope check
       without JVM scopes, and `verify_as_owner`'s BSD `stat` fallback (the
       GNU path must still be taken on Linux)
@@ -2401,7 +2401,9 @@ and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
 
 **Repos:** `tests/contract`.
 
-- [ ] RPN-1 — commit `contracts/notification-service/20261110` with
+- [ ] RPN-1 — first redo RPN-0's commit, lost with its undownloaded save:
+      ruff skips `contracts/` (the capture's `stub.py`); then commit
+      `contracts/notification-service/20261110` with
       `PROVENANCE.md` and `CAPTURE.md` (from `CAPTURE.sh`); decode the OTLP
       exports to JSON beside the raw bodies; start
       `docs/implicit-behaviours.md` entries for notification-service (first

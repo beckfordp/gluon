@@ -73,11 +73,14 @@ NOT_EXPORTED = frozenset({Path("PLAN.md")})
 EXPORT_REPOS = (
     Path("tests") / "contract",
     Path("services") / "user-service-rs",
+    Path("services") / "user-service",
     Path("services") / "notification-service",
     Path("lib") / "purerest",
 )
 """Nested repos exported beside gluon's own files: the harness, the Rust service, the
-service being ported, and purerest/purekafka as the reference for the shared layer."""
+Scala user-service it replaces (the harness's schema check applies its migrations;
+bin/verify-laptop-prep switches bin/k8s-local-up back to it), the service being
+ported, and purerest/purekafka as the reference for the shared layer."""
 
 EXPORT_EXCLUDES = PLATFORM_EXCLUDES | {".claude", ".bsp", "structure101-settings.java.hsw"}
 """Names never exported: VCS data, build output, editor and assistant state."""

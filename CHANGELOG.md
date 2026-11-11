@@ -867,3 +867,12 @@ own line. See each repo's own `git log` for full detail either way.
   `/docs/docs.yaml` is `application/yaml` with no charset (user-service-rs
   changed to match). `tests/contract/scripts/verify-scala-confirmation.sh`
   reruns it; user-service-rs's verify scripts now run on macOS.
+- **RUST-5.0 re-verified on Linux (RPN-0).** In the sandbox: both repos' CI,
+  `docs.yaml` without charset, the metrics scopes, `verify_as_owner`'s GNU
+  `stat` path; `bin/verify-rust-spike --quick` 128/128
+  (`bin/verify-complete-RPN-0.sh`). `bin/sandbox-export` now carries the Scala
+  `services/user-service` too: the schema check applies its migrations and
+  `bin/verify-laptop-prep` switches back to it, and four checks failed without
+  it. The sandbox's `tests/contract` commit (the notification-service capture
+  20261110, its `PROVENANCE.md`, ruff skipping captures) was lost: the session's
+  `bin/sandbox-save` archive was never downloaded. RPN-1 redoes it first.
