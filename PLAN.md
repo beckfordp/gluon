@@ -2437,9 +2437,13 @@ not for listed ones; and `--session` picks RPN-1 once this is ticked.
       one: `/health/ready` hangs while Postgres is paused, 503 when it is
       stopped)
 
-**Done when:** `scripts/verify-ns-capture.sh` PASS: every `http/*.txt`
-parses as an exchange, every OTLP body decodes, every `.jsonl` line is JSON,
-the DLQ dumps parse, and `sent_email` rows match the capture's scenario list.
+**Done when:** `bin/verify-complete-RPN-1.sh` PASS, then it runs
+`bin/sandbox-save` (download the archive): `tests/contract`'s `ci.sh`;
+`scripts/verify-ns-capture.sh` (every `http/*.txt` parses as an exchange,
+every OTLP body decodes, every `.jsonl` line is JSON, the DLQ dumps parse, and
+`sent_email` rows match the capture's scenario list); the capture,
+`CAPTURE.md` and each OTLP body's decoded `.json` committed; the
+implicit-behaviours entry; nothing uncommitted.
 
 ### RPN-L0 — Create notification-service-rs
 
