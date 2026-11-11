@@ -2369,8 +2369,7 @@ service, which stays the default. Built in the sandbox in **sessions**
 - Each session's check is written first and seen failing for the stated
   reason, then turned green. "Done when" names the script that prints `PASS`.
 - Each session ends with a review, a commit in its repo (a conductor track,
-  newTrack → implement → review → archive; `tests/contract` commits directly,
-  no track) and `bin/sandbox-save`.
+  newTrack → implement → review → archive) and `bin/sandbox-save`.
 - `bin/sandbox-export --session RPN-N` copies only the current session's plan
   to the sandbox, as `SANDBOX-PLAN.md`; `PLAN.md` itself doesn't travel.
 - The sandbox has no Scala, Docker, Kubernetes or GitHub; anything needing
@@ -2427,23 +2426,42 @@ not for listed ones; and `--session` picks RPN-1 once this is ticked.
 
 ### RPN-1 — Capture into the harness
 
-**Repos:** `tests/contract`. **Time:** ~1 hour.
+**Repos:** `tests/contract`. **Time:** ~2 hours.
 
-- [ ] RPN-1 — the capture `contracts/notification-service/20261111` and its
-      `CAPTURE.md` are committed on the laptop (recaptured 2026-11-11 after
-      RPN-0's commit was lost); write `scripts/verify-ns-capture.sh`; decode
-      the OTLP exports to JSON beside the raw bodies; start
-      `docs/implicit-behaviours.md` entries for notification-service (first
-      one: `/health/ready` hangs while Postgres is paused, 503 when it is
-      stopped)
+The capture `contracts/notification-service/20261111` and its `CAPTURE.md` are
+already committed (on the laptop, 2026-11-11). One conductor track in
+`tests/contract`; example: `conductor/archive/scala-confirmation_20261110`.
 
-**Done when:** `bin/verify-complete-RPN-1.sh` PASS, then it runs
-`bin/sandbox-save` (download the archive): `tests/contract`'s `ci.sh`;
-`scripts/verify-ns-capture.sh` (every `http/*.txt` parses as an exchange,
-every OTLP body decodes, every `.jsonl` line is JSON, the DLQ dumps parse, and
-`sent_email` rows match the capture's scenario list); the capture,
-`CAPTURE.md` (already in) and each OTLP body's decoded `.json` committed; the
-implicit-behaviours entry; nothing uncommitted.
+- [ ] RPN-1 — goals:
+      - the harness can check a notification-service capture on its own. New:
+        user-service's capture was only checked by being used (its check
+        groups compare against it; `tests/unit/test_contracts.py` checks
+        provenance). Write a module in `src/gluon_contract/` (reusing
+        `capture.parse_exchange`, `otlp.decode_traces`,
+        `cluster.parse_console_line`), unit-tested, and
+        `tests/contract/scripts/verify-ns-capture.sh [capture dir]` (default:
+        the latest notification-service capture) running it. It checks:
+        every `http/*.txt` parses as an exchange (the timed health files: a
+        response, or curl's timeout, exit 28); every OTLP export decodes and
+        its `.json` gives the same spans; every `.jsonl` line is JSON; each
+        DLQ holds the expected records; the `sent_email` rows are exactly a
+        scenario table written from `CAPTURE.sh`'s comments (20 rows; dead
+        letters: user-events `{not json` and event 3, order-events 22 and 50,
+        fulfilment-events 42). `PASS`, or `FAIL` naming the file (relative to
+        the capture) and exit 1. The scenario table is reused by the consumer
+        checks (RPN-10 on)
+      - each OTLP export decoded to readable JSON beside it
+      - `docs/implicit-behaviours.md` started for notification-service: N1,
+        `/health/ready` hangs while Postgres is paused (the Rust port answers
+        503 within 2 s: not contract)
+
+**Done when:** `bin/verify-complete-RPN-1.sh` (written on the laptop) PASS,
+then it runs `bin/sandbox-save` (download the archive): `tests/contract`'s
+`ci.sh`; `verify-ns-capture.sh` PASS on the capture and FAIL, naming the file,
+on three broken copies of it (an `http/*.txt` that is no exchange, an
+`otlp/*.json` whose spans differ from its `.pb`, a `sent_email` row with
+another status); each OTLP export's `.json` committed; the implicit-behaviours
+entry; the track archived; nothing uncommitted.
 
 ### RPN-L0 — Create notification-service-rs
 
