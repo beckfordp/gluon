@@ -2487,15 +2487,19 @@ entry; the track archived; nothing uncommitted.
       migrations (the contract is `sent_email`, not Flyway's history table);
       `/health` 200, `/health/ready` 200 or 503 by a Postgres ping bounded at
       2 s (Scala hangs while Postgres is paused: not contract, recorded in
-      `docs/implicit-behaviours.md`), HEAD 405 as captured; exit 0 on SIGTERM.
-      `scripts/verify-skeleton.sh` reads the capture directly (no harness
-      changes yet)
+      `docs/implicit-behaviours.md`), HEAD 405 as captured; exit 0 on SIGTERM;
+      binary `notification-service`. `scripts/verify-skeleton.sh` reads the
+      capture directly (no harness changes yet). `tests/contract`
+      `docs/implicit-behaviours.md` N2: Scala's `Connection: keep-alive` is
+      hop-by-hop, not contract
 
 **Done when:** `bin/verify-complete-RPN-2.sh` PASS: `ci.sh` PASS; against a
 throwaway `initdb` Postgres, `/health`, `/health/ready` and HEAD match the
-capture's `http/health*.txt` (status, headers bar `Date`, body); Postgres
-stopped → 503, paused (`kill -STOP`) → 503 within 3 s, back → 200;
-`pg_dump -t sent_email` equals the capture's `sent_email` DDL; SIGTERM → exit 0.
+capture's `http/health*.txt` (status, headers bar `Date` and `Connection`, in
+any case and order, body); Postgres stopped → 503, back → 200, paused
+(`kill -STOP`) → 503 within 3 s, resumed → 200; `pg_dump -t sent_email` equals
+the capture's `sent_email` DDL; SIGTERM → exit 0; the N2 entry; the track
+archived; nothing uncommitted. Then it runs `bin/sandbox-save`.
 
 ### RPN-3 — Harness for more than one service
 
