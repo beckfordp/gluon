@@ -2370,8 +2370,9 @@ service, which stays the default. Built in the sandbox in **sessions**
   reason, then turned green. "Done when" names the script that prints `PASS`.
 - Each session ends with a review, a commit in its repo (a conductor track,
   newTrack → implement → review → archive) and `bin/sandbox-save`.
-- `bin/sandbox-export --session RPN-N` copies only the current session's plan
-  to the sandbox, as `SANDBOX-PLAN.md`; `PLAN.md` itself doesn't travel.
+- `bin/sandbox-export --session RPN-N` writes the session, with a scope fence,
+  beside the export as `RPN-N-plan.md`, pasted as the sandbox plan; no
+  plan, backlog or sequence file travels.
 - The sandbox has no Scala, Docker, Kubernetes or GitHub; anything needing
   them waits for the laptop sessions (`RPN-L…`).
 

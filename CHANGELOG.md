@@ -891,3 +891,9 @@ own line. See each repo's own `git log` for full detail either way.
   16/16. `tests/contract` N2: `Connection: keep-alive` is not contract. Built
   on the laptop: the sandbox session didn't run `bin/sandbox-save`, so only its
   plan tick came back.
+- **Sandbox export carries no plans.** The sandbox model ran ahead on
+  plan files. `bin/sandbox-export` no longer ships `SANDBOX-PLAN.md`,
+  `perf-work-sequence.md`, `TECHNICAL_DEBT.md`, read-only repos' `conductor/`,
+  or working repos' `conductor/archive/` and `tracks.md` backlog. The session
+  goes beside the export as `RPN-N-plan.md`, ending in a scope fence, to
+  paste as the sandbox plan.

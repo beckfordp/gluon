@@ -31,8 +31,12 @@ First, untracked files and build output (BUILD_DIRS) in those repos are listed
 and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-PLAN.md stays on the laptop; SANDBOX-PLAN.md carries the Rust Port section's
-rules and the one session (default: the first unchecked sandbox session).
+No plan travels: PLAN.md, the perf sequence and TECHNICAL_DEBT.md stay on the
+laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
+conductor/archive/ and their tracks.md backlog. The one session (default:
+the first unchecked sandbox session) is written beside the export, not in it, as
+RPN-N-plan.md: the Rust Port section's rules, the session and a scope fence,
+to paste as the sandbox plan.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -53,14 +57,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, NESTED_REPO_DIRS, PLATFORM_EXCLUDES, export_repos, git_repos
+from sandbox import GLUON, NESTED_REPO_DIRS, PLATFORM_EXCLUDES, SANDBOX_REPOS, export_repos, git_repos
 
 DEFAULT_OUT = GLUON.parent / "sandbox" / "workspace" / "gluon"
 """Where the upload is staged on the laptop."""
 
 MANIFEST = "EXPORT-MANIFEST.json"
 REVIEW = "EXPORT-REVIEW.md"
-SANDBOX_PLAN = "SANDBOX-PLAN.md"
 
 PLAN_SECTION = "## Rust Port — notification-service"
 """The PLAN.md section whose sessions run in the sandbox."""
@@ -72,8 +75,19 @@ LOCAL_ONLY = frozenset({Path("contract.sh"), Path("contract-notification.sh")})
 """Untracked gluon files allowed at export: the laptop capture scripts, which travel
 inside their captures as CAPTURE.sh."""
 
-NOT_EXPORTED = frozenset({Path("PLAN.md")})
-"""gluon files that stay on the laptop: the sandbox gets SANDBOX_PLAN instead."""
+NOT_EXPORTED = frozenset({Path("PLAN.md"), Path("perf-work-sequence.md"), Path("TECHNICAL_DEBT.md")})
+"""gluon files that stay on the laptop: plans the sandbox model would run ahead on."""
+
+CONDUCTOR = Path("conductor")
+"""Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
+
+SCOPE_FENCE = (
+    "## Scope\n\n"
+    "Do only this session. No other plan, backlog or sequence exists for you; don't start "
+    "further work. Done = the \"Done when\" script prints PASS, then review, conductor "
+    "archive and `bin/sandbox-save`; then stop and report."
+)
+"""Closes the session plan: the sandbox model stops at the session's end."""
 
 EXPORT_EXCLUDES = PLATFORM_EXCLUDES | {".claude", ".bsp", "structure101-settings.java.hsw"}
 """Names never exported: VCS data, build output, editor and assistant state."""
@@ -177,7 +191,9 @@ LEFT_OUT = (
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and assistant state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`", "Replaced by `SANDBOX-PLAN.md`: only the current session's plan travels."),
+    ("`PLAN.md`, `perf-work-sequence.md`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on; the session travels as a pasted plan."),
+    ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
+    ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox model would pick up; active tracks and `workflow.md` stay."),
 )
 """What the export leaves out and why; reproduced in EXPORT-REVIEW.md."""
 
@@ -216,8 +232,28 @@ def platform() -> list[Path]:
     ]
 
 
+def conductor_files(repo: Path, files: list[Path]) -> list[Path]:
+    """`files` without what CONDUCTOR holds beyond a working repo's live tracks."""
+    working = repo.relative_to(GLUON) in SANDBOX_REPOS
+    return [
+        p
+        for p in files
+        if not p.is_relative_to(CONDUCTOR) or (working and not p.is_relative_to(CONDUCTOR / "archive"))
+    ]
+
+
+def strip_backlog(text: str) -> str:
+    """tracks.md without its Backlog items and intro; the heading stays as patch context."""
+    start = text.find("\n## Backlog")
+    if start < 0:
+        return text
+    following = text.find("\n## ", start + 1)
+    end = following if following >= 0 else len(text)
+    return text[:start] + "\n## Backlog\n" + text[end:]
+
+
 def session_plan(session: str | None) -> tuple[str, str]:
-    """The session's id and SANDBOX_PLAN text: the section's rules and inputs, then that session.
+    """The session's id and plan: the section's rules and inputs, that session, then SCOPE_FENCE.
 
     Without `session`, the first sandbox session with an unchecked item.
     """
@@ -242,14 +278,14 @@ def session_plan(session: str | None) -> tuple[str, str]:
         raise SystemExit(f"--session {session}: not in PLAN.md (have {', '.join(blocks)})")
     plan = "\n\n".join(
         [
-            f"# Sandbox plan — {session}",
-            f"Copied from gluon's `PLAN.md` (\"{PLAN_SECTION.removeprefix('## ')}\") by "
-            "`bin/sandbox-export`. Only this session is in scope; the rest of the plan stays on "
-            "the laptop. Tick the item here when done; the laptop copies the tick back.",
+            f"# Sandbox session — {session}",
+            f"From gluon's `PLAN.md` (\"{PLAN_SECTION.removeprefix('## ')}\") by "
+            "`bin/sandbox-export`.",
             "## Rules and inputs",
             intro,
             "## This session",
             blocks[session],
+            SCOPE_FENCE,
         ]
     )
     return session, plan + "\n"
@@ -501,7 +537,8 @@ def review(
 
 
 def export(out: Path, captures: Sequence[str], clean: bool, session: str | None) -> dict[str, object]:
-    """Stages and scans the export, then empties `out` and writes it there; returns its manifest."""
+    """Stages and scans the export, then empties `out` and writes it there, the session plan
+    beside it; returns its manifest."""
     nested = export_repos()
     repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
@@ -516,13 +553,14 @@ def export(out: Path, captures: Sequence[str], clean: bool, session: str | None)
     with tempfile.TemporaryDirectory() as scratch:
         staging = Path(scratch) / "gluon"
         staging.mkdir()
-        (staging / SANDBOX_PLAN).write_text(plan)
-        print(f"planned   {SANDBOX_PLAN}: {session}")
         entries = []
         for repo in repos:
             relative = repo.relative_to(GLUON)
-            files = platform() if repo == GLUON else tracked(repo)
+            files = platform() if repo == GLUON else conductor_files(repo, tracked(repo))
             copy(files, repo, staging / relative)
+            tracks = staging / relative / CONDUCTOR / "tracks.md"
+            if repo != GLUON and tracks.is_file():
+                tracks.write_text(strip_backlog(tracks.read_text()))
             head = git(repo, "rev-parse", "HEAD").strip()
             entries.append({"path": relative.as_posix(), "head": head, "files": len(files)})
             print(f"copied    {relative} @ {head[:7]} ({len(files)} files)")
@@ -545,6 +583,9 @@ def export(out: Path, captures: Sequence[str], clean: bool, session: str | None)
         out.mkdir(parents=True, exist_ok=True)
         for item in staging.iterdir():
             shutil.move(str(item), out / item.name)
+    path = out.parent / f"{session}-plan.md"
+    path.write_text(plan)
+    print(f"plan      {path}: paste as the sandbox plan")
     return manifest
 
 
@@ -571,7 +612,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--capture", action="append", default=[], metavar="SERVICE=DIR")
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
-    parser.add_argument("--session", help="PLAN.md session for SANDBOX-PLAN.md (default: next unchecked)")
+    parser.add_argument("--session", help="PLAN.md session for RPN-N-plan.md (default: next unchecked)")
     parser.add_argument("--yes", action="store_true", help="remove untracked files and build output unasked")
     args = parser.parse_args(argv)
     out = args.out.expanduser().resolve()
