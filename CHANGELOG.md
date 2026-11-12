@@ -876,3 +876,18 @@ own line. See each repo's own `git log` for full detail either way.
   it. The sandbox's `tests/contract` commit (the notification-service capture
   20261110, its `PROVENANCE.md`, ruff skipping captures) was lost: the session's
   `bin/sandbox-save` archive was never downloaded. RPN-1 redoes it first.
+
+## 2026-11-12
+
+### Added
+- **notification-service-rs walking skeleton (RPN-2).** The second Rust port
+  (ADR 0029) starts: a cargo workspace with `scripts/ci.sh` (fmt, clippy,
+  coverage gate, cargo audit), the Scala service's `NOTIFICATION_SERVICE_PORT`
+  and `POSTGRES_*` config, V1/V2 copied verbatim as sqlx migrations, `/health`
+  and `/health/ready` (503 within 2 s when Postgres is stopped or paused, where
+  Scala hangs), HEAD 405 and exit 0 on SIGTERM.
+  `scripts/verify-skeleton.sh` matches the health exchanges and the
+  `sent_email` DDL with capture 20261111; `bin/verify-complete-RPN-2.sh`
+  16/16. `tests/contract` N2: `Connection: keep-alive` is not contract. Built
+  on the laptop: the sandbox session didn't run `bin/sandbox-save`, so only its
+  plan tick came back.
