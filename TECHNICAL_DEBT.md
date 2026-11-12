@@ -1285,3 +1285,23 @@ topics, scale up (re-created compacted), re-run the register Job. Apicurio
       start, or broker `auto.create.topics.enable=false`, so a wipe can't leave
       wrongly configured internals.
 - [ ] TD-31.4: alert on Kafka restarts / Connect not publishing (with TD-30.2).
+
+## TD-32 — Sandbox commit history doesn't reach the laptop
+
+The sandbox's only download is an all-code `tar.gz` of the workspace
+(`<id>_<n>_a_all_code.tar.gz`). It drops `.git`, build output and every
+archive (`.tar.gz`, `.bundle`, `.zip`), so `bin/sandbox-save`'s archive
+(`gluon-sandbox-*.tar.gz`, git bundles) never arrives, even if written into
+the workspace (suspected). RPN-1 (2026-11-11) came back as files only: its 7
+`tests/contract` commits (`91c931c`…`11a6ff0`) were lost, and it was squashed on
+the laptop as `12bc822`. The archived track's `plan.md` still cites the sandbox
+SHAs.
+
+### Tasks
+- [ ] TD-32.1: `bin/sandbox-save` also writes `git format-patch <baseline>..main`
+      per sandbox repo as plain `.patch` files inside the workspace
+      (`gluon/sandbox-out/<repo>/`); the laptop replays them with `git am`.
+      Confirm on one download that they survive the filter.
+- [ ] TD-32.2: if no text route survives, accept squash: one laptop commit per
+      repo per session, and document that in `docs/sandbox.md` ("Bringing
+      commits back to the laptop"), replacing the bundle route.
