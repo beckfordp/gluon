@@ -2468,7 +2468,7 @@ entry; the track archived; nothing uncommitted.
 **Laptop.** **Repos:** `services/notification-service-rs` (new). **Time:**
 ~30 min.
 
-- [ ] RPN-L0 — empty repo on `main`, `/conductor:setup` (standard workflow,
+- [x] RPN-L0 — empty repo on `main`, `/conductor:setup` (standard workflow,
       Rust styleguide from user-service-rs), README stub, `.gitignore`;
       GitHub repo with `GH_PACKAGES_TOKEN`; the next export then carries it
       (`PORTS` already names it)
