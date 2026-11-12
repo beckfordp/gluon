@@ -16,7 +16,9 @@ fixed (two stale verify-script expectations, an order-dependent metrics
 check, unlinted tests, a coverage gate whose mutation no longer bit). Then
 `bin/verify-rust-spike --quick` after the fixes: `PASS`, 129/129 checks.
 Since 2026-11-10: 128, the login timing check dropped and recorded as not
-checked (`tests/contract` `4d95ea8`).
+checked (`tests/contract` `4d95ea8`). Since 2026-11-12: 127, the probe's
+slow-lookup timing check dropped the same way (`tests/contract` `b261c29`):
+timing isn't contract.
 
 ## What was built
 

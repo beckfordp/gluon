@@ -17,7 +17,7 @@ SELF="$(realpath "${BASH_SOURCE[0]}")"
 GLUON="$(dirname "$(dirname "$SELF")")"
 RUST="$GLUON/services/user-service-rs"
 CONTRACT="$GLUON/tests/contract"
-EXPECTED_CHECKS=128
+EXPECTED_CHECKS=127 # 128 until 2026-11-12: the probe's slow-lookup timing check dropped (tests/contract b261c29)
 
 cd "$RUST" || exit 1
 # shellcheck source=SCRIPTDIR/../services/user-service-rs/scripts/lib/verify.sh
