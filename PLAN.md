@@ -2432,7 +2432,7 @@ The capture `contracts/notification-service/20261111` and its `CAPTURE.md` are
 already committed (on the laptop, 2026-11-11). One conductor track in
 `tests/contract`; example: `conductor/archive/scala-confirmation_20261110`.
 
-- [ ] RPN-1 — goals:
+- [x] RPN-1 — goals:
       - the harness can check a notification-service capture on its own. New:
         user-service's capture was only checked by being used (its check
         groups compare against it; `tests/unit/test_contracts.py` checks
