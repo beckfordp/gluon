@@ -10,6 +10,12 @@ The archive holds:
   platform.tar.gz         gluon's own files (not the nested repos' contents)
   MANIFEST.json           what was saved, the repo HEADs, the toolchain
 
+It also writes each sandbox repo's commits since its baseline as plain
+`git format-patch` files to gluon/sandbox-out/<name>/ (TD-32): the sandbox's
+download is an all-code tar.gz that drops .git and every archive, this one
+included, so the patches are what brings the commits back to the laptop
+(`git am`, docs/sandbox.md).
+
 Usage:
   bin/sandbox-save [--out DIR]   default DIR: /tmp/outputs
 
@@ -21,6 +27,7 @@ warning at the end, to be added to bin/lib/sandbox.py's PORTS or SANDBOX_REPOS.
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -30,7 +37,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, SANDBOX_REPOS, git_repos, platform_files
+from sandbox import GLUON, PATCH_DIR, SANDBOX_REPOS, git_repos, platform_files
 
 
 def git(repo: Path, *args: str) -> str:
@@ -50,6 +57,35 @@ def uncommitted(repo: Path) -> list[str]:
     names = git(repo, "ls-files", "--modified", "--others", "--exclude-standard").splitlines()
     names += git(repo, "diff", "--cached", "--name-only").splitlines()
     return sorted({name for name in names if (repo / name).is_file()})
+
+
+BASELINE_PREFIX = "chore(sandbox): baseline from laptop export @ "
+"""bin/sandbox-setup's baseline commit message; the laptop commit's short sha follows."""
+
+
+def write_patches(repo: Path, dest: Path) -> int:
+    """Writes `repo`'s commits after its baseline on main to `dest` as .patch files.
+
+    The baseline is the root commit bin/sandbox-setup made from the export; a repo
+    created in the sandbox (no baseline) has all its commits written. `dest` is
+    replaced, and holds a BASELINE file naming the baseline and the laptop commit.
+    Returns the number of patches.
+    """
+    shutil.rmtree(dest, ignore_errors=True)
+    root = git(repo, "rev-list", "--max-parents=0", "main").split()[0]
+    subject = git(repo, "log", "-1", "--format=%s", root).strip()
+    if subject.startswith(BASELINE_PREFIX):
+        revs, span = f"{root}..main", [f"{root}..main"]
+        laptop = subject.removeprefix(BASELINE_PREFIX)
+    else:
+        revs, span = "main", ["--root", "main"]
+        laptop = "none (repo created in the sandbox)"
+    if not git(repo, "rev-list", revs).strip():
+        return 0
+    dest.mkdir(parents=True)
+    git(repo, "format-patch", "--quiet", "--binary", "-o", str(dest), *span)
+    (dest / "BASELINE").write_text(f"sandbox baseline: {root}\nlaptop commit: {laptop}\n")
+    return len(list(dest.glob("*.patch")))
 
 
 def unsaved(root: Path = GLUON) -> list[Path]:
@@ -91,6 +127,9 @@ def save(out_dir: Path) -> Path:
             )
             state = f"{len(wip)} uncommitted file(s) kept in wip/" if wip else "clean"
             print(f"bundled   {relative} @ {str(repos[-1]['head'])[:7]} ({state})")
+            patches = write_patches(repo, PATCH_DIR / label)
+            where = f" → {(PATCH_DIR / label).relative_to(GLUON)}" if patches else ""
+            print(f"patched   {relative}: {patches} commit(s) since baseline{where}")
         files = platform_files()
         with tarfile.open(staging / "platform.tar.gz", "w:gz") as tar:
             for platform_file in files:

@@ -30,9 +30,23 @@ NESTED_REPO_DIRS = ("services", "frontends", "tools", "lib", "tests")
 """gluon's gitignored directories of independent repos; only their README.md is gluon's."""
 
 PLATFORM_EXCLUDES = frozenset(
-    {".git", ".venv", "__pycache__", "node_modules", "target", ".DS_Store", ".obsidian", ".idea"}
+    {
+        ".git",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        "target",
+        ".DS_Store",
+        ".obsidian",
+        ".idea",
+        "sandbox-out",
+    }
 )
-"""Names never part of gluon's own files: VCS data, build output, editor state."""
+"""Names never part of gluon's own files: VCS data, build output, editor state, sandbox patches."""
+
+PATCH_DIR = GLUON / "sandbox-out"
+"""Where bin/sandbox-save writes each sandbox repo's commits as plain .patch files (TD-32):
+the sandbox's all-code download drops .git and archives, but keeps the workspace's text."""
 
 
 def platform_files(root: Path = GLUON) -> list[Path]:

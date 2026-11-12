@@ -1302,6 +1302,8 @@ SHAs.
       per sandbox repo as plain `.patch` files inside the workspace
       (`gluon/sandbox-out/<repo>/`); the laptop replays them with `git am`.
       Confirm on one download that they survive the filter.
+      *Implemented 2026-11-12 (`write_patches`, docs/sandbox.md); awaiting
+      the next session's download to confirm.*
 - [ ] TD-32.2: if no text route survives, accept squash: one laptop commit per
       repo per session, and document that in `docs/sandbox.md` ("Bringing
       commits back to the laptop"), replacing the bundle route.

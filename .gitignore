@@ -36,3 +36,6 @@ target/
 __pycache__/
 *.py[cod]
 .venv/
+
+# Sandbox commits as patches (bin/sandbox-save, TD-32); replayed with git am, never committed
+sandbox-out/
