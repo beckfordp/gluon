@@ -2480,7 +2480,7 @@ entry; the track archived; nothing uncommitted.
 **Repos:** `services/notification-service-rs`, `gluon` (`bin/`). **Time:**
 ~3 hours; split after "starts, `/health` green" if it runs over.
 
-- [ ] RPN-2 — cargo workspace (axum, sqlx, as user-service-rs; no shared
+- [x] RPN-2 — cargo workspace (axum, sqlx, as user-service-rs; no shared
       crates yet), `scripts/ci.sh` (fmt, clippy, tests, coverage gate); the
       Scala service's env contract (`NOTIFICATION_SERVICE_PORT`,
       `POSTGRES_HOST/PORT/DB/USER/PASSWORD`); V1/V2 copied verbatim as sqlx
