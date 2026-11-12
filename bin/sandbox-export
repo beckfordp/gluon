@@ -31,8 +31,8 @@ First, untracked files and build output (BUILD_DIRS) in those repos are listed
 and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md and
-docs/sandbox.md stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
+No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md,
+docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The one session (default:
 the first unchecked sandbox session) is written beside the export, not in it, as
 RPN-N-plan.md: the Rust Port section's rules, the session and a scope fence,
@@ -82,10 +82,13 @@ NOT_EXPORTED = frozenset(
         Path("TECHNICAL_DEBT.md"),
         Path("CHANGELOG.md"),
         Path("docs") / "sandbox.md",
+        Path("bin") / "sandbox-export",
+        Path("bin") / "verify-complete-RPN-0.1.sh",
     }
 )
-"""gluon files that stay on the laptop: plans the sandbox model would run ahead on, and
-history and sandbox how-to it doesn't need."""
+"""gluon files that stay on the laptop: plans the sandbox model would run ahead on,
+history and sandbox how-to it doesn't need, and this script and its tests, which show how
+the session plan is made."""
 
 CONDUCTOR = Path("conductor")
 """Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
@@ -168,9 +171,6 @@ RULES = (
     Rule("private ip", "IP-like numbers in minified upstream JS",
          "Version strings and constants in vendored Swagger UI / AsyncAPI UI bundles.",
          re.compile(r"."), only_in=VENDORED),
-    Rule("*", "The scan's own patterns and allow-rules in `bin/sandbox-export`",
-         "The scanner has to name what it looks for and what it allows.",
-         re.compile(r"."), only_in=re.compile(r"^bin/sandbox-export$")),
 )
 """Every allowed kind of match; EXPORT-REVIEW.md reproduces this table."""
 
@@ -200,8 +200,9 @@ LEFT_OUT = (
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and assistant state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`, `perf-work-sequence.md`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on; the session travels as a pasted plan."),
+    ("`PLAN.md`, `perf-work-sequence.md`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on."),
     ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox model."),
+    ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
     ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox model would pick up; active tracks and `workflow.md` stay."),
 )

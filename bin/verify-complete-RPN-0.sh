@@ -8,7 +8,7 @@
 #   3. services/user-service-rs scripts/verify-yaml-content-type.sh
 #   4. services/user-service-rs scripts/verify-readiness.sh (the older one)
 #   5. bin/verify-rust-spike --quick, every one of EXPECTED_CHECKS green
-#   6. bin/sandbox-export carries services/user-service, the Scala service whose
+#   6. the export carries services/user-service, the Scala service whose
 #      migrations and build the checks above read (added in RPN-0)
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
 #   bin/verify-complete-RPN-0.sh
@@ -63,13 +63,12 @@ run "bin/verify-rust-spike --quick" rust-spike.log "$GLUON" bin/verify-rust-spik
 # The Scala user-service was left out of the RPN-0 export, and four checks above
 # failed for it: test_schema.py applies its migrations, verify-laptop-prep
 # switches bin/k8s-local-up to it. The export must carry it.
-run "bin/sandbox-export carries services/user-service" export-repos.log "$GLUON" \
+run "the export carries services/user-service" export-repos.log "$GLUON" \
   env PYTHONDONTWRITEBYTECODE=1 python3 -c '
-import importlib.machinery, importlib.util, sys
-loader = importlib.machinery.SourceFileLoader("sandbox_export", "bin/sandbox-export")
-module = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
-loader.exec_module(module)
-repos = [str(repo) for repo in module.export_repos()]
+import sys
+sys.path.insert(0, "bin/lib")
+from sandbox import export_repos
+repos = [str(repo) for repo in export_repos()]
 print("export_repos():", ", ".join(repos))
 sys.exit(0 if "services/user-service" in repos else "services/user-service not in export_repos()")'
 
