@@ -15,6 +15,8 @@ runs, 2026-11-10: `bin/verify-rust-spike` (full) — all 23 track scripts
 fixed (two stale verify-script expectations, an order-dependent metrics
 check, unlinted tests, a coverage gate whose mutation no longer bit). Then
 `bin/verify-rust-spike --quick` after the fixes: `PASS`, 129/129 checks.
+Since 2026-11-10: 128, the login timing check dropped and recorded as not
+checked (`tests/contract` `4d95ea8`).
 
 ## What was built
 

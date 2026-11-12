@@ -2509,8 +2509,13 @@ archived; nothing uncommitted. Then it runs `bin/sandbox-save`.
 - [ ] RPN-3 — service name as a parameter: env contract, Postgres login,
       captures per service, check groups selected per service
 
-**Done when:** `ci.sh` PASS; user-service's 129 green; the notification env
-contract unit test green.
+**Done when:** `bin/verify-complete-RPN-3.sh` (written on the laptop) PASS,
+then it runs `bin/sandbox-save` (download the archive): `tests/contract`'s
+`ci.sh`; user-service's 128 contract checks green (`bin/verify-rust-spike
+--only build contract`; 129 in the spike, the login timing check since
+dropped); the notification env contract unit test (a test in
+`tests/unit/test_env_contract.py` named for notification) green; the track
+archived; nothing uncommitted.
 
 ### RPN-4 — `/emails` checks
 
