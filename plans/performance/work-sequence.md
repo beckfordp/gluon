@@ -7,7 +7,7 @@ is not `[x]`, then stop again.
 
 - Status: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` dropped/moved
 - Each step runs the usual conductor cycle in its repo(s) (newTrack → implement
-  → review → archive), then ticks PLAN.md / TECHNICAL_DEBT.md / CHANGELOG.md.
+  → review → archive), then ticks `plans/performance/plan.md` / TECHNICAL_DEBT.md / CHANGELOG.md.
 - **Decision** = needs your call before or at the start of that step.
 - Revise freely: reorder, split, drop. Record why in the Decisions log.
 

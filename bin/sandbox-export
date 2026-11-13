@@ -32,7 +32,7 @@ files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ON
 never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md,
+No plan travels: PLAN.md, plans/, TECHNICAL_DEBT.md, CHANGELOG.md,
 docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
 instructions are written by hand.
@@ -71,7 +71,6 @@ inside their captures as CAPTURE.sh."""
 NOT_EXPORTED = frozenset(
     {
         Path("PLAN.md"),
-        Path("perf-work-sequence.md"),
         Path("TECHNICAL_DEBT.md"),
         Path("CHANGELOG.md"),
         Path("docs") / "sandbox.md",
@@ -81,6 +80,9 @@ NOT_EXPORTED = frozenset(
 )
 """gluon files that stay on the laptop: plans the sandbox model would run ahead on,
 history and sandbox how-to it doesn't need, and this script and its tests (laptop-only)."""
+
+NOT_EXPORTED_DIRS = frozenset({"plans"})
+"""gluon directories that stay on the laptop: every plan, retro and work sequence."""
 
 CONDUCTOR = Path("conductor")
 """Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
@@ -185,7 +187,7 @@ LEFT_OUT = (
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and assistant state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`, `perf-work-sequence.md`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on."),
+    ("`PLAN.md`, `plans/`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on."),
     ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox model."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
@@ -225,6 +227,7 @@ def platform() -> list[Path]:
         for p in tracked(GLUON)
         if (p.parts[0] not in NESTED_REPO_DIRS or p == Path(p.parts[0]) / "README.md")
         and p not in NOT_EXPORTED
+        and p.parts[0] not in NOT_EXPORTED_DIRS
     ]
 
 
@@ -505,7 +508,7 @@ def review(
         "| PBKDF2 hashes | user-service capture, tests | Of the published test password; a check depends on them (ADR 0028). |",
         "| Random UUIDs, trace ids, timestamps | captures, tests | Identifiers of throw-away test records. |",
         "| `*.svc.cluster.local`, `localhost`, `127.0.0.1` | scripts, values, captures | In-cluster and loopback names. |",
-        "| \"MacBook Pro M1 Max, 10 cores\" | `PLAN.md` | A hardware spec for perf figures; identifies no one. |",
+        "| \"MacBook Pro M1 Max, 10 cores\" | `plans/performance/plan.md` | A hardware spec for perf figures; identifies no one. |",
         "",
     ]
     return "\n".join(lines)

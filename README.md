@@ -9,9 +9,9 @@ this repo is generated automatically by an agent.
 See [`docs/`](./docs/) for the cross-repo vision, user stories, system
 design, and ADRs this is built from.
 
-**Start with [`PLAN.md`](./PLAN.md)** — the phased, cross-repo order of work
-(walking skeleton), what to stub in each repo's own tests, and when to run
-`/conductor:setup`. This README is the per-command reference; `PLAN.md` is
+**Start with [`PLAN.md`](./PLAN.md)** — the index of the cross-repo plans in
+[`plans/`](./plans) (order of work, what to stub in each repo's own tests, and when to run
+`/conductor:setup`). This README is the per-command reference; `PLAN.md` is
 the sequencing. [`TECHNICAL_DEBT.md`](./TECHNICAL_DEBT.md) tracks the
 separate list of cross-cutting gaps found while building (not derived from
 a user story) that affect more than one repo — CORS, Kafka consumer
@@ -43,7 +43,7 @@ catalog-service · cart-service · user-service
 
 `user-service-rs` is an alternative Rust implementation of user-service, a
 spike per [ADR 0028](./docs/adr/0028-rust-port-spike-user-service.md)
-(`PLAN.md` "Rust Spike"); the Scala service stays the default.
+([`plans/rust-port/user/plan.md`](./plans/rust-port/user/plan.md)); the Scala service stays the default.
 
 ## Demo data (local only)
 

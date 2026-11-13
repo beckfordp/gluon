@@ -39,3 +39,6 @@ __pycache__/
 
 # Sandbox commits as patches (bin/sandbox-save, TD-32); replayed with git am, never committed
 sandbox-out/
+
+# Private plan notes (retros): laptop only, never pushed
+plans/private/

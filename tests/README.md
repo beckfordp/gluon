@@ -15,4 +15,4 @@ git repository**, pushed to its own GitHub remote, with its own
 This directory itself is **not** tracked by gluon's own git repo (see
 `.gitignore`). Don't `git add` anything under here from gluon's repo.
 
-Planned work: `../PLAN.md`, sections "Performance" and "Acceptance Testing".
+Planned work: `../plans/performance/plan.md`, `../plans/acceptance/` (index: `../PLAN.md`).
