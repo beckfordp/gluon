@@ -4,11 +4,11 @@
 # harness for more than one service), each criterion printed PASS or FAIL as it
 # finishes, then saves the session:
 #   1. tests/contract scripts/ci.sh
-#   2. user-service's 127 contract checks green: bin/verify-rust-spike --only
-#      build contract prints "ok   contract: 127/127 green" (129 in the spike;
+#   2. user-service's 128 contract checks green: bin/verify-rust-spike --only
+#      build contract prints "ok   contract: 128/128 green" (129 in the spike;
 #      the login timing check was dropped, tests/contract 4d95ea8; then the
-#      probe's slow-lookup timing check, tests/contract b261c29, 2026-11-12:
-#      timing isn't contract). The harness now
+#      probe's slow-lookup timing check, tests/contract 8b893d4, 2026-11-12,
+#      restored by order of events 2026-11-13). The harness now
 #      takes the service as a parameter; user-service must still run unchanged.
 #      If RPN-3 renames the harness options, it updates bin/verify-rust-spike's
 #      contract step in the same session
@@ -55,11 +55,11 @@ run() {
 
 run "tests/contract scripts/ci.sh" ci.log "$CONTRACT" scripts/ci.sh
 
-run "user-service's 127 contract checks green" spike.log "$GLUON" bash -c '
+run "user-service's 128 contract checks green" spike.log "$GLUON" bash -c '
 out="$(bin/verify-rust-spike --only build contract 2>&1)"
 echo "$out"
-grep -q "^ok   contract: 127/127 green" <<< "$out" \
-  || { echo "not 127/127 green: $(grep "contract:" <<< "$out" | tail -n 1)"; exit 1; }'
+grep -q "^ok   contract: 128/128 green" <<< "$out" \
+  || { echo "not 128/128 green: $(grep "contract:" <<< "$out" | tail -n 1)"; exit 1; }'
 
 run "notification-service env contract unit test" env-contract.log "$CONTRACT" bash -c '
 uv run pytest tests/unit/test_env_contract.py -k notification -q -p no:cacheprovider
