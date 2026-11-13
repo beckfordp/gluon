@@ -25,7 +25,7 @@ allowed match with the reason it's fine, for the sandbox reviewer.
 
 Usage:
   bin/sandbox-export [--out DIR] [--clean] [--capture SERVICE=DIR ...]
-                     [--no-auto-captures] [--no-archive] [--session RPN-N] [--yes]
+                     [--no-auto-captures] [--no-archive] [--yes]
 
 First, untracked files and build output (BUILD_DIRS) in those repos are listed
 and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY never are.
@@ -33,10 +33,8 @@ Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md,
 docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
-conductor/archive/ and their tracks.md backlog. The one session (default:
-the first unchecked sandbox session) is written beside the export, not in it, as
-RPN-N-plan.md: the Rust Port section's rules, the session and a scope fence,
-to paste as the sandbox plan.
+conductor/archive/ and their tracks.md backlog. The sandbox plan is written by
+hand each session.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -65,12 +63,6 @@ DEFAULT_OUT = GLUON.parent / "sandbox" / "workspace" / "gluon"
 MANIFEST = "EXPORT-MANIFEST.json"
 REVIEW = "EXPORT-REVIEW.md"
 
-PLAN_SECTION = "## Rust Port — notification-service"
-"""The PLAN.md section whose sessions run in the sandbox."""
-
-SESSION_HEADING = re.compile(r"^### (RPN-[\w.]+) — ", re.M)
-"""A session's heading in that section (`RPN-1`, `RPN-0.1`); laptop sessions are `RPN-L…`."""
-
 LOCAL_ONLY = frozenset({Path("contract.sh"), Path("contract-notification.sh")})
 """Untracked gluon files allowed at export: the laptop capture scripts, which travel
 inside their captures as CAPTURE.sh."""
@@ -87,19 +79,10 @@ NOT_EXPORTED = frozenset(
     }
 )
 """gluon files that stay on the laptop: plans the sandbox model would run ahead on,
-history and sandbox how-to it doesn't need, and this script and its tests, which show how
-the session plan is made."""
+history and sandbox how-to it doesn't need, and this script and its tests (laptop-only)."""
 
 CONDUCTOR = Path("conductor")
 """Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
-
-SCOPE_FENCE = (
-    "## Scope\n\n"
-    "Do only this session. No other plan, backlog or sequence exists for you; don't start "
-    "further work. Done = the \"Done when\" script prints PASS, then review, conductor "
-    "archive and `bin/sandbox-save`; then stop and report."
-)
-"""Closes the session plan: the sandbox model stops at the session's end."""
 
 EXPORT_EXCLUDES = PLATFORM_EXCLUDES | {".claude", ".bsp", "structure101-settings.java.hsw"}
 """Names never exported: VCS data, build output, editor and assistant state."""
@@ -261,45 +244,6 @@ def strip_backlog(text: str) -> str:
     following = text.find("\n## ", start + 1)
     end = following if following >= 0 else len(text)
     return text[:start] + "\n## Backlog\n" + text[end:]
-
-
-def session_plan(session: str | None) -> tuple[str, str]:
-    """The session's id and plan: the section's rules and inputs, that session, then SCOPE_FENCE.
-
-    Without `session`, the first sandbox session with an unchecked item.
-    """
-    text = (GLUON / "PLAN.md").read_text()
-    start = text.find(PLAN_SECTION)
-    if start < 0:
-        raise SystemExit(f"PLAN.md has no '{PLAN_SECTION}' section")
-    following = text.find("\n## ", start + len(PLAN_SECTION))
-    section = text[start : following if following >= 0 else len(text)].rstrip().removesuffix("---").rstrip()
-    headings = list(SESSION_HEADING.finditer(section))
-    if not headings:
-        raise SystemExit(f"'{PLAN_SECTION}' has no sessions")
-    intro = section[len(PLAN_SECTION) : headings[0].start()].strip()
-    bounds = zip(headings, [*(h.start() for h in headings[1:]), len(section)], strict=True)
-    blocks = {h.group(1): section[h.start() : end].strip() for h, end in bounds}
-    if session is None:
-        pending = [s for s, block in blocks.items() if not s.startswith("RPN-L") and "- [ ]" in block]
-        if not pending:
-            raise SystemExit("No sandbox session left unchecked in PLAN.md; pass --session")
-        session = pending[0]
-    if session not in blocks:
-        raise SystemExit(f"--session {session}: not in PLAN.md (have {', '.join(blocks)})")
-    plan = "\n\n".join(
-        [
-            f"# Sandbox session — {session}",
-            f"From gluon's `PLAN.md` (\"{PLAN_SECTION.removeprefix('## ')}\") by "
-            "`bin/sandbox-export`.",
-            "## Rules and inputs",
-            intro,
-            "## This session",
-            blocks[session],
-            SCOPE_FENCE,
-        ]
-    )
-    return session, plan + "\n"
 
 
 def dirty(repo: Path) -> list[str]:
@@ -547,19 +491,16 @@ def review(
     return "\n".join(lines)
 
 
-def export(out: Path, captures: Sequence[str], clean: bool, session: str | None) -> dict[str, object]:
-    """Stages and scans the export, then empties `out` and writes it there, the session plan
-    beside it; returns its manifest."""
+def export(out: Path, captures: Sequence[str], clean: bool) -> dict[str, object]:
+    """Stages and scans the export, then empties `out` and writes it there; returns its manifest."""
     nested = export_repos()
     repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
     if unclean:
         lines = "\n".join(f"  {repo}: {change}" for repo, changes in unclean.items() for change in changes)
         raise SystemExit(f"Uncommitted changes; commit or stash first:\n{lines}")
-    session, plan = session_plan(session)
     manifest: dict[str, object] = {
         "created": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "session": session,
     }
     with tempfile.TemporaryDirectory() as scratch:
         staging = Path(scratch) / "gluon"
@@ -594,9 +535,6 @@ def export(out: Path, captures: Sequence[str], clean: bool, session: str | None)
         out.mkdir(parents=True, exist_ok=True)
         for item in staging.iterdir():
             shutil.move(str(item), out / item.name)
-    path = out.parent / f"{session}-plan.md"
-    path.write_text(plan)
-    print(f"plan      {path}: paste as the sandbox plan")
     return manifest
 
 
@@ -623,7 +561,6 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--capture", action="append", default=[], metavar="SERVICE=DIR")
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
-    parser.add_argument("--session", help="PLAN.md session for RPN-N-plan.md (default: next unchecked)")
     parser.add_argument("--yes", action="store_true", help="remove untracked files and build output unasked")
     args = parser.parse_args(argv)
     out = args.out.expanduser().resolve()
@@ -635,7 +572,7 @@ def main(argv: Sequence[str]) -> int:
     if out.exists() and any(out.iterdir()) and not args.clean and not (out / MANIFEST).is_file():
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
     clean([GLUON, *(GLUON / r for r in export_repos())], args.yes)
-    export(out, captures, args.clean, args.session)
+    export(out, captures, args.clean)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:
         archive = out.parent / f"{out.name}.tar.gz"

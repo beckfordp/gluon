@@ -7,9 +7,7 @@
 #   2. its reference check warns for a repo not exported, and not for an
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
-#   4. --session's default picks RPN-1 once RPN-0.1 is ticked, and RPN-0.1 is
-#      its own session, not part of RPN-0
-#   5. the touched Python scripts compile
+#   4. the touched Python scripts compile
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
 #   bin/verify-complete-RPN-0.1.sh
 set -uo pipefail
@@ -51,7 +49,7 @@ EOF
 
 check "export carries the ports and shared repos, no other" export.log '
 with tempfile.TemporaryDirectory() as out:
-    manifest = export.export(Path(out) / "gluon", [], False, None)
+    manifest = export.export(Path(out) / "gluon", [], False)
 got = {repo["path"] for repo in manifest["repos"]}
 want = {".", "tests/contract", "lib/purerest", "services/user-service",
         "services/user-service-rs", "services/notification-service"}
@@ -85,14 +83,6 @@ with tempfile.TemporaryDirectory() as scratch:
     missing = save.unsaved(root)
 print("unsaved:", missing)
 sys.exit(0 if missing == [Path("services/foo-rs")] else "unexpected unsaved list")'
-
-check "--session: RPN-1 next, RPN-0.1 its own session" session.log '
-session, _ = export.session_plan(None)
-_, own = export.session_plan("RPN-0.1")
-_, previous = export.session_plan("RPN-0")
-print("default:", session)
-ok = session == "RPN-1" and "### RPN-0.1 — " in own and "RPN-0.1" not in previous
-sys.exit(0 if ok else "RPN-0.1 not parsed as its own session, or not ticked")'
 
 echo "     python scripts compile"
 if python3 - > "$LOGS/compile.log" 2>&1 <<'EOF'
