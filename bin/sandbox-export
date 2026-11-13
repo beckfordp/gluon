@@ -33,8 +33,8 @@ Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md,
 docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
-conductor/archive/ and their tracks.md backlog. The sandbox plan is written by
-hand each session.
+conductor/archive/ and their tracks.md backlog. The sandbox session's
+instructions are written by hand.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
