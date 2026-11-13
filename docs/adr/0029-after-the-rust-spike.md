@@ -11,7 +11,7 @@ ADR 0028's spike asked what rebuilding purerest's and purekafka's behaviour
 costs a non-Scala service. In the sandbox, every contract group is green
 against the Rust user-service (119 checks), and the consumer probe covers
 purekafka's consumer side and purerest's client side (10 checks). Findings:
-[`docs/rust-spike-findings.md`](../rust-spike-findings.md).
+[`docs/ports/user-service-findings.md`](../ports/user-service-findings.md).
 
 What the numbers say:
 - **The service is the small part.** user-service in Rust is ~1,900 lines.

@@ -1316,27 +1316,33 @@ already named for it (`checks/test_notification_rest.py`,
 `scripts/verify-notification-rest-group.sh`); user-service's aren't
 (`checks/test_rest.py`, `test_docs.py`, `test_schema.py`, …;
 `scripts/verify-rest-group.sh`, `verify-docs-group.sh`, …). Callers: gluon
-`bin/verify-rust-spike`, `bin/verify-complete-RPN-0.sh`,
-`docs/rust-spike-verification.md`; tests/contract `scripts/verify-*-group.sh`,
+`bin/verify-port user-service`, `bin/verify-complete-RPN-0.sh`,
+`docs/ports/user-service-verification.md`; tests/contract `scripts/verify-*-group.sh`,
 `verify-portable-harness.sh`, `docs/implicit-behaviours.md` (25 entries name
 `test_rest.py::…`), `tests/integration/test_cluster_mode.py`; user-service-rs
 `scripts/verify-{readiness,openapi,users-cors,asyncapi,metrics,auth}.sh`.
 
 ### Tasks
-- [ ] TD-33.1: rename to `test_user_rest.py`, …, `verify-user-rest-group.sh`, …
+- [~] TD-33.1: rename to `test_user_rest.py`, …, `verify-user-rest-group.sh`, …
       and update every caller. Decide first whether finished sessions' done
       scripts (`bin/verify-complete-RPN-0.sh` … `-3.sh`) change or stay as
-      history. Done when: `bin/verify-rust-spike --quick` 128/128 green; every
+      history. Done when: `bin/verify-port user-service --quick` 128/128 green; every
       user-service `verify-*-group.sh` passes; `git grep` finds no old name
       outside history.
+      *2026-11-13 (RPN-4.1): check modules renamed (`test_user_*.py`), with
+      `ns_*` → `notification_*` (TD-44), `bin/verify-rust-spike` →
+      `bin/verify-port user-service`, `docs/ports/`, service-named plan dirs;
+      done scripts kept as history. The `verify-*-group.sh` scripts aren't
+      renamed: TD-46 retires them. Left: `verify-port user-service` green in
+      the sandbox.*
 
 ## TD-34 — Two sets of response comparisons in tests/contract
 
-user-service's `checks/test_rest.py` keeps its own `assert_same`,
+user-service's `checks/test_user_rest.py` keeps its own `assert_same`,
 `assert_text_error` and `CORS_HEADERS`; RPN-4 added
 `gluon_contract.expect` (`assert_same`, `assert_text_error`,
 `assert_same_cors`, `CORS_HEADERS`) for any service. `new_email` in
-`test_rest.py` and `test_schema.py` duplicates `checks/support.py`'s. Two
+`test_user_rest.py` and `test_user_schema.py` duplicates `checks/support.py`'s. Two
 copies of a comparison rule drift; `expect`'s failures also spell out
 expected and actual (pytest doesn't rewrite asserts in `src/`).
 
@@ -1357,12 +1363,12 @@ in `pytest_plugin.db`, `tests/integration/test_schema_snapshot.py`,
 
 ## TD-36 — `sent-email.jsonl` parsed twice in tests/contract
 
-`ns_capture.check_sent_email` (RPN-1) parses the dump line by line;
+`notification_capture.check_sent_email` (RPN-1) parses the dump line by line;
 `sent_email.parse_rows` (RPN-4) parses the same file into typed rows.
 
 ### Tasks
 - [ ] TD-36.1: the capture check uses `sent_email.parse_rows`. Done when: one
-      parser; `scripts/verify-ns-capture.sh` and its broken-copy cases (gluon
+      parser; `scripts/verify-notification-capture.sh` and its broken-copy cases (gluon
       `bin/verify-complete-RPN-1.sh`) still behave.
 
 ## TD-37 — tests/contract CI depends on what has been built
@@ -1427,7 +1433,7 @@ By decision in RPN-4 (option a), `test_notification_rest.py` has no checks of
 stopped. notification-service-rs's own tests cover them (`tests/health.rs`,
 `tests/readiness.rs`, `scripts/verify-skeleton.sh`), but the harness doesn't
 run those, so the Scala service never faces them there. user-service's
-versions (`test_rest.py`) port quickly once TD-34 shares their helpers.
+versions (`test_user_rest.py`) port quickly once TD-34 shares their helpers.
 
 ### Tasks
 - [ ] TD-42.1: port them into `test_notification_rest.py`. Done when: they
@@ -1468,7 +1474,7 @@ Adding cart-service would touch all of them.
 ### Tasks
 - [ ] TD-44.1: one profile per service carrying its capture, variable prefix
       and stubs; the service argument required (no user-service default);
-      `ns_*` → `notification_*` (with TD-33). Done when: adding a service is
+      `ns_*` → `notification_*` (with TD-33; done 2026-11-13). Done when: adding a service is
       one profile plus its checks; both services' groups as before.
 
 ## TD-45 — The Kafka broker lives in cdc.py
@@ -1491,7 +1497,7 @@ done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
 ### Tasks
 - [ ] TD-46.1: rule (in each repo's `conductor/workflow.md` and
       `docs/sandbox.md`): once a track is archived, its script folds into
-      `ci.sh` or `bin/verify-rust-spike`, or is deleted; done scripts stay
+      `ci.sh` or `bin/verify-port user-service`, or is deleted; done scripts stay
       as history, unchanged. Apply it to the existing scripts. Done when:
       every remaining script is run by CI or a regression entry point.
 

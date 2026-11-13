@@ -1,8 +1,8 @@
-# Rust Spike — user-service
+# Rust Port — user-service
 
 Split from `PLAN.md` (index); item IDs unchanged.
 
-## Rust Spike
+## Rust Port — user-service (began as the ADR 0028 spike)
 
 A time-boxed spike of a wire-compatible Rust port of user-service
 ([ADR 0028](../../../docs/adr/0028-rust-port-spike-user-service.md)). It measures
@@ -11,7 +11,7 @@ in another language. The Scala user-service stays the default. A black-box
 contract harness decides parity against the **specified contracts** (ADR 0028
 decision 2): the documented contracts, the Scala-generated OpenAPI/AsyncAPI
 artifacts, the Scala repo's test suites and `verify-*.sh` scripts, and
-behaviour captured on request. Numbered `Rust Spike N` with items `RUST-N.M`;
+behaviour captured on request. Numbered `RUST-N` with items `RUST-N.M` (new user-service port work: `RPU-N`);
 each item is promoted into a track in its owning repo's
 `conductor/tracks.md` (newTrack → implement → review → archive), one item at
 a time.
@@ -28,7 +28,7 @@ a time.
 - **Laptop** — the Scala build, Docker and gluon-local. Used for
   **contract captures** (the user runs commands given by the sandbox session
   and brings the output back, committed to `tests/contract/contracts/` with
-  its provenance) and for the final **laptop pass** (Rust Spike 5).
+  its provenance) and for the final **laptop pass** (RUST-5).
 
 **Repos:** `tests/contract` (new, `beckfordp/gluon-contract`),
 `services/user-service-rs` (new, `beckfordp/user-service-rs`), `gluon`
@@ -47,10 +47,10 @@ under "Sequencing" in its `conductor/product.md`.
 runner needs a process to start) → each check group is written, and seen
 failing for the stated reason, just before the Rust items that turn it green:
 1.3 + 1.5 → 2.4–2.6; 1.6 + 1.7 → 3.1–3.4; 1.4 → 4.1–4.2; 1.8 after 3.1;
-6.1–6.5 after 3; 1.9 alongside. Then Rust Spike 5 (laptop), then 7. Time box
+6.1–6.5 after 3; 1.9 alongside. Then RUST-5 (laptop), then 7. Time box
 about 10 working days for the whole section (ADR 0028 decision 9); each item
 ends with a review, and the next is re-planned from what it found. At the
-time box, work stops and Rust Spike 7 records how far it got.
+time box, work stops and RUST-7 records how far it got.
 
 **Not in this section:** the performance comparison (a follow-up; ADR 0028
 "Out of scope" has the notes for it), deploying the consumer probe, and any
@@ -58,7 +58,7 @@ contract change.
 
 ---
 
-## Rust Spike 1 — Contract harness
+## RUST-1 — Contract harness
 
 **Repos:** `tests/contract` (new), `gluon` (`docs/system-design.md`),
 `user-service` (OpenAPI descriptions only, on the laptop, if a gap needs
@@ -89,7 +89,7 @@ items that satisfy it (see Order above).
       process group, log and span waits with deadlines). Proven against a
       stand-in target; 73 tests, 100% coverage;
       `scripts/verify-isolated-runner.sh` PASS. Verify scripts replace manual
-      phase verification in both Rust Spike repos.*
+      phase verification in both user-service port repos.*
 - [x] RUST-1.3 — REST group: every endpoint's success and error statuses
       with exact bodies and `error` strings; email and password edge cases
       (UTF-16 length, U+00A0, non-ASCII); malformed JSON, missing fields,
@@ -164,7 +164,7 @@ of its paired Rust items; the list of implicit behaviours reviewed.
 
 ---
 
-## Rust Spike 2 — Scaffold, REST, Postgres and hashing
+## RUST-2 — Scaffold, REST, Postgres and hashing
 
 **Repos:** `services/user-service-rs` (new).
 
@@ -206,7 +206,7 @@ of its paired Rust items; the list of implicit behaviours reviewed.
 - [x] RUST-2.6 — `GET /users/{id}`; CORS; error and rejection responses as
       the reference specifies
       *Done 2026-11-09 (`users-cors_20261109`): the whole contract REST group
-      green (35/35) — RUST-1.3's exit criterion; Rust Spike 2's exit criterion
+      green (35/35) — RUST-1.3's exit criterion; RUST-2's exit criterion
       (REST + schema/stored-format groups green) met.*
 
 **Exit criteria:** the harness's REST and schema/stored-format groups green
@@ -214,11 +214,11 @@ against the Rust service in isolated mode.
 
 ---
 
-## Rust Spike 3 — Outbox and the telemetry crate
+## RUST-3 — Outbox and the telemetry crate
 
 **Repos:** `services/user-service-rs`.
 
-**Depends on:** Rust Spike 2; paired with RUST-1.6 and 1.7.
+**Depends on:** RUST-2; paired with RUST-1.6 and 1.7.
 
 - [x] RUST-3.1 — `UserRegistered` outbox row in the signup transaction, in
       the shared envelope; CI check of the generated payload schema against
@@ -251,7 +251,7 @@ against the Rust service in isolated mode.
       every `AuthRoutes`/`UserRoutes` message, level and context field (9
       outcomes checked), canonical ids in user log paths, nothing for
       undecodable requests. Contract logs 16/16 (`scripts/verify-logs.sh`).
-      Rust Spike 3's exit criterion met: outbox, traces, metrics, logs and
+      RUST-3's exit criterion met: outbox, traces, metrics, logs and
       config groups green in isolated mode.*
 
 **Exit criteria:** the outbox and envelope, traces, metrics, logs and config
@@ -259,11 +259,11 @@ groups green against the Rust service in isolated mode.
 
 ---
 
-## Rust Spike 4 — Docs parity
+## RUST-4 — Docs parity
 
 **Repos:** `services/user-service-rs`.
 
-**Depends on:** Rust Spike 3; paired with RUST-1.4. Needs the Scala-generated
+**Depends on:** RUST-3; paired with RUST-1.4. Needs the Scala-generated
 docs artifacts from the laptop.
 
 - [x] RUST-4.1 — OpenAPI at `/docs/docs.yaml`, generated from the Rust
@@ -287,19 +287,19 @@ docs artifacts from the laptop.
       schema, in Scala either); `asyncapi-spec` prints the captured JSON byte
       for byte; `scripts/asyncapi-html.sh` renders HTML byte-identical to the
       capture; served from `ASYNCAPI_HTML_DIR` as in Scala. Docs group 17/17:
-      Rust Spike 4's exit criterion met (`scripts/verify-asyncapi.sh`).*
+      RUST-4's exit criterion met (`scripts/verify-asyncapi.sh`).*
 
 **Exit criteria:** the docs group green against the Rust service.
 
 ---
 
-## Rust Spike 5 — Laptop pass: Scala confirmation and gluon-local
+## RUST-5 — Laptop pass: Scala confirmation and gluon-local
 
 **Environment:** laptop. **Repos:** `gluon` (`bin/`, `environments/`),
 `tests/contract` (cluster mode), `services/user-service-rs` (Dockerfile,
 fixes).
 
-**Depends on:** Rust Spikes 1–4 (and 6, if done).
+**Depends on:** RUST-1–4 (and RUST-6, if done).
 
 - [x] RUST-5.0 — the harness against the Scala service in isolated mode:
       confirms every expectation drawn from the reference; any difference is
@@ -311,7 +311,7 @@ fixes).
       expectations were wrong, not Scala: the metrics scope check now leaves
       out the JVM runtime scopes, and `/docs/docs.yaml` is `application/yaml`
       with no charset (the Rust service changed to match). Rerun with
-      `tests/contract/scripts/verify-scala-confirmation.sh`.*
+      `tests/contract/scripts/verify-user-scala-confirmation.sh`.*
 - [ ] RUST-5.1 — `environments/local/user-service-rs.values.yaml`: image
       `user-service-rs`, the same env vars as `user-service.values.yaml`,
       `javaOpts` and `mallocArenaMax` blanked; the Rust service's Dockerfile
@@ -355,12 +355,12 @@ and the same checks green after switching back.
 
 ---
 
-## Rust Spike 6 — Consumer probe
+## RUST-6 — Consumer probe
 
 **Environment:** sandbox. **Repos:** `tests/contract` (stubs, probe group),
 `services/user-service-rs` (`events-probe`).
 
-**Depends on:** Rust Spike 3 (the telemetry crate) and RUST-1.8 (the Kafka
+**Depends on:** RUST-3 (the telemetry crate) and RUST-1.8 (the Kafka
 broker from the CDC stack). Can run alongside 4.
 
 - [x] RUST-6.1 — harness: the throwaway Kafka broker (shared with RUST-1.8)
@@ -398,7 +398,7 @@ broker from the CDC stack). Can run alongside 4.
       *Done 2026-11-09 (gluon-contract `probe-group_20261109`): 10 checks
       written before the probe, from ADR 0025, system-design, purekafka,
       purerest and notification-service; red against the placeholder, then
-      2, 5 and 10 green as 6.2, 6.3 and 6.4 landed. Rust Spike 6's exit
+      2, 5 and 10 green as 6.2, 6.3 and 6.4 landed. RUST-6's exit
       criterion met (`scripts/verify-probe-group.sh`).*
 
 **Exit criteria:** the probe group green; the probe never deployed to
@@ -406,7 +406,7 @@ gluon-local.
 
 ---
 
-## Rust Spike 7 — Findings and follow-up decision
+## RUST-7 — Findings and follow-up decision
 
 **Repos:** `gluon` (`docs/`), `services/user-service-rs` (README).
 
@@ -416,8 +416,8 @@ gluon-local.
       where it is now documented, library maturity notes, image size,
       startup time and idle memory (no load comparison), which success
       criteria were reached, and what the two-environment setup cost
-      *Sandbox part written 2026-11-10: `docs/rust-spike-findings.md`; the
-      laptop figures and criteria are added after Rust Spike 5.*
+      *Sandbox part written 2026-11-10: `docs/ports/user-service-findings.md`; the
+      laptop figures and criteria are added after RUST-5.*
 - [ ] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
       further ports; cost estimates for consuming or calling services take
       the probe's results, not user-service's alone
@@ -427,6 +427,6 @@ gluon-local.
       user-service-rs README
       *CHANGELOG and README updated 2026-11-10; ADR 0028's status waits for
       the laptop pass. How to verify everything:
-      `docs/rust-spike-verification.md`, `bin/verify-rust-spike`.*
+      `docs/ports/user-service-verification.md`, `bin/verify-port user-service`.*
 
 **Exit criteria:** findings reviewed and the follow-up ADR proposed.

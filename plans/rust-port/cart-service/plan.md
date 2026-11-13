@@ -2,7 +2,7 @@
 
 The third Rust port, after notification-service. Sessions `RPC-N`, built in
 the sandbox and verified on the laptop, under the same session rules as
-[notification-service](../notification/plan.md).
+[notification-service](../notification-service/plan.md).
 
 Not planned yet.
 

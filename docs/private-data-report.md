@@ -69,7 +69,7 @@ records the changes to the capture.
 |---|---|---|
 | GitHub user `beckfordp` | READMEs, ADRs, `build.sbt` (`io.github.beckfordp` artifacts), CI workflows, dashboard links in `infra/k8s` | The project's public GitHub account and package namespace; deliberately public. |
 | `gluon sandbox <sandbox@gluon.local>` | `bin/sandbox-setup`, `docs/sandbox.md` | The git identity for commits made in the sandbox. `.local` isn't a routable domain. |
-| `/home/model`, `/home/claude/.local/bin` | `docs/sandbox.md`, `bin/verify-rust-spike`, a harness unit test | Paths inside the sandbox machine, not anyone's computer. |
+| `/home/model`, `/home/claude/.local/bin` | `docs/sandbox.md`, `bin/verify-port user-service`, a harness unit test | Paths inside the sandbox machine, not anyone's computer. |
 | `support@asyncapi.org`, `i@izs.me` | generated AsyncAPI HTML, `frontends/gshop/package-lock.json` | Contacts of upstream open-source projects, published in their packages. |
 
 ## Left out of the delivery

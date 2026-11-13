@@ -1,20 +1,20 @@
-# Rust spike findings (ADR 0028; PLAN.md RUST-7.1)
+# user-service port findings (ADR 0028; PLAN.md RUST-7.1)
 
 **State: sandbox work complete, laptop pass under way.** Everything ADR 0028
-plans for the sandbox is done and green (Rust Spikes 1–4 and 6). On the
+plans for the sandbox is done and green (RUST-1–4 and RUST-6). On the
 laptop, the harness is confirmed against the Scala service (RUST-5.0,
-2026-11-10); the rest of the pass (Rust Spike 5: the image, the gluon-local
+2026-11-10); the rest of the pass (RUST-5: the image, the gluon-local
 deployment, Tempo, Kibana, the dashboards) is prepared but not run, so the
 criteria that need it are open. This document is updated after
 that pass; figures marked *(laptop)* come from it.
 
 How each success criterion is verified, and by which script:
-[`rust-spike-verification.md`](./rust-spike-verification.md). Last sandbox
-runs, 2026-11-10: `bin/verify-rust-spike` (full) — all 23 track scripts
+[`user-service-verification.md`](./user-service-verification.md). Last sandbox
+runs, 2026-11-10: `bin/verify-port user-service` (full) — all 23 track scripts
 `PASS`, laptop preparation `PASS`; it also found five verification bugs, all
 fixed (two stale verify-script expectations, an order-dependent metrics
 check, unlinted tests, a coverage gate whose mutation no longer bit). Then
-`bin/verify-rust-spike --quick` after the fixes: `PASS`, 129/129 checks.
+`bin/verify-port user-service --quick` after the fixes: `PASS`, 129/129 checks.
 Since 2026-11-10: 128, the login timing check dropped and recorded as not
 checked (`tests/contract` `4d95ea8`). On 2026-11-12: 127, the probe's
 slow-lookup timing check dropped the same way (`tests/contract` `8b893d4`):
@@ -58,7 +58,7 @@ timestamps give the sandbox time, review pauses excluded:
 
 25 implicit behaviours, each now a harness check; the list, with sources and
 where each gap is raised, is
-[`tests/contract/docs/implicit-behaviours.md`](../tests/contract/docs/implicit-behaviours.md).
+[`tests/contract/docs/implicit-behaviours.md`](../../tests/contract/docs/implicit-behaviours.md).
 The ones that changed documents:
 - **gluon `system-design.md`** (done): how `GET /users/{id}` parses ids (what
   `java.util.UUID.fromString` accepts: `1-2-3-4-5` is an id); the Kafka

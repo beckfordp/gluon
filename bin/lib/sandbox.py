@@ -3,7 +3,7 @@
 """What the sandbox scripts share (bin/sandbox-setup, -save, -restore, -export; docs/sandbox.md).
 
 The sandbox (ADR 0028) has no GitHub access, so the repos created there exist
-nowhere else until they are pushed from the laptop (plans/rust-port/user/plan.md RUST-5.6), and
+nowhere else until they are pushed from the laptop (plans/rust-port/user-service/plan.md RUST-5.6), and
 gluon itself has no git history there. These lists say what must be carried
 across a teardown.
 """

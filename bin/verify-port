@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Verify the Rust spike in the sandbox, end to end (ADR 0028; docs/rust-spike-verification.md).
+"""Verify a service's Rust port in the sandbox, end to end (docs/ports/<service>-verification.md).
+
+user-service (ADR 0028; docs/ports/user-service-verification.md) is the only port
+it verifies yet; notification-service follows with RPN-6.
 
 Runs every check the sandbox can run, one step at a time, printing each
 step's outcome as it finishes, then maps the results onto ADR 0028's success
@@ -18,9 +21,9 @@ Steps:
   7. laptop-prep bin/verify-laptop-prep (the laptop pieces, as far as the sandbox can)
 
 Usage:
-  bin/verify-rust-spike            everything (about an hour)
-  bin/verify-rust-spike --quick    steps 1-5 and 7 without its release build (~20 min)
-  bin/verify-rust-spike --only contract tracks
+  bin/verify-port user-service            everything (about an hour)
+  bin/verify-port user-service --quick    steps 1-5 and 7 without its release build (~20 min)
+  bin/verify-port user-service --only contract tracks
 
 Run from the sandbox desktop's root terminal too: it re-runs itself as the
 repos' owner, as every verify script does.
@@ -173,6 +176,11 @@ def step_build(logs: Path) -> Step:
     )
 
 
+def group_name(module: str) -> str:
+    """`test_user_rest` → `rest`: the group, without the service its module is named for."""
+    return module.removeprefix("test_").removeprefix("user_")
+
+
 def step_contract(logs: Path) -> Step:
     argv = [
         "uv",
@@ -208,11 +216,11 @@ def step_contract(logs: Path) -> Step:
         else:
             failed.append(f"{group}::{test}")
     groups = ", ".join(
-        f"{g.removeprefix('test_')} {green[g]}/{n}" for g, n in sorted(per_group.items())
+        f"{group_name(g)} {green[g]}/{n}" for g, n in sorted(per_group.items())
     )
     total = sum(per_group.values())
     ok = code == 0 and total > 0 and not failed
-    by_group = {g.removeprefix("test_"): green[g] == n for g, n in per_group.items()}
+    by_group = {group_name(g): green[g] == n for g, n in per_group.items()}
     summary = f"{sum(green.values())}/{total} green — {groups}"
     return Step("contract", ok, summary, failed, by_group)
 
@@ -273,6 +281,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
+    parser.add_argument("service", choices=["user-service", "notification-service"])
     parser.add_argument(
         "--quick", action="store_true", help="skip the track scripts and the release build"
     )
@@ -282,11 +291,14 @@ def main() -> int:
         choices=["sandbox", "harness-ci", "rust-ci", "build", "contract", "tracks", "laptop-prep"],
     )
     args = parser.parse_args()
+    if args.service != "user-service":
+        print(f"verify-port: {args.service} isn't verified yet (RPN-6)", file=sys.stderr)
+        return 2
     as_owner()
     os.environ["PATH"] = f"{OWNER_BIN}:{Path.home() / '.cargo/bin'}:{os.environ.get('PATH', '')}"
-    logs = Path(f"/tmp/rust-spike-verification-{time.strftime('%Y%m%d-%H%M%S')}")
+    logs = Path(f"/tmp/verify-port-{args.service}-{time.strftime('%Y%m%d-%H%M%S')}")
     logs.mkdir(parents=True)
-    print(f"Rust spike verification — logs in {logs}\n", flush=True)
+    print(f"{args.service} port verification — logs in {logs}\n", flush=True)
     wanted = args.only or ["sandbox", "harness-ci", "rust-ci", "build", "contract"] + (
         [] if args.quick else ["tracks"]
     ) + ["laptop-prep"]
@@ -325,7 +337,7 @@ def main() -> int:
         print(f"{state:<8} {criterion}")
     for criterion in LAPTOP:
         print(f"{'LAPTOP':<8} {criterion}")
-    print("(LAPTOP: docs/rust-spike-verification.md, Part B)")
+    print("(LAPTOP: docs/ports/user-service-verification.md, Part B)")
     failed = [s.name for s in steps.values() if not s.ok]
     print()
     if failed:

@@ -1,18 +1,18 @@
-# Verifying the Rust spike against ADR 0028
+# Verifying the user-service port against ADR 0028
 
 How to check that the Rust port of user-service meets
-[ADR 0028](./adr/0028-rust-port-spike-user-service.md)'s success criteria and
+[ADR 0028](../adr/0028-rust-port-spike-user-service.md)'s success criteria and
 covers every group of its "Contracts the harness checks" table. Part A runs
-in the sandbox with one command. Part B is the laptop pass (Rust Spike 5):
+in the sandbox with one command. Part B is the laptop pass (RUST-5):
 the criteria that need the Scala build, Docker or gluon-local.
 
-Results so far: [`rust-spike-findings.md`](./rust-spike-findings.md).
+Results so far: [`user-service-findings.md`](./user-service-findings.md).
 
 ## What is being verified
 
 | # | Criterion (ADR 0028 "Success criteria") | Where | How |
 |---|---|---|---|
-| C1 | The harness is green against the Rust service in isolated mode | sandbox | A: `bin/verify-rust-spike`, step `contract` |
+| C1 | The harness is green against the Rust service in isolated mode | sandbox | A: `bin/verify-port user-service`, step `contract` |
 | C2 | The harness is green against the Scala service, confirming its expectations | laptop | B2 |
 | C3 | Cluster mode is green for whichever implementation is deployed | laptop (mode tested in the sandbox) | B4, B9; A: `verify-cluster-mode.sh` |
 | C4 | With Rust deployed: `bin/run-acceptance` and user-service's `scripts/verify-auth.sh` pass unchanged | laptop | B5 |
@@ -20,19 +20,19 @@ Results so far: [`rust-spike-findings.md`](./rust-spike-findings.md).
 | C6 | One sign-up → notification trace in Tempo, through the Rust service, the outbox and notification-service, without breaks | laptop | B7 |
 | C7 | The Rust service's logs can be found in Kibana by `trace_id` | laptop | B7 |
 | C8 | The Service dashboard needs no panel changes; language-neutral panels and "Registrations + logins" populate; JVM/cats-effect panels empty | laptop (metric families checked in the sandbox) | B8; A: `contract` (metrics group) |
-| C9 | Findings recorded (effort, gaps, library notes, image size, startup, idle memory) | both | `rust-spike-findings.md`, completed after B |
+| C9 | Findings recorded (effort, gaps, library notes, image size, startup, idle memory) | both | `user-service-findings.md`, completed after B |
 | C10 | Consumer probe: the probe group green | sandbox | A: `contract` (probe group) |
 
 | Group (ADR 0028 "Contracts the harness checks") | Checks | File in `tests/contract/checks` |
 |---|---|---|
-| REST | 42 | `test_rest.py` |
-| Docs | 22 | `test_docs.py` |
-| Schema and stored formats | 6 | `test_schema.py` |
-| Outbox and envelope (+ the real routed record) | 5 + 3 | `test_outbox.py`, `test_cdc.py` |
-| Traces | 8 | `test_traces.py` |
-| Metrics | 7 | `test_metrics.py` |
-| Logs | 16 | `test_logs.py` |
-| Config | 10 | `test_config.py` |
+| REST | 42 | `test_user_rest.py` |
+| Docs | 22 | `test_user_docs.py` |
+| Schema and stored formats | 6 | `test_user_schema.py` |
+| Outbox and envelope (+ the real routed record) | 5 + 3 | `test_user_outbox.py`, `test_user_cdc.py` |
+| Traces | 8 | `test_user_traces.py` |
+| Metrics | 7 | `test_user_metrics.py` |
+| Logs | 16 | `test_user_logs.py` |
+| Config | 10 | `test_user_config.py` |
 | Consumer probe | 10 | `test_probe.py` |
 
 Every check names its `Source:` in the reference (ADR 0028 decision 2); none
@@ -45,13 +45,13 @@ itself as the repos' owner):
 
 ```
 cdw
-bin/verify-rust-spike            # everything, about an hour
-bin/verify-rust-spike --quick    # without the per-track scripts and the release build, ~20 min
+bin/verify-port user-service            # everything, about an hour
+bin/verify-port user-service --quick    # without the per-track scripts and the release build, ~20 min
 ```
 
 It prints each step's result as it finishes, then the criteria table with
 `MET`, `NOT MET` or `LAPTOP`, and ends `PASS` or `FAIL`. Logs go to
-`/tmp/rust-spike-verification-<time>/`, one file per step.
+`/tmp/verify-port-user-service-<time>/`, one file per step.
 
 | Step | What runs | Passes when | Criteria |
 |---|---|---|---|
@@ -66,7 +66,7 @@ It prints each step's result as it finishes, then the criteria table with
 Reviewing what was built: `sr contract` and `sr rust` open a repo's changes
 in vim (`--commit HEAD~N` for one commit); every commit has a git note
 saying why. The behaviours the spike found that nothing documented:
-[`tests/contract/docs/implicit-behaviours.md`](../tests/contract/docs/implicit-behaviours.md)
+[`tests/contract/docs/implicit-behaviours.md`](../../tests/contract/docs/implicit-behaviours.md)
 (`tests/contract/scripts/verify-implicit-behaviours.sh --run` re-checks
 them).
 
@@ -103,7 +103,7 @@ them).
 ## Part B — the laptop
 
 Everything below runs in the laptop's gluon checkout, with OrbStack's
-`gluon-local` up. Record each result in `rust-spike-findings.md`.
+`gluon-local` up. Record each result in `user-service-findings.md`.
 
 **B1. Bring the sandbox work over.** Download the newest
 `gluon-sandbox-<time>.tar.gz` from the sandbox's outputs, then:
@@ -135,9 +135,9 @@ uv run pytest checks -rA --ignore checks/test_probe.py \
 
 Passes when every check is green (the probe group is Rust-only; the CDC group
 needs the jars from `bin/sandbox-setup --only cdc`, or add
-`--ignore checks/test_cdc.py`). Or in one go, staging included:
-`tests/contract/scripts/verify-scala-confirmation.sh`. *Run 2026-11-10: 119/119
-(see `rust-spike-findings.md`).* Any red check is a harness expectation the
+`--ignore checks/test_user_cdc.py`). Or in one go, staging included:
+`tests/contract/scripts/verify-user-scala-confirmation.sh`. *Run 2026-11-10: 119/119
+(see `user-service-findings.md`).* Any red check is a harness expectation the
 Scala service doesn't meet: fix the check (or record a contract gap) before
 anything else, then re-run Part A's `contract` step in the sandbox.
 

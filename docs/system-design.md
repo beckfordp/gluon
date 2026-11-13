@@ -307,7 +307,7 @@ resolution, ADM-3; callee: user-service, **built 2026-11-02**,
   `java.util.UUID.fromString` accepts: five dash-separated hex groups of any
   length up to 36 characters in all, so `1-2-3-4-5` decodes (and then 404s)
   while the 32-digit undashed, braced and `urn:uuid:` forms are `400`s
-  (found by the Rust spike, ADR 0028; checked in `tests/contract`).
+  (found by the user-service port, ADR 0028; checked in `tests/contract`).
 - `404`: `{"error": "string"}` — no account with that id.
 - Unauthenticated local/demo read (ADM-3/ADR 0025 caveat); publishes nothing.
 

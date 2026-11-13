@@ -8,7 +8,7 @@ The second Rust port ([ADR 0029](../../../docs/adr/0029-after-the-rust-spike.md)
 option 3, edges inward): notification-service, wire-compatible with the Scala
 service, which stays the default. Built in the sandbox in **sessions**
 `RPN-N`, then verified on the laptop. Findings and the exit criteria:
-[`docs/rust-spike-findings.md`](../../../docs/rust-spike-findings.md).
+[`docs/ports/user-service-findings.md`](../../../docs/ports/user-service-findings.md).
 
 **Session rules:**
 - About 2–3 hours each, at least 5 turns; never more
@@ -48,7 +48,7 @@ Rust crates), `gluon` (`bin/`, `docs/`, `environments/`).
       GNU path must still be taken on Linux)
 
 **Done when:** both repos' `scripts/ci.sh` PASS; `verify-yaml-content-type.sh`
-and one older `verify-*.sh` PASS; `bin/verify-rust-spike --quick` PASS
+and one older `verify-*.sh` PASS; `bin/verify-port user-service --quick` PASS
 (128/128).
 
 ### RPN-0.1 — Export the ports, warn on unsaved repos
@@ -92,7 +92,7 @@ already committed (on the laptop, 2026-11-11). One conductor track in
         provenance). Write a module in `src/gluon_contract/` (reusing
         `capture.parse_exchange`, `otlp.decode_traces`,
         `cluster.parse_console_line`), unit-tested, and
-        `tests/contract/scripts/verify-ns-capture.sh [capture dir]` (default:
+        `tests/contract/scripts/verify-notification-capture.sh [capture dir]` (default:
         the latest notification-service capture) running it. It checks:
         every `http/*.txt` parses as an exchange (the timed health files: a
         response, or curl's timeout, exit 28); every OTLP export decodes and
@@ -110,7 +110,7 @@ already committed (on the laptop, 2026-11-11). One conductor track in
 
 **Done when:** `bin/verify-complete-RPN-1.sh` (written on the laptop) PASS,
 then it runs `bin/sandbox-save` (download the archive): `tests/contract`'s
-`ci.sh`; `verify-ns-capture.sh` PASS on the capture and FAIL, naming the file,
+`ci.sh`; `verify-notification-capture.sh` PASS on the capture and FAIL, naming the file,
 on three broken copies of it (an `http/*.txt` that is no exchange, an
 `otlp/*.json` whose spans differ from its `.pb`, a `sent_email` row with
 another status); each OTLP export's `.json` committed; the implicit-behaviours
@@ -163,7 +163,7 @@ archived; nothing uncommitted. Then it runs `bin/sandbox-save`.
 
 **Done when:** `bin/verify-complete-RPN-3.sh` (written on the laptop) PASS,
 then it runs `bin/sandbox-save` (download the archive): `tests/contract`'s
-`ci.sh`; user-service's 128 contract checks green (`bin/verify-rust-spike
+`ci.sh`; user-service's 128 contract checks green (`bin/verify-port user-service
 --only build contract`; 129 in the spike, the login timing check since
 dropped); the notification env contract unit test (a test in
 `tests/unit/test_env_contract.py` named for notification) green; the track
@@ -214,7 +214,7 @@ readiness, HEAD on `/health` and the unknown path were left out by decision
 
 **Done when:** each TD item's own "Done when"; both Rust services build on
 `lib/gluon-rs`; user-service 128/128 green
-(`bin/verify-rust-spike --only build contract`); notification-service's REST
+(`bin/verify-port user-service --only build contract`); notification-service's REST
 group still red against the skeleton only for `/emails` and CORS (the TD-42
 checks green); `tests/contract`'s `ci.sh` green.
 
