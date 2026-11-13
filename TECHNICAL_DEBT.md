@@ -1433,3 +1433,75 @@ versions (`test_rest.py`) port quickly once TD-34 shares their helpers.
 - [ ] TD-42.1: port them into `test_notification_rest.py`. Done when: they
       pass against both notification-service builds (Rust in the sandbox,
       Scala on the laptop).
+
+## TD-43 — The Rust services share no code
+
+Found in the RPN-4.1 design review (2026-11-13). notification-service-rs
+started as a copy of user-service-rs: `tests/support/mod.rs` (~450 lines, 53
+differ once the service name is swapped), `main.rs` (environment, runtime,
+`shutdown_signal`), `db::connect`, `ConfigError`/`PostgresConfig`/port
+parsing, the plain-text 404/405 and `/health`, `/health/ready` (two styles:
+`TextError` struct vs `text_error()`), `scripts/lib/verify.sh`, `ci.sh`, the
+lint table and toolchain. A cart port would make a third copy.
+
+### Tasks
+- [ ] TD-43.1: create `lib/gluon-rs` (cargo workspace, `ci.sh`, conductor; a
+      sandbox repo in `bin/lib/sandbox.py`) with a service-basics crate
+      (environment, shutdown, Postgres pool and ping, plain-text errors,
+      health and readiness routes) and a test-support crate (throwaway
+      Postgres, starting the service under test). Both services use them.
+      `telemetry` still moves in RPN-7. Done when: no copy of those pieces in
+      either service; both services' `ci.sh` green; user-service 128/128.
+- [ ] TD-43.2: one shared `scripts/lib/verify.sh` and a common `ci.sh` core;
+      each repo keeps only its own steps (e.g. user-service's registry
+      check). Done when: the two repos' copies are gone or differ only in
+      their own steps.
+
+## TD-44 — Service knowledge spread through tests/contract
+
+`services.py` holds each service's dependencies, but other per-service facts
+are written in elsewhere: capture helpers default to `service="user-service"`,
+`config.DEFAULT_SERVICE`, `http_stub` is user-service's `GET /users/{id}`
+only, notification-service's modules are `ns_capture`/`ns_scenarios`.
+Adding cart-service would touch all of them.
+
+### Tasks
+- [ ] TD-44.1: one profile per service carrying its capture, variable prefix
+      and stubs; the service argument required (no user-service default);
+      `ns_*` → `notification_*` (with TD-33). Done when: adding a service is
+      one profile plus its checks; both services' groups as before.
+
+## TD-45 — The Kafka broker lives in cdc.py
+
+`KafkaBroker` is in `gluon_contract/cdc.py` (575 lines), but the harness for
+notification-service and the probe checks use it without CDC.
+
+### Tasks
+- [ ] TD-45.1: move it to `gluon_contract/kafka.py`. Done when: `cdc.py` holds
+      only the Connect/Debezium stack; CI green.
+
+## TD-46 — Verify scripts pile up
+
+Each track leaves its acceptance script behind: ~19 in tests/contract
+(`scripts/verify-*.sh`), ~19 in user-service-rs, plus gluon's per-session
+done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
+`canon_http` is copied (notification-service-rs `verify-skeleton.sh`, gluon
+`bin/verify-complete-RPN-2.sh`; see TD-39).
+
+### Tasks
+- [ ] TD-46.1: rule (in each repo's `conductor/workflow.md` and
+      `docs/sandbox.md`): once a track is archived, its script folds into
+      `ci.sh` or `bin/verify-rust-spike`, or is deleted; done scripts stay
+      as history, unchanged. Apply it to the existing scripts. Done when:
+      every remaining script is run by CI or a regression entry point.
+
+## TD-47 — A Rust port cites its sibling, not the Scala source
+
+notification-service-rs `db.rs`: pool size "as user-service-rs". The value
+(10) matches Scala `SentEmailStore` (`.pooled(max = 10)`), but the contract
+is the Scala service.
+
+### Tasks
+- [ ] TD-47.1: cite the Scala source for every contract value in both ports.
+      Done when: `git grep -n 'as user-service-rs'` finds none in
+      notification-service-rs sources.

@@ -191,9 +191,14 @@ readiness, HEAD on `/health` and the unknown path were left out by decision
 ### RPN-4.1 — Review and tidy
 
 **Laptop**, before the next sandbox session. **Repos:** `tests/contract`,
-`services/user-service-rs`, `services/notification-service-rs`, `gluon`
-(`bin/`).
+`services/user-service-rs`, `services/notification-service-rs`,
+`lib/gluon-rs` (new), `gluon` (`bin/`).
 
+- [x] RPN-4.1a — the design review *(2026-11-13: findings M1–M5, m1–m5;
+      decided: shared crates now (TD-43), one profile per service (TD-44),
+      `kafka.py` split (TD-45), script retirement rule (TD-46), Scala
+      citations (TD-47); the probe's retirement planned in RPN-8 and
+      RPN-10–13)*
 - [ ] RPN-4.1 — a design review of all the Rust-port work so far, at the macro
       level (repo and crate boundaries, what the harness owns, what the two
       services share) and the micro level (modules, helpers, naming, tests),
@@ -203,9 +208,12 @@ readiness, HEAD on `/health` and the unknown path were left out by decision
       connect), TD-36 (one `sent-email.jsonl` parser), TD-37 (CI independent
       of the build), TD-39 (done-script library), TD-40 (full failure
       messages), TD-41 (every citation checked), TD-42 (notification-service
-      health checks in the harness). Not TD-38 (shellcheck).
+      health checks in the harness), and from the review TD-43 (`lib/gluon-rs`
+      with service basics and test support; shared `verify.sh`/`ci.sh` core),
+      TD-44, TD-45, TD-46, TD-47. Not TD-38 (shellcheck).
 
-**Done when:** each TD item's own "Done when"; user-service 128/128 green
+**Done when:** each TD item's own "Done when"; both Rust services build on
+`lib/gluon-rs`; user-service 128/128 green
 (`bin/verify-rust-spike --only build contract`); notification-service's REST
 group still red against the skeleton only for `/emails` and CORS (the TD-42
 checks green); `tests/contract`'s `ci.sh` green.
@@ -237,9 +245,8 @@ lists every criterion NOT MET or LAPTOP; its own test shows the exit codes.
 **Repos:** `lib/gluon-rs` (new), `services/user-service-rs`,
 `services/notification-service-rs`.
 
-- [ ] RPN-7 — create `lib/gluon-rs` (cargo workspace, `ci.sh`, conductor),
-      move `telemetry` there; both Rust services depend on it by path; add the
-      repo to `SANDBOX_REPOS`
+- [ ] RPN-7 — move `telemetry` into `lib/gluon-rs` (created in RPN-4.1,
+      TD-43); both Rust services depend on it by path
 
 **Done when:** all three repos' `ci.sh` PASS; the harness 128/128 against
 user-service-rs; notification-service-rs's checks still green.
@@ -249,7 +256,12 @@ user-service-rs; notification-service-rs's checks still green.
 **Repos:** `lib/gluon-rs`, `services/user-service-rs`.
 
 - [ ] RPN-8 — move the probe's envelope handling, DLQ, stream supervisor and
-      lag into a `gluon-kafka` crate; the probe uses it
+      lag into a `gluon-kafka` crate; the probe uses it. The probe stands in
+      for notification-service's consumers (its checks are marked
+      user-service only for want of a consumer): as RPN-10–13 bring the real
+      consumers, each probe check moves to notification-service's groups and
+      runs against notification-service-rs; the probe and `events-probe`
+      crate are retired after RPN-13 (design review RPN-4.1, M2)
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
 
