@@ -1,3 +1,4 @@
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "16px", "primaryTextColor": "#0f172a", "textColor": "#0f172a", "lineColor": "#64748b", "clusterBkg": "#f8fafc", "clusterBorder": "#64748b", "titleColor": "#0f172a", "edgeLabelBackground": "#ffffff", "mainBkg": "#f1f5f9", "nodeBorder": "#334155"}}}%%
 flowchart TB
     subgraph LAPTOP1["laptop — reference"]
         SCALA["Scala service<br/>(the reference, stays the default)"]
@@ -42,10 +43,11 @@ flowchart TB
     EXIT -->|"no: next increment"| EXPORT
     EXIT -->|"yes"| SWAP["Rust port can replace the Scala service"]
 
-    classDef ref fill:#eef2ff,stroke:#4f46e5,stroke-width:2px
-    classDef harness fill:#ecfdf5,stroke:#059669,stroke-width:2px
-    classDef sandbox fill:#fff7ed,stroke:#ea580c,stroke-width:2px
-    classDef decision fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+    classDef default fill:#f1f5f9,stroke:#334155,stroke-width:2px,color:#0f172a
+    classDef ref fill:#e0e7ff,stroke:#3730a3,stroke-width:2px,color:#0f172a
+    classDef harness fill:#d1fae5,stroke:#047857,stroke-width:2px,color:#0f172a
+    classDef sandbox fill:#ffedd5,stroke:#c2410c,stroke-width:2px,color:#0f172a
+    classDef decision fill:#f1f5f9,stroke:#334155,stroke-width:2px,color:#0f172a
     class SCALA,CAP,SPEC ref
     class CONTRACTS,CHECKS,IMPLICIT harness
     class ACC,RED,IMPL,GREEN,REVIEW sandbox
