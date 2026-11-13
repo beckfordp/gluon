@@ -8,6 +8,9 @@ gluon itself has no git history there. These lists say what must be carried
 across a teardown.
 """
 
+import shutil
+import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 GLUON = Path(__file__).resolve().parent.parent.parent
@@ -76,3 +79,45 @@ def git_repos(root: Path = GLUON) -> list[Path]:
     return sorted(
         git.parent.relative_to(root) for d in NESTED_REPO_DIRS for git in (root / d).glob("*/.git")
     )
+
+
+BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
+"""Build-output directory names removed unasked before every export and save: regenerable,
+and too big for the sandbox's download."""
+
+KEPT = frozenset({".claude", ".venv", "node_modules"})
+"""Never removed: tool state and dev environments (none is exported)."""
+
+
+def build_output(repo: Path) -> list[Path]:
+    """Build-output directories (BUILD_DIRS) in `repo`, bar KEPT."""
+    ignored = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    build = [Path(p) for p in ignored.split("\0") if p.endswith("/") and Path(p).name in BUILD_DIRS]
+    return [repo / p for p in sorted(build) if not any(part in KEPT for part in p.parts)]
+
+
+def size(path: Path) -> int:
+    """Bytes under `path`."""
+    if path.is_file():
+        return path.stat().st_size
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
+
+
+def remove(path: Path) -> None:
+    """Removes a file or a directory tree."""
+    shutil.rmtree(path) if path.is_dir() and not path.is_symlink() else path.unlink()
+
+
+def remove_build_output(repos: Sequence[Path]) -> int:
+    """Removes the build output in `repos`, printing each directory; returns how many."""
+    build = [path for repo in repos for path in build_output(repo)]
+    built = 0
+    for path in build:
+        built += (bytes_ := size(path))
+        remove(path)
+        print(f"removed   dir  {path.relative_to(GLUON)} ({bytes_ / 2**20:.1f} MiB)")
+    print(f"clean     {len(build)} build-output dirs removed ({built / 2**20:.0f} MiB)")
+    return len(build)

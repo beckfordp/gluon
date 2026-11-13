@@ -32,10 +32,11 @@ files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ON
 never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-No plan travels: PLAN.md, plans/, TECHNICAL_DEBT.md, CHANGELOG.md,
+No plan travels: PLAN.md, plans/, CHANGELOG.md,
 docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
-instructions are written by hand.
+instructions are written by hand. TECHNICAL_DEBT.md travels: the sandbox adds what
+it finds, and the laptop merges it.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -56,7 +57,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, NESTED_REPO_DIRS, PLATFORM_EXCLUDES, SANDBOX_REPOS, export_repos, git_repos
+from sandbox import (
+    GLUON,
+    KEPT,
+    NESTED_REPO_DIRS,
+    PLATFORM_EXCLUDES,
+    SANDBOX_REPOS,
+    export_repos,
+    git_repos,
+    remove,
+    remove_build_output,
+    size,
+)
 
 DEFAULT_OUT = GLUON.parent / "sandbox" / "workspace" / "gluon"
 """Where the upload is staged on the laptop."""
@@ -71,7 +83,6 @@ inside their captures as CAPTURE.sh."""
 NOT_EXPORTED = frozenset(
     {
         Path("PLAN.md"),
-        Path("TECHNICAL_DEBT.md"),
         Path("CHANGELOG.md"),
         Path("docs") / "sandbox.md",
         Path("bin") / "sandbox-export",
@@ -174,20 +185,13 @@ REF_ALLOWED = (
 )
 """Files whose references to repos not exported are known to be harmless, and why."""
 
-BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
-"""Build-output directory names removed unasked before every export: regenerable, never
-exported."""
-
-KEPT = frozenset({".claude", ".venv", "node_modules"})
-"""Never removed: tool state and dev environments (none is exported)."""
-
 LEFT_OUT = (
     ("`.git` in every repo", "No history leaves the laptop; early harness history holds pre-redaction capture values."),
     ("Build output: `target/`, `.bsp/`, `node_modules/`, `.venv/`, `__pycache__/`", "Transient, and `.bsp/sbt.json` holds laptop paths."),
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`, `plans/`, `TECHNICAL_DEBT.md`", "Plans the sandbox session would act on."),
+    ("`PLAN.md`, `plans/`", "Plans the sandbox session would act on."),
     ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
@@ -256,13 +260,6 @@ def dirty(repo: Path) -> list[str]:
     return git(repo, "status", "--porcelain", "--untracked-files=no").splitlines()
 
 
-def build_output(repo: Path) -> list[Path]:
-    """Build-output directories (BUILD_DIRS) in `repo`, bar KEPT."""
-    ignored = git(repo, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
-    build = [Path(p) for p in ignored.split("\0") if p.endswith("/") and Path(p).name in BUILD_DIRS]
-    return [repo / p for p in sorted(build) if not any(part in KEPT for part in p.parts)]
-
-
 def untracked(repo: Path) -> list[Path]:
     """Untracked files in `repo`, bar KEPT and LOCAL_ONLY.
 
@@ -279,28 +276,10 @@ def untracked(repo: Path) -> list[Path]:
     return [repo / p for p in sorted(found) if offered(p)]
 
 
-def size(path: Path) -> int:
-    """Bytes under `path`."""
-    if path.is_file():
-        return path.stat().st_size
-    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
-
-
-def remove(path: Path) -> None:
-    """Removes a file or a directory tree."""
-    shutil.rmtree(path) if path.is_dir() and not path.is_symlink() else path.unlink()
-
-
 def clean(repos: Sequence[Path], yes: bool) -> None:
     """Removes build output unasked, then lists untracked files and removes them once
     confirmed; stops if not."""
-    build = [path for repo in repos for path in build_output(repo)]
-    built = 0
-    for path in build:
-        built += (bytes_ := size(path))
-        remove(path)
-        print(f"removed   dir  {path.relative_to(GLUON)} ({bytes_ / 2**20:.1f} MiB)")
-    print(f"clean     {len(build)} build-output dirs removed ({built / 2**20:.0f} MiB)")
+    remove_build_output(repos)
     found = [path for repo in repos for path in untracked(repo)]
     if not found:
         print("clean     no untracked files")

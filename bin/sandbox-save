@@ -16,8 +16,13 @@ download is an all-code tar.gz that drops .git and every archive, this one
 included, so the patches are what brings the commits back to the laptop
 (`git am`, docs/sandbox.md).
 
+First it removes build output (BUILD_DIRS) in gluon and the exported repos, as
+bin/sandbox-export does: with `target/` left in, the sandbox's download is too big
+to be made. --no-clean keeps it, for a mid-session save with no download to follow.
+
 Usage:
   bin/sandbox-save [--out DIR]   default DIR: /tmp/outputs
+  bin/sandbox-save --no-clean    keep build output (no download after this save)
 
 Restore with bin/sandbox-restore <archive>.
 
@@ -37,7 +42,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
-from sandbox import GLUON, PATCH_DIR, SANDBOX_REPOS, git_repos, platform_files
+from sandbox import GLUON, PATCH_DIR, SANDBOX_REPOS, export_repos, git_repos, platform_files, remove_build_output
 
 
 def git(repo: Path, *args: str) -> str:
@@ -163,7 +168,12 @@ def main(argv: Sequence[str]) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--out", type=Path, default=Path("/tmp/outputs"), help="output directory")
+    parser.add_argument(
+        "--no-clean", action="store_true", help="keep build output (no download after this save)"
+    )
     args = parser.parse_args(argv)
+    if not args.no_clean:
+        remove_build_output([GLUON, *(GLUON / repo for repo in export_repos())])
     archive = save(args.out)
     size_kib = archive.stat().st_size // 1024
     print(f"\nSaved {archive} ({size_kib} KiB). Restore: bin/sandbox-restore {archive}")
