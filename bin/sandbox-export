@@ -27,8 +27,9 @@ Usage:
   bin/sandbox-export [--out DIR] [--clean] [--capture SERVICE=DIR ...]
                      [--no-auto-captures] [--no-archive] [--yes]
 
-First, untracked files and build output (BUILD_DIRS) in those repos are listed
-and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY never are.
+First, build output (BUILD_DIRS) in those repos is removed, unasked; then untracked
+files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY
+never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels: PLAN.md, the perf sequence, TECHNICAL_DEBT.md, CHANGELOG.md,
@@ -172,7 +173,8 @@ REF_ALLOWED = (
 """Files whose references to repos not exported are known to be harmless, and why."""
 
 BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
-"""Build-output directory names offered for removal before an export."""
+"""Build-output directory names removed unasked before every export: regenerable, never
+exported."""
 
 KEPT = frozenset({".claude", ".venv", "node_modules"})
 """Never removed: assistant state and dev environments (none is exported)."""
@@ -247,12 +249,19 @@ def strip_backlog(text: str) -> str:
 
 
 def dirty(repo: Path) -> list[str]:
-    """Uncommitted changes to tracked files (untracked ones are `removable`)."""
+    """Uncommitted changes to tracked files (untracked ones are `untracked`)."""
     return git(repo, "status", "--porcelain", "--untracked-files=no").splitlines()
 
 
-def removable(repo: Path) -> list[Path]:
-    """Untracked files and build-output directories in `repo`, bar KEPT and LOCAL_ONLY.
+def build_output(repo: Path) -> list[Path]:
+    """Build-output directories (BUILD_DIRS) in `repo`, bar KEPT."""
+    ignored = git(repo, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
+    build = [Path(p) for p in ignored.split("\0") if p.endswith("/") and Path(p).name in BUILD_DIRS]
+    return [repo / p for p in sorted(build) if not any(part in KEPT for part in p.parts)]
+
+
+def untracked(repo: Path) -> list[Path]:
+    """Untracked files in `repo`, bar KEPT and LOCAL_ONLY.
 
     In gluon, the nested repos' directories are ignored as a whole and never offered.
     """
@@ -263,10 +272,8 @@ def removable(repo: Path) -> list[Path]:
             return False
         return True
 
-    untracked = [Path(p) for p in git(repo, "ls-files", "-z", "--others", "--exclude-standard").split("\0") if p]
-    ignored = git(repo, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory")
-    build = [Path(p) for p in ignored.split("\0") if p.endswith("/") and Path(p).name in BUILD_DIRS]
-    return [repo / p for p in sorted({*untracked, *build}) if offered(p)]
+    found = [Path(p) for p in git(repo, "ls-files", "-z", "--others", "--exclude-standard").split("\0") if p]
+    return [repo / p for p in sorted(found) if offered(p)]
 
 
 def size(path: Path) -> int:
@@ -276,11 +283,24 @@ def size(path: Path) -> int:
     return sum(p.stat().st_size for p in path.rglob("*") if p.is_file() and not p.is_symlink())
 
 
+def remove(path: Path) -> None:
+    """Removes a file or a directory tree."""
+    shutil.rmtree(path) if path.is_dir() and not path.is_symlink() else path.unlink()
+
+
 def clean(repos: Sequence[Path], yes: bool) -> None:
-    """Lists untracked files and build output, and removes them once confirmed; stops if not."""
-    found = [path for repo in repos for path in removable(repo)]
+    """Removes build output unasked, then lists untracked files and removes them once
+    confirmed; stops if not."""
+    build = [path for repo in repos for path in build_output(repo)]
+    built = 0
+    for path in build:
+        built += (bytes_ := size(path))
+        remove(path)
+        print(f"removed   dir  {path.relative_to(GLUON)} ({bytes_ / 2**20:.1f} MiB)")
+    print(f"clean     {len(build)} build-output dirs removed ({built / 2**20:.0f} MiB)")
+    found = [path for repo in repos for path in untracked(repo)]
     if not found:
-        print("clean     no untracked files or build output")
+        print("clean     no untracked files")
         return
     total = 0
     for path in found:
@@ -294,7 +314,7 @@ def clean(repos: Sequence[Path], yes: bool) -> None:
         if input(prompt).strip().lower() not in ("y", "yes"):
             raise SystemExit("Not removed; nothing exported")
     for path in found:
-        shutil.rmtree(path) if path.is_dir() and not path.is_symlink() else path.unlink()
+        remove(path)
     print(f"removed   {len(found)} paths ({total / 2**20:.0f} MiB)")
 
 
@@ -561,7 +581,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--capture", action="append", default=[], metavar="SERVICE=DIR")
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
-    parser.add_argument("--yes", action="store_true", help="remove untracked files and build output unasked")
+    parser.add_argument("--yes", action="store_true", help="remove untracked files unasked (build output always is)")
     args = parser.parse_args(argv)
     out = args.out.expanduser().resolve()
     if out == GLUON or GLUON in out.parents:
