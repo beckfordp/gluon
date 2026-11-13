@@ -1,4 +1,4 @@
--10I# Technical debt
+# Technical debt
 
 Cross-cutting technical gaps found while building — not derived from a
 user story, so they don't belong in `docs/user-stories.md`/`PLAN.md`, and
@@ -1286,7 +1286,7 @@ topics, scale up (re-created compacted), re-run the register Job. Apicurio
       wrongly configured internals.
 - [ ] TD-31.4: alert on Kafka restarts / Connect not publishing (with TD-30.2).
 
-## TD-32 — Sandbox commit history doesn't reach the laptop
+## TD-32 — Sandbox commit history doesn't reach the laptop — **RESOLVED 2026-11-13**
 
 The sandbox's only download is an all-code `tar.gz` of the workspace
 (`<id>_<n>_a_all_code.tar.gz`). It drops `.git`, build output and every
@@ -1298,12 +1298,138 @@ the laptop as `12bc822`. The archived track's `plan.md` still cites the sandbox
 SHAs.
 
 ### Tasks
-- [ ] TD-32.1: `bin/sandbox-save` also writes `git format-patch <baseline>..main`
+- [x] TD-32.1: `bin/sandbox-save` also writes `git format-patch <baseline>..main`
       per sandbox repo as plain `.patch` files inside the workspace
       (`gluon/sandbox-out/<repo>/`); the laptop replays them with `git am`.
       Confirm on one download that they survive the filter.
-      *Implemented 2026-11-12 (`write_patches`, docs/sandbox.md); awaiting
-      the next session's download to confirm.*
-- [ ] TD-32.2: if no text route survives, accept squash: one laptop commit per
+      *Implemented 2026-11-12 (`write_patches`, docs/sandbox.md);
+      confirmed by RPN-4's download 2026-11-13 (25 patches, `git am` clean).*
+- [-] TD-32.2 *(not needed: the patches survive)*: if no text route survives, accept squash: one laptop commit per
       repo per session, and document that in `docs/sandbox.md` ("Bringing
       commits back to the laptop"), replacing the bundle route.
+
+## TD-33 — user-service's check modules and verify scripts don't name the service
+
+Found in RPN-4 (sandbox, 2026-11-13). With two services in `tests/contract`,
+a name that doesn't say its service is ambiguous. notification-service's are
+already named for it (`checks/test_notification_rest.py`,
+`scripts/verify-notification-rest-group.sh`); user-service's aren't
+(`checks/test_rest.py`, `test_docs.py`, `test_schema.py`, …;
+`scripts/verify-rest-group.sh`, `verify-docs-group.sh`, …). Callers: gluon
+`bin/verify-rust-spike`, `bin/verify-complete-RPN-0.sh`,
+`docs/rust-spike-verification.md`; tests/contract `scripts/verify-*-group.sh`,
+`verify-portable-harness.sh`, `docs/implicit-behaviours.md` (25 entries name
+`test_rest.py::…`), `tests/integration/test_cluster_mode.py`; user-service-rs
+`scripts/verify-{readiness,openapi,users-cors,asyncapi,metrics,auth}.sh`.
+
+### Tasks
+- [ ] TD-33.1: rename to `test_user_rest.py`, …, `verify-user-rest-group.sh`, …
+      and update every caller. Decide first whether finished sessions' done
+      scripts (`bin/verify-complete-RPN-0.sh` … `-3.sh`) change or stay as
+      history. Done when: `bin/verify-rust-spike --quick` 128/128 green; every
+      user-service `verify-*-group.sh` passes; `git grep` finds no old name
+      outside history.
+
+## TD-34 — Two sets of response comparisons in tests/contract
+
+user-service's `checks/test_rest.py` keeps its own `assert_same`,
+`assert_text_error` and `CORS_HEADERS`; RPN-4 added
+`gluon_contract.expect` (`assert_same`, `assert_text_error`,
+`assert_same_cors`, `CORS_HEADERS`) for any service. `new_email` in
+`test_rest.py` and `test_schema.py` duplicates `checks/support.py`'s. Two
+copies of a comparison rule drift; `expect`'s failures also spell out
+expected and actual (pytest doesn't rewrite asserts in `src/`).
+
+### Tasks
+- [ ] TD-34.1: user-service's checks use `gluon_contract.expect` and
+      `checks/support.py`'s `new_email`. Done when: no comparison helper
+      defined in a check module; user-service 128/128 green.
+
+## TD-35 — Postgres connection written out in several places in tests/contract
+
+The same `psycopg.connect(host=…, port=…, dbname=…, user=…, password=…)` is
+in `pytest_plugin.db`, `tests/integration/test_schema_snapshot.py`,
+`test_sent_email_seed.py` and the verify scripts' inline Python.
+
+### Tasks
+- [ ] TD-35.1: one helper in `gluon_contract.postgres` (from a
+      `PostgresEndpoint`). Done when: one definition; CI green.
+
+## TD-36 — `sent-email.jsonl` parsed twice in tests/contract
+
+`ns_capture.check_sent_email` (RPN-1) parses the dump line by line;
+`sent_email.parse_rows` (RPN-4) parses the same file into typed rows.
+
+### Tasks
+- [ ] TD-36.1: the capture check uses `sent_email.parse_rows`. Done when: one
+      parser; `scripts/verify-ns-capture.sh` and its broken-copy cases (gluon
+      `bin/verify-complete-RPN-1.sh`) still behave.
+
+## TD-37 — tests/contract CI depends on what has been built
+
+`tests/integration/test_cluster_mode.py` skips until
+`services/user-service-rs/target/debug/user-service` exists, then runs the
+docs checks, which fail unless `scripts/asyncapi-html.sh` has rendered
+`target/asyncapi-docs`. So `scripts/ci.sh` flips green → red after a plain
+`cargo build`. Found in RPN-4's baseline; `bin/verify-complete-RPN-4.sh`
+works around it with RPN-0's setup step.
+
+### Tasks
+- [ ] TD-37.1: skip with the reason when the HTML is missing too (or have the
+      test render it). Done when: CI gives the same result on a fresh
+      checkout, after `cargo build`, and after `asyncapi-html.sh`.
+
+## TD-38 — Shell scripts aren't linted
+
+The verify and done scripts carry `shellcheck` directives, but nothing runs
+shellcheck: the sandbox doesn't have it and no `ci.sh` calls it.
+
+### Tasks
+- [ ] TD-38.1: pinned shellcheck in `bin/sandbox-setup`; run over
+      `scripts/*.sh` in each repo's CI and over gluon `bin/*.sh`. Done when:
+      shellcheck runs in CI, clean.
+
+## TD-39 — Done scripts share their boilerplate by copy
+
+Each `bin/verify-complete-RPN-*.sh` defines `pass`, `fail`, `run`, the log
+directory and the `bin/sandbox-save` ending (RPN-2's also `canon_http`).
+
+### Tasks
+- [ ] TD-39.1: extract `bin/lib/verify-complete.sh`; each done script keeps
+      only its criteria. Done when: RPN-4's and later done scripts source it,
+      their output unchanged.
+
+## TD-40 — `verify-check-group.sh` cuts each check's failure short
+
+The per-check lines come from pytest's `-rA` summary, which cuts messages to
+the terminal width (`red  test_… - A...`). The script writes a junit report
+since RPN-4.
+
+### Tasks
+- [ ] TD-40.1: read each check's outcome and message from the junit report.
+      Done when: a red line shows its reason (`got 404 …`) in full, up to a
+      fixed length.
+
+## TD-41 — `verify-check-group.sh` checks only `http/…` citations
+
+Section 2 checks that each capture file a docstring cites exists, but only
+names written `http/<name>.txt`; in `http/emails-post.txt, emails-delete.txt`
+the later names go unchecked.
+
+### Tasks
+- [ ] TD-41.1: check every capture file a `Source:` line names. Done when: a
+      missing later name fails the section.
+
+## TD-42 — The harness doesn't check notification-service's health endpoints
+
+By decision in RPN-4 (option a), `test_notification_rest.py` has no checks of
+`/health`, `/health/ready`, HEAD, the unknown path, or readiness with Postgres
+stopped. notification-service-rs's own tests cover them (`tests/health.rs`,
+`tests/readiness.rs`, `scripts/verify-skeleton.sh`), but the harness doesn't
+run those, so the Scala service never faces them there. user-service's
+versions (`test_rest.py`) port quickly once TD-34 shares their helpers.
+
+### Tasks
+- [ ] TD-42.1: port them into `test_notification_rest.py`. Done when: they
+      pass against both notification-service builds (Rust in the sandbox,
+      Scala on the laptop).

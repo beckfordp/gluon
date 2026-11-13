@@ -15,11 +15,16 @@ service, which stays the default. Built in the sandbox in **sessions**
   than four. Estimates are a first guess ×3 (RPN-0: 45 min planned, 3 hours
   taken). A session that runs over is split at its first green check.
 - Each session's check is written first and seen failing for the stated
-  reason, then turned green. "Done when" names the script that prints `PASS`.
+  reason, then turned green. "Done when" names the script that prints `PASS`:
+  a `bin/verify-complete-RPN-N.sh` written with the user at the start of the
+  session, as its acceptance test (RPN-4 on), not sent from the laptop.
+- The session proposes, the user decides: no design decision is taken
+  without the user's approval, and work stops at each step for review.
 - Each session ends with a review, a commit in its repo (a conductor track,
   newTrack → implement → review → archive) and `bin/sandbox-save`.
 - The sandbox session's instructions are written by hand; no plan, backlog
-  or sequence file travels.
+  or sequence file travels. `TECHNICAL_DEBT.md` does: the session adds what
+  it finds there, and the laptop merges it.
 - The sandbox has no Scala, Docker, Kubernetes or GitHub; anything needing
   them waits for the laptop sessions (`RPN-L…`).
 
@@ -168,12 +173,42 @@ archived; nothing uncommitted.
 
 **Repos:** `tests/contract`.
 
-- [ ] RPN-4 — REST group from the capture: filters (customer, order, both,
+- [x] RPN-4 — REST group from the capture: filters (customer, order, both,
       none, empty, repeated, unknown), newest first, 404 / 405, trailing
-      slash, HEAD, CORS
+      slash, HEAD, CORS *(done 2026-11-13, tests/contract track
+      `ns-rest_20261113`, squashed on the laptop)*
 
 **Done when:** the group is red against the scaffold for the stated reason
 (404), and green against the capture's exchanges.
+
+*As delivered:* `bin/verify-complete-RPN-4.sh` PASS. 19 checks, all red against
+the skeleton with a 404. "Green against the capture" became the seed
+reproducing all 13 captured `/emails` answers (a unit test); the group itself
+is first seen green in RPN-5, and against Scala on the laptop. Health,
+readiness, HEAD on `/health` and the unknown path were left out by decision
+(TD-42, now in RPN-4.1). Technical debt found: TD-33–TD-42.
+
+### RPN-4.1 — Review and tidy
+
+**Laptop**, before the next sandbox session. **Repos:** `tests/contract`,
+`services/user-service-rs`, `services/notification-service-rs`, `gluon`
+(`bin/`).
+
+- [ ] RPN-4.1 — a design review of all the Rust-port work so far, at the macro
+      level (repo and crate boundaries, what the harness owns, what the two
+      services share) and the micro level (modules, helpers, naming, tests),
+      looking for duplication between user-service and notification-service.
+      Its findings become decisions here or TD items. Then:
+      TD-33 (names), TD-34 (one set of comparisons), TD-35 (one Postgres
+      connect), TD-36 (one `sent-email.jsonl` parser), TD-37 (CI independent
+      of the build), TD-39 (done-script library), TD-40 (full failure
+      messages), TD-41 (every citation checked), TD-42 (notification-service
+      health checks in the harness). Not TD-38 (shellcheck).
+
+**Done when:** each TD item's own "Done when"; user-service 128/128 green
+(`bin/verify-rust-spike --only build contract`); notification-service's REST
+group still red against the skeleton only for `/emails` and CORS (the TD-42
+checks green); `tests/contract`'s `ci.sh` green.
 
 ### RPN-5 — `/emails`
 
@@ -181,7 +216,9 @@ archived; nothing uncommitted.
 
 - [ ] RPN-5 — the route, the store's list query, CORS
 
-**Done when:** REST group green.
+**Done when:** the whole REST group (`test_notification_rest.py`, the TD-42
+checks included) green against notification-service-rs in the sandbox, and,
+on the laptop, the same group green against the Scala service.
 
 ### RPN-6 — Exit criteria and `bin/verify-port`
 
