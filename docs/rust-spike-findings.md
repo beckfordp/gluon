@@ -39,9 +39,9 @@ the service itself is under 2,000 lines.
 
 ## Effort per increment
 
-The work was done by the assistant in the sandbox, with the user reviewing
+The work was done in the sandbox, with reviews
 between increments, so elapsed time isn't a human's working days. Commit
-timestamps give the assistant's share, review pauses excluded:
+timestamps give the sandbox time, review pauses excluded:
 
 | Increment | Sandbox time | Notes |
 |---|---|---|

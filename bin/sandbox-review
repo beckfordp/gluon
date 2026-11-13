@@ -18,7 +18,7 @@ Usage:
 In vim: gt / gT next / previous tab, :qa quit.
 
 Safe to run from the sandbox desktop's terminal, which runs as root while the
-repos belong to the assistant's user: git is told to trust the repo for this
+repos belong to the sandbox user: git is told to trust the repo for this
 command only (a throwaway global config; root's own git config is untouched),
 and --ci is refused for another user, because it would leave root-owned files
 in the repo.
@@ -58,7 +58,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def owned_by_me(repo: Path) -> bool:
-    """Whether this process runs as the repo's owner (the assistant's user)."""
+    """Whether this process runs as the repo's owner (the sandbox user)."""
     return repo.stat().st_uid == os.geteuid()
 
 
@@ -113,7 +113,7 @@ def review(argv: Sequence[str]) -> int:
     if args.ci and not owned_by_me(repo):
         raise ReviewError(
             "--ci refused: this terminal runs as a different user from the repo's owner, "
-            "and CI would leave files the owner can't change. Ask the assistant to run CI, "
+            "and CI would leave files the owner can't change. Run CI as the sandbox user, "
             "or review without --ci."
         )
     if args.ci and (repo / "scripts" / "ci.sh").is_file():

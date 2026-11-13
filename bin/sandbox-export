@@ -78,7 +78,7 @@ NOT_EXPORTED = frozenset(
         Path("bin") / "verify-complete-RPN-0.1.sh",
     }
 )
-"""gluon files that stay on the laptop: plans the sandbox model would run ahead on,
+"""gluon files that stay on the laptop: plans the sandbox session would act on,
 history and sandbox how-to it doesn't need, and this script and its tests (laptop-only)."""
 
 NOT_EXPORTED_DIRS = frozenset({"plans"})
@@ -88,7 +88,7 @@ CONDUCTOR = Path("conductor")
 """Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
 
 EXPORT_EXCLUDES = PLATFORM_EXCLUDES | {".claude", ".bsp", "structure101-settings.java.hsw"}
-"""Names never exported: VCS data, build output, editor and assistant state."""
+"""Names never exported: VCS data, build output, editor and tool state."""
 
 CAPTURE_DIR = re.compile(r"^(?P<service>[a-z][a-z0-9-]*)-contracts-(?P<date>\d{8})$")
 """A laptop capture's output directory in the home directory."""
@@ -179,19 +179,19 @@ BUILD_DIRS = frozenset({"target", ".bsp", "__pycache__", ".metals", ".bloop"})
 exported."""
 
 KEPT = frozenset({".claude", ".venv", "node_modules"})
-"""Never removed: assistant state and dev environments (none is exported)."""
+"""Never removed: tool state and dev environments (none is exported)."""
 
 LEFT_OUT = (
     ("`.git` in every repo", "No history leaves the laptop; early harness history holds pre-redaction capture values."),
     ("Build output: `target/`, `.bsp/`, `node_modules/`, `.venv/`, `__pycache__/`", "Transient, and `.bsp/sbt.json` holds laptop paths."),
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
-    ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and assistant state; `.idea` holds laptop paths."),
+    ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`, `plans/`, `TECHNICAL_DEBT.md`", "Plans the sandbox model ran ahead on."),
-    ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox model."),
+    ("`PLAN.md`, `plans/`, `TECHNICAL_DEBT.md`", "Plans the sandbox session would act on."),
+    ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
-    ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox model would pick up; active tracks and `workflow.md` stay."),
+    ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox session would pick up; active tracks and `workflow.md` stay."),
 )
 """What the export leaves out and why; reproduced in EXPORT-REVIEW.md."""
 
