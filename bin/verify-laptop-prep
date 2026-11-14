@@ -9,8 +9,8 @@ laptop. What can be checked here is checked here, each result printed as found:
 1. bin/k8s-local-up's implementation switch, run with stand-in docker,
    kubectl, helm and sbt commands that record what they were asked to do:
    which image is built and how, which values file is installed under which
-   release, and that a switch (and only a switch) resets the user schema
-   before the deploy and restarts the user outbox connector after it.
+   release, and that a switch (and only a switch) resets the user schema and
+   Debezium's slot before the deploy and restarts the user outbox connector after it.
 2. bin/reset-data's truncation SQL, run on a throwaway PostgreSQL 16 holding
    the Rust service's schema: every table emptied except the migration
    histories (flyway_schema_history, _sqlx_migrations).
@@ -47,7 +47,11 @@ def check(ok: bool, what: str) -> None:
 
 STAND_IN = """#!/usr/bin/env bash
 # Stand-in for {name}: records its arguments (and stdin) and answers as needed.
-echo "{name} $*" >> "$CALLS"
+if [ "{name}" = kubectl ] && [ "$1" = exec ] && [ "$2" = -i ]; then
+  echo "{name} $* < $(tr '\n' ' ')" >> "$CALLS"
+else
+  echo "{name} $*" >> "$CALLS"
+fi
 if [ "{name}" = kubectl ] && [ "$1" = get ] && [ "$2" = deployment/user-service ]; then
   printf '%s' "${{DEPLOYED_IMAGE:-}}"
 fi
@@ -126,6 +130,10 @@ def verify_switch() -> None:
     check(
         index_of(calls, "DROP PUBLICATION IF EXISTS dbz_publication") >= 0,
         "the reset drops Debezium's publication",
+    )
+    check(
+        index_of(calls, "deploy/user-postgres", "pg_drop_replication_slot('debezium_user')") >= 0,
+        "the reset drops Debezium's slot, so a restart doesn't replay WAL from before the switch",
     )
     check(helm >= 0, "rust: installed as release user-service with user-service-rs.values.yaml")
     check(helm < restart, "rust, switching: the outbox connector is restarted after the deploy")

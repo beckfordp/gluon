@@ -115,16 +115,15 @@ for svc in "${SERVICES[@]}"; do
     (cd "$SERVICE_DIR" && sbt "Docker/publishLocal")
   fi
 
-  # Switching implementation starts from a clean schema (ADR 0028 decision 5):
-  # each keeps its own migration history, and there is no production data.
+  # Switching implementation starts from a clean schema and a fresh Debezium slot
+  # (ADR 0028 decision 5; what and why: infra/k8s/local-infra/user-switch-reset.sql).
   SWITCHED=0
   current="$(deployed_image "$svc")"
   if [ "$svc" = user-service ] && [ -n "$current" ] && [ "${current%%:*}" != "$IMAGE" ]; then
-    echo "== Switching user-service from ${current%%:*} to $IMAGE: resetting the user schema =="
-    kubectl exec -n "$NAMESPACE" deploy/user-postgres -- \
-      psql -v ON_ERROR_STOP=1 -q -U user -d user \
-      -c 'DROP SCHEMA public CASCADE' -c 'CREATE SCHEMA public' \
-      -c 'DROP PUBLICATION IF EXISTS dbz_publication'
+    echo "== Switching user-service from ${current%%:*} to $IMAGE: resetting the user database =="
+    kubectl exec -i -n "$NAMESPACE" deploy/user-postgres -- \
+      psql -v ON_ERROR_STOP=1 -q -U user -d user -f - \
+      < "$GLUON_DIR/infra/k8s/local-infra/user-switch-reset.sql"
     SWITCHED=1
   fi
 
@@ -145,7 +144,7 @@ for svc in "${SERVICES[@]}"; do
 
   if [ "$SWITCHED" = 1 ]; then
     # The new service has created outbox_events again; Debezium recreates its
-    # publication for it on restart (rehearsed on the sandbox CDC stack:
+    # publication and slot for it on restart (rehearsed on the sandbox CDC stack:
     # tests/contract tests/integration/test_cdc_stack.py).
     echo "== Restarting the user outbox connector =="
     kubectl exec -n "$NAMESPACE" deploy/kafka-connect -- \

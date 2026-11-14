@@ -319,7 +319,7 @@ fixes).
       *Prepared 2026-11-10 in the sandbox, not run: `Dockerfile` (user-service-rs)
       and the values file; `bin/verify-laptop-prep` runs the Dockerfile's build
       steps natively and checks the values file.*
-- [ ] RUST-5.2 — implementation switch in `bin/k8s-local-up` for
+- [x] RUST-5.2 — implementation switch in `bin/k8s-local-up` for
       user-service: build `services/user-service-rs` with `docker build`,
       install that values file under the release name `user-service`; a
       switch resets the `user` database's `public` schema and restarts the
@@ -330,6 +330,17 @@ fixes).
       (`bin/verify-laptop-prep`); the schema reset + publication drop +
       connector restart sequence is rehearsed on the sandbox CDC stack
       (gluon-contract `switch-rehearsal_20261110`).*
+      *Done 2026-11-14 on the laptop. The first live switch to Rust left CDC down:
+      the `debezium_user` slot survived the reset, and on restart it replayed WAL
+      from before the switch, where `dbz_publication` didn't exist. pgoutput
+      failed with 'publication "dbz_publication" does not exist' while the
+      connector reported RUNNING. The fix: the reset is now one file,
+      `infra/k8s/local-infra/user-switch-reset.sql`. It ends the slot's
+      walsender and drops the slot, and Debezium creates a fresh one on restart.
+      Guarded red-first by the rehearsal (gluon-contract `switch-reset_20261114`:
+      an offset committed, migration DML before the restart; red 3/3, green 3/3)
+      and by `bin/verify-laptop-prep`. Live: Rust→Scala and Scala→Rust with no
+      manual recovery, `bin/run-acceptance` 53/53 each way.*
 - [ ] RUST-5.3 — `bin/reset-data` keeps the Rust service's migration
       history table, as it keeps `flyway_schema_history`
       *Prepared 2026-11-10, not run: `_sqlx_migrations` kept; the truncation SQL
@@ -346,6 +357,8 @@ fixes).
       `cluster-mode_20261110`). Not yet run against gluon-local.*
 - [ ] RUST-5.5 — switch back to Scala and repeat RUST-5.4's checks, so the
       switch is proven in both directions
+      *2026-11-14: `bin/run-acceptance` 53/53 after the switch both ways
+      (RUST-5.2); RUST-5.4's other checks not yet repeated.*
 - [ ] RUST-5.6 — GitHub remotes for `gluon-contract` and `user-service-rs`;
       Actions green
 
