@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Restore the sandbox's work from a bin/sandbox-save archive (docs/sandbox.md).
+"""Restore the sandbox's work from a bin/sandbox-save archive (plans/private/sandbox.md).
 
 Repos: each sandbox-only repo missing from gluon is cloned from its bundle,
 with its git notes, and its saved uncommitted files are put back. A repo that

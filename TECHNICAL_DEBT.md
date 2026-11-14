@@ -1302,10 +1302,10 @@ SHAs.
       per sandbox repo as plain `.patch` files inside the workspace
       (`gluon/sandbox-out/<repo>/`); the laptop replays them with `git am`.
       Confirm on one download that they survive the filter.
-      *Implemented 2026-11-12 (`write_patches`, docs/sandbox.md);
+      *Implemented 2026-11-12 (`write_patches`, plans/private/sandbox.md);
       confirmed by RPN-4's download 2026-11-13 (25 patches, `git am` clean).*
 - [-] TD-32.2 *(not needed: the patches survive)*: if no text route survives, accept squash: one laptop commit per
-      repo per session, and document that in `docs/sandbox.md` ("Bringing
+      repo per session, and document that in `plans/private/sandbox.md` ("Bringing
       commits back to the laptop"), replacing the bundle route.
 
 ## TD-33 — user-service's check modules and verify scripts don't name the service
@@ -1508,12 +1508,12 @@ done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
 
 ### Tasks
 - [x] TD-46.1: rule (in each repo's `conductor/workflow.md` and
-      `docs/sandbox.md`): once a track is archived, its script folds into
+      `plans/private/sandbox.md`): once a track is archived, its script folds into
       `ci.sh` or `bin/verify-port user-service`, or is deleted; done scripts stay
       as history, unchanged. Apply it to the existing scripts. Done when:
       every remaining script is run by CI or a regression entry point.
       *2026-11-14: rule in user-service-rs and tests/contract `workflow.md` and
-      `docs/sandbox.md` ("Track scripts"). Retired: user-service-rs 12,
+      `plans/private/sandbox.md` ("Track scripts"). Retired: user-service-rs 12,
       tests/contract 14 (each repo's archived `retire-scripts_20261113`
       maps every section); `bin/verify-port` runs the two left
       (`verify-rust-ci`, `verify-cluster-mode`). Kept as tools:

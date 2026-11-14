@@ -12,6 +12,6 @@ The Scala services stay the default.
 - Why and how: [ADR 0028](../../docs/adr/0028-rust-port-spike-user-service.md)
   (spike), [ADR 0029](../../docs/adr/0029-after-the-rust-spike.md) (after it),
   [findings](../../docs/ports/user-service-findings.md).
-- Two environments, sandbox and laptop: [`docs/sandbox.md`](../../docs/sandbox.md)
+- Two environments, sandbox and laptop: `plans/private/sandbox.md` (laptop only)
   and the user-service plan's introduction.
 - Session rules: the notification-service plan's "Session rules".

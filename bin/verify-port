@@ -45,7 +45,7 @@ RUST = GLUON / "services" / "user-service-rs"
 OWNER_BIN = Path("/home/claude/.local/bin")
 
 # The track scripts CI can't replace; the rest were retired into CI and the
-# harness (TECHNICAL_DEBT.md TD-46, docs/sandbox.md "Track scripts").
+# harness (TECHNICAL_DEBT.md TD-46, plans/private/sandbox.md "Track scripts").
 RUST_TRACK_SCRIPTS = ["verify-rust-ci"]
 CONTRACT_TRACK_SCRIPTS = ["verify-cluster-mode"]
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Export gluon and the repos the sandbox ports need, for upload (docs/sandbox.md).
+"""Export gluon and the repos the sandbox ports need, for upload (plans/private/sandbox.md).
 
 Laptop side; the reverse of bin/sandbox-save. Re-runnable: with no arguments it
 replaces the previous export in DEFAULT_OUT and writes DEFAULT_OUT.tar.gz.
@@ -33,7 +33,7 @@ never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels: PLAN.md, plans/, CHANGELOG.md,
-docs/sandbox.md, this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
+this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
 instructions are written by hand. TECHNICAL_DEBT.md travels: the sandbox adds what
 it finds, and the laptop merges it.
@@ -84,13 +84,12 @@ NOT_EXPORTED = frozenset(
     {
         Path("PLAN.md"),
         Path("CHANGELOG.md"),
-        Path("docs") / "sandbox.md",
         Path("bin") / "sandbox-export",
         Path("bin") / "verify-complete-RPN-0.1.sh",
     }
 )
 """gluon files that stay on the laptop: plans the sandbox session would act on,
-history and sandbox how-to it doesn't need, and this script and its tests (laptop-only)."""
+history it doesn't need, and this script and its tests (laptop-only)."""
 
 NOT_EXPORTED_DIRS = frozenset({"plans"})
 """gluon directories that stay on the laptop: every plan, retro and work sequence."""
@@ -192,7 +191,7 @@ LEFT_OUT = (
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
     ("`PLAN.md`, `plans/`", "Plans the sandbox session would act on."),
-    ("`CHANGELOG.md`, `docs/sandbox.md`", "History and the sandbox how-to: for the laptop, not the sandbox session."),
+    ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
     ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox session would pick up; active tracks and `workflow.md` stay."),

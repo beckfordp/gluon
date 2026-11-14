@@ -22,7 +22,7 @@ a time.
   PostgreSQL 16 binaries; PyPI, crates.io, npm and Maven Central reachable.
   No Docker, Kubernetes or GitHub; the Scala build doesn't resolve there. Only
   Rust, Python and (if needed) TypeScript code changes here. Everything
-  installed there is recorded in [`docs/sandbox.md`](../../../docs/sandbox.md) and
+  installed there is recorded in `plans/private/sandbox.md` (laptop only) and
   reproduced by `bin/sandbox-setup`; `bin/sandbox-save` / `bin/sandbox-restore`
   carry the sandbox-only repos across a teardown.
 - **Laptop** — the Scala build, Docker and gluon-local. Used for

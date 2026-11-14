@@ -7,7 +7,7 @@ The sandbox image provides Python, uv, Java, Node, git and the PostgreSQL 16
 binaries; this script verifies those and installs everything the spike added on
 top, without root, into the home directory. It is idempotent: run it after a
 teardown, or any time, and it only installs what is missing. Every tool the
-spike adds to the sandbox is added here in the same change (docs/sandbox.md).
+spike adds to the sandbox is added here in the same change (plans/private/sandbox.md).
 
 Usage:
   bin/sandbox-setup            install what is missing, then report
@@ -56,7 +56,7 @@ RUST_TOOLCHAIN = "1.99.1"
 RUST_COMPONENTS = ("rustfmt", "clippy", "llvm-tools-preview")
 CARGO_TOOLS = {"cargo-llvm-cov": "0.9.1"}
 """Cargo subcommands built from crates.io, pinned. Not cargo-audit: its advisory
-database is on GitHub, unreachable from the sandbox (docs/sandbox.md)."""
+database is on GitHub, unreachable from the sandbox (plans/private/sandbox.md)."""
 CARGO_HOME = HOME / ".cargo"
 
 NODE_VERSION = "24.21.0"
@@ -124,7 +124,7 @@ endif
 MANAGED_MARK = "bin/sandbox-setup"
 """A ~/.vimrc whose first line carries this is ours to rewrite; any other is left alone."""
 
-SHELL_ALIASES = """# Sandbox shell shortcuts (bin/sandbox-setup; rewritten by it). docs/sandbox.md.
+SHELL_ALIASES = """# Sandbox shell shortcuts (bin/sandbox-setup; rewritten by it). plans/private/sandbox.md.
 alias cdw='cd /workspace/gluon'
 alias sr='/workspace/gluon/bin/sandbox-review'
 """
@@ -494,7 +494,7 @@ def step_git_init(install: bool) -> list[Result]:
 
     The export carries no .git; without one, bin/sandbox-save skips the repo. The
     baseline leaves the export's new captures untracked, so its tree is the laptop
-    commit's and later sandbox commits replay onto it (docs/sandbox.md).
+    commit's and later sandbox commits replay onto it (plans/private/sandbox.md).
     """
     results = []
     manifest = export_manifest()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Save the sandbox's work to one archive, so a teardown loses nothing (docs/sandbox.md).
+"""Save the sandbox's work to one archive, so a teardown loses nothing (plans/private/sandbox.md).
 
 The archive holds:
   repos/<name>.bundle     every commit, branch, tag and git note of each
@@ -14,7 +14,7 @@ It also writes each sandbox repo's commits since its baseline as plain
 `git format-patch` files to gluon/sandbox-out/<name>/ (TD-32): the sandbox's
 download is an all-code tar.gz that drops .git and every archive, this one
 included, so the patches are what brings the commits back to the laptop
-(`git am`, docs/sandbox.md).
+(`git am`, plans/private/sandbox.md).
 
 First it removes build output (BUILD_DIRS) in gluon and the exported repos, as
 bin/sandbox-export does: with `target/` left in, the sandbox's download is too big

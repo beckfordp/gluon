@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-"""What the sandbox scripts share (bin/sandbox-setup, -save, -restore, -export; docs/sandbox.md).
+"""What the sandbox scripts share (bin/sandbox-setup, -save, -restore, -export; plans/private/sandbox.md).
 
 The sandbox (ADR 0028) has no GitHub access, so the repos created there exist
 nowhere else until they are pushed from the laptop (plans/rust-port/user-service/plan.md RUST-5.6), and

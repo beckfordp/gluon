@@ -83,7 +83,7 @@ The spike runs in two environments:
   GitHub. The Scala services can't be built there: the Maven Central it
   reaches lacks versions they pin, and purerest's GitHub Packages are out of
   reach. Only Rust, Python and, if needed, TypeScript code changes in the
-  sandbox. Its setup is recorded in [`docs/sandbox.md`](../sandbox.md) and
+  sandbox. Its setup is recorded in `plans/private/sandbox.md` (laptop only) and
   reproduced by `bin/sandbox-setup`.
 - **The laptop**, where the Scala build, Docker and gluon-local run. Anything
   Scala-generated or cluster-level happens there.
