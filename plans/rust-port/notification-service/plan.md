@@ -207,7 +207,7 @@ one conductor track per repo, approved step by step. In order:
    services on them, Scala citations; `lib/gluon-rs` added to the sandbox export
    *(done 2026-11-14)*
 5. TD-43.2 and user-service-rs's `verify-rust-ci.sh` portable (its backlog):
-   `bin/verify-port`'s tracks step is red on macOS
+   `bin/verify-port`'s tracks step is red on macOS *(done 2026-11-14)*
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
 7. RPN-5, green against Rust and Scala in one go
 8. RPN-6, with TD-39 decided

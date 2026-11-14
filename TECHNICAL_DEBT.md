@@ -1501,10 +1501,23 @@ lint table and toolchain. A cart port would make a third copy.
       - *The sandbox exports and saves gluon-rs.*
       - *Open: both services' GitHub workflows must check out gluon-rs
         (their backlogs).*
-- [ ] TD-43.2: one shared `scripts/lib/verify.sh` and a common `ci.sh` core;
+- [x] TD-43.2: one shared `scripts/lib/verify.sh` and a common `ci.sh` core;
       each repo keeps only its own steps (e.g. user-service's registry
       check). Done when: the two repos' copies are gone or differ only in
       their own steps.
+      *Done 2026-11-14:*
+      - *gluon-rs `scripts/lib/` (`ci.sh`, `verify.sh`, `portable.sh`) runs on
+        Linux and macOS (bash 3.2, BSD tools, no coreutils `timeout`), tested
+        by `scripts/test-lib.sh` in its CI.*
+      - *Both services' `ci.sh` run its steps; user-service keeps its
+        registry step. Their `scripts/lib/verify.sh` copies are gone.*
+      - *Fixed on the way: `verify-rust-ci.sh`'s `stat -c` (red on macOS) and
+        its scratch copy (now in gluon's layout, for the gluon-rs path
+        dependency); `timeout` made cargo audit skip silently on a stock Mac.*
+      - *A Linux test bed: gluon-rs `scripts/on-linux.sh` runs any Rust repo's
+        script in Docker. All three `ci.sh` and both user-service verify
+        scripts green there and on macOS.*
+      - *`bin/verify-port user-service` tracks step green on the laptop.*
 
 ## TD-44 — Service knowledge spread through tests/contract
 
