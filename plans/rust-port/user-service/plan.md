@@ -435,17 +435,19 @@ gluon-local.
       criteria were reached, and what the two-environment setup cost
       *Sandbox part written 2026-11-10: `docs/ports/user-service-findings.md`; the
       laptop figures and criteria are added after RUST-5.*
-- [x] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
+- [ ] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
       further ports; cost estimates for consuming or calling services take
       the probe's results, not user-service's alone
       *Drafted 2026-11-10: ADR 0029 (Proposed, for review after the laptop
       pass).*
-      *Accepted 2026-11-14: option 3, further ports.*
-- [x] RUST-7.3 — update ADR 0028's status, `CHANGELOG.md`, and the
+      *2026-11-14: ADR 0029 accepted (option 3) without waiting for RUST-7; this
+      item is deferred, no longer a gate.*
+- [ ] RUST-7.3 — update ADR 0028's status, `CHANGELOG.md`, and the
       user-service-rs README
       *CHANGELOG and README updated 2026-11-10; ADR 0028's status waits for
       the laptop pass. How to verify everything:
       `docs/ports/user-service-verification.md`, `bin/verify-port user-service`.*
-      *ADR 0028 accepted 2026-11-14.*
+      *2026-11-14: ADR 0028's status updated (accepted); the rest of RUST-7 is
+      deferred, no longer a gate on ADR 0029.*
 
 **Exit criteria:** findings reviewed and the follow-up ADR proposed.

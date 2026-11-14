@@ -65,6 +65,8 @@ Acceptance criteria, as they stand at acceptance:
   on 2026-11-14
 - RUST-5.6 (GitHub remotes and Actions) waits for GitHub access; it is not a
   condition of this decision
+- RUST-7 (the findings with the laptop figures) is deferred; it no longer
+  gates this decision
 
 Per port:
 - its harness groups come first
