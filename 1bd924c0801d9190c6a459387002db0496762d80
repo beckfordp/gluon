@@ -1,0 +1,1 @@
+Perf 3b Phase 1 task 3: bin/obs up|down|status. Preflight (orbstack context, namespace reachable), apply -k infra/k8s/observability, rollout-wait workloads labelled part-of=gluon-obs, re-create one-shot Jobs from observability/jobs/, print URLs, obs-budget check (exit 3 over budget). Checked by gluon-performance scripts/check-obs-cli.sh (6 cases).
