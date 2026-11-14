@@ -1,0 +1,1 @@
+Perf 3b Phase 2 task 4: postgres-exporter v0.17.1 (multi-target /probe, auth_module per db from local-infra dev creds) and redis_exporter v1.74.0 (multi-target /scrape); unprivileged/read-only. Verified pg_up=1 x6, redis_up=1 x3.
