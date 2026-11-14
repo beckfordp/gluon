@@ -8,6 +8,12 @@ Publishes `purerestlib`, the cross-cutting microservice concerns
 (tracing, observability, resilience) every generated service depends on
 — see [ADR 0005](../docs/adr/0005-purerestlib-local-publish-over-registry.md).
 
+[`lib/gluon-rs/`](./gluon-rs) is its Rust counterpart, also an independent
+git repository (no GitHub remote yet): the crates every Rust port shares
+(TD-43, ADR 0029). The Rust services depend on it by path, and
+`bin/k8s-local-up` passes it to `docker build` as the `gluon-rs` build
+context.
+
 This directory itself is **not** tracked by gluon's own git repo (see
 `.gitignore`) — gluon just co-locates it on disk for convenience, same as
 `services/` and `frontends/`. Don't `git add` anything under here from

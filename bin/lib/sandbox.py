@@ -22,12 +22,13 @@ PORTS = (
 """Scala service → its Rust port, each started or done in the sandbox; add a line per new port.
 bin/sandbox-export exports both sides (the Rust one once it exists on the laptop)."""
 
-SHARED_REPOS = (Path("tests") / "contract", Path("lib") / "purerest")
-"""Repos every port needs: the contract harness, and purerest/purekafka as the reference
-for the shared Rust layer."""
+SHARED_REPOS = (Path("tests") / "contract", Path("lib") / "purerest", Path("lib") / "gluon-rs")
+"""Repos every port needs: the contract harness, purerest/purekafka as the reference
+for the shared Rust layer, and gluon-rs, that layer (TD-43)."""
 
-SANDBOX_REPOS = (Path("tests") / "contract", *(rust for _, rust in PORTS))
-"""Git repos created in the sandbox, relative to gluon's root: the harness and the Rust ports."""
+SANDBOX_REPOS = (Path("tests") / "contract", *(rust for _, rust in PORTS), Path("lib") / "gluon-rs")
+"""Git repos the sandbox commits to, relative to gluon's root: the harness, the Rust ports,
+and gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it)."""
 
 NESTED_REPO_DIRS = ("services", "frontends", "tools", "lib", "tests")
 """gluon's gitignored directories of independent repos; only their README.md is gluon's."""

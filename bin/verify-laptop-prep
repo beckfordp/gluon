@@ -123,6 +123,10 @@ def verify_switch() -> None:
         calls, "kubectl exec", "deploy/kafka-connect", "user-outbox-connector/restart"
     )
     check(build >= 0, "rust: the image is built from services/user-service-rs with docker build")
+    check(
+        build >= 0 and f"--build-context gluon-rs={GLUON / 'lib' / 'gluon-rs'}" in calls[build],
+        "rust: the build gets lib/gluon-rs as its gluon-rs context (the shared crates, TD-43)",
+    )
     check(index_of(calls, "sbt") < 0, "rust: sbt isn't run for user-service")
     check(
         0 <= reset < helm, "rust, switching from Scala: the user schema is reset before the deploy"

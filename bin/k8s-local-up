@@ -109,7 +109,8 @@ for svc in "${SERVICES[@]}"; do
 
   if [ "$IMAGE" = user-service-rs ]; then
     echo "== Building $svc image from services/user-service-rs (docker build) =="
-    docker build -t user-service-rs:latest "$SERVICE_DIR"
+    # The shared crates are a path dependency on lib/gluon-rs (TD-43): a named context.
+    docker build -t user-service-rs:latest --build-context gluon-rs="$GLUON_DIR/lib/gluon-rs" "$SERVICE_DIR"
   else
     echo "== Building $svc image (sbt Docker/publishLocal) =="
     (cd "$SERVICE_DIR" && sbt "Docker/publishLocal")

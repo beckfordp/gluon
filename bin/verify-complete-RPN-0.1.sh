@@ -51,7 +51,7 @@ check "export carries the ports and shared repos, no other" export.log '
 with tempfile.TemporaryDirectory() as out:
     manifest = export.export(Path(out) / "gluon", [], False)
 got = {repo["path"] for repo in manifest["repos"]}
-want = {".", "tests/contract", "lib/purerest", "services/user-service",
+want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "services/user-service",
         "services/user-service-rs", "services/notification-service"}
 want |= {"services/notification-service-rs"} if Path("services/notification-service-rs").is_dir() else set()
 print("exported:", sorted(got))
