@@ -56,49 +56,30 @@ It prints each step's result as it finishes, then the criteria table with
 | Step | What runs | Passes when | Criteria |
 |---|---|---|---|
 | `sandbox` | `bin/sandbox-setup --check` | toolchains (Rust 1.99.1, cargo-llvm-cov), Node 24, the CDC jars, repos and dependencies present | reproducibility |
-| `harness-ci` | `tests/contract/scripts/ci.sh` | ruff, `mypy --strict`, unit and integration tests (runner, OTLP stub, Postgres, CDC stack, broker outage, switch rehearsal, cluster mode), coverage ≥ 80% | C1, C3 |
+| `harness-ci` | `tests/contract/scripts/ci.sh` | ruff, `mypy --strict`, unit and integration tests (runner, OTLP stub, Postgres, CDC stack, broker outage, switch rehearsal, cluster mode), every check's `Source:` and the capture files it cites (TD-41), coverage ≥ 80% | C1, C3 |
 | `rust-ci` | `services/user-service-rs/scripts/ci.sh` | fmt, clippy `-D warnings`, all tests (incl. the payload schema equal to `registry/user-service/registry.json`), coverage ≥ 80%; cargo-audit prints `SKIP` in the sandbox (its database is on GitHub), and on the laptop fails on three advisories (user-service-rs backlog) | C1 |
 | `build` | `cargo build` of the service and the probe; `scripts/asyncapi-html.sh` | builds; the AsyncAPI HTML rendered | — |
 | `contract` | `pytest checks` against the Rust build, every group in one session (the CDC stack and a broker start on demand) | all 128 checks green; the summary line shows each group's count | C1, C8 (families), C10 |
-| `tracks` | every track's `scripts/verify-*.sh` in both repos (listed below) | each ends `PASS` | C1, C10 |
+| `tracks` | the track scripts CI can't replace, in both repos (listed below) | each ends `PASS` | C1, C10 |
 | `laptop-prep` | `bin/verify-laptop-prep` | the switch's control flow (stand-in docker/kubectl/helm/sbt), `reset-data`'s SQL on a real Postgres, the values file, the Dockerfile's build steps run natively (release build, HTML equal to the Scala build's) | prepares C3–C8 |
 
 Reviewing what was built: `sr contract` and `sr rust` open a repo's changes
 in vim (`--commit HEAD~N` for one commit); every commit has a git note
 saying why. The behaviours the spike found that nothing documented:
 [`tests/contract/docs/implicit-behaviours.md`](../../tests/contract/docs/implicit-behaviours.md)
-(`tests/contract/scripts/verify-implicit-behaviours.sh --run` re-checks
-them).
+(CI checks every check it names exists, `tests/unit/test_implicit_behaviours.py`;
+the `contract` step runs them).
 
 ### Per-track scripts (step `tracks`)
 
-`services/user-service-rs/scripts/`:
+The other track scripts were retired into CI and the harness (TD-46); each
+repo's `conductor/archive/retire-scripts_20261113/plan.md` maps every section
+to what covers it now.
 
 | Script | PLAN item | Verifies |
 |---|---|---|
-| `verify-rust-ci.sh` | RUST-2.2 | CI passes; each gate stops a broken change (on a scratch copy) |
-| `verify-service-start.sh` | RUST-2.3 | config contract; invalid values stop startup |
-| `verify-readiness.sh` | RUST-2.4 | baseline migration equals Flyway's schema; readiness |
-| `verify-auth.sh` | RUST-2.5 | signup and login, PBKDF2 and token parity |
-| `verify-users-cors.sh` | RUST-2.6 | `GET /users/{id}`, CORS, error responses; the whole REST group |
-| `verify-outbox.sh` | RUST-3.1 | the outbox row and envelope; payload schema = registry |
-| `verify-tracing.sh` | RUST-3.2 | traces group; Debezium headers; console spans |
-| `verify-metrics.sh` | RUST-3.3 | metrics group; JDK UUID vectors; a scrape |
-| `verify-logs.sh` | RUST-3.4 | logs group; a real run's stdout, no secrets |
-| `verify-openapi.sh` | RUST-4.1 | Swagger UI and the OpenAPI spec; REST group |
-| `verify-asyncapi.sh` | RUST-4.2 | AsyncAPI JSON and HTML byte-equal to the capture; docs group |
-| `verify-probe.sh` | RUST-6.2–6.4 | the probe group |
-
-`tests/contract/scripts/`:
-
-| Script | PLAN item | Verifies |
-|---|---|---|
-| `verify-isolated-runner.sh` | RUST-1.2 | the runner against a stand-in target |
-| `verify-rest-group.sh`, `verify-schema-group.sh`, `verify-outbox-group.sh`, `verify-telemetry-groups.sh`, `verify-docs-group.sh` | RUST-1.3–1.7, 1.4 | CI; every check names its source; the group against the Rust build |
-| `verify-cdc-group.sh` | RUST-1.8 | the real `user-events` record on the sandbox CDC stack |
-| `verify-probe-stubs.sh`, `verify-probe-group.sh` | RUST-6.1, 6.5 | broker and lookup stub; the probe group |
-| `verify-implicit-behaviours.sh` | RUST-1.9 | every listed behaviour has its check |
-| `verify-cluster-mode.sh` | RUST-5.4 (prepared) | cluster mode against a started service |
+| `services/user-service-rs/scripts/verify-rust-ci.sh` | RUST-2.2 | CI passes; each gate stops a broken change (on a scratch copy) |
+| `tests/contract/scripts/verify-cluster-mode.sh` | RUST-5.4 (prepared) | cluster mode against a started service |
 
 ## Part B — the laptop
 

@@ -1333,7 +1333,7 @@ already named for it (`checks/test_notification_rest.py`,
       `ns_*` → `notification_*` (TD-44), `bin/verify-rust-spike` →
       `bin/verify-port user-service`, `docs/ports/`, service-named plan dirs;
       done scripts kept as history. The `verify-*-group.sh` scripts aren't
-      renamed: TD-46 retires them. Left: `verify-port user-service` green in
+      renamed: retired (TD-46). Left: `verify-port user-service` green in
       the sandbox.*
 
 ## TD-34 — Two sets of response comparisons in tests/contract
@@ -1368,8 +1368,8 @@ in `pytest_plugin.db`, `tests/integration/test_schema_snapshot.py`,
 
 ### Tasks
 - [ ] TD-36.1: the capture check uses `sent_email.parse_rows`. Done when: one
-      parser; `scripts/verify-notification-capture.sh` and its broken-copy cases (gluon
-      `bin/verify-complete-RPN-1.sh`) still behave.
+      parser; `uv run python -m gluon_contract.notification_capture check` and
+      `tests/unit/test_notification_capture.py`'s broken-copy cases still behave.
 
 ## TD-37 — tests/contract CI depends on what has been built
 
@@ -1381,9 +1381,13 @@ docs checks, which fail unless `scripts/asyncapi-html.sh` has rendered
 works around it with RPN-0's setup step.
 
 ### Tasks
-- [ ] TD-37.1: skip with the reason when the HTML is missing too (or have the
+- [x] TD-37.1: skip with the reason when the HTML is missing too (or have the
       test render it). Done when: CI gives the same result on a fresh
       checkout, after `cargo build`, and after `asyncapi-html.sh`.
+      *2026-11-14: tests/contract `74f2114` (retire-scripts review): skips
+      unless the jars, the binary and `target/asyncapi-docs/index.html` are
+      all there. Seen: built, HTML hidden → skipped with the reason; HTML
+      rendered → passes.*
 
 ## TD-38 — Shell scripts aren't linted
 
@@ -1423,8 +1427,13 @@ names written `http/<name>.txt`; in `http/emails-post.txt, emails-delete.txt`
 the later names go unchecked.
 
 ### Tasks
-- [ ] TD-41.1: check every capture file a `Source:` line names. Done when: a
+- [x] TD-41.1: check every capture file a `Source:` line names. Done when: a
       missing later name fails the section.
+      *2026-11-14: in CI now, tests/contract `tests/unit/test_check_sources.py`
+      (`49feb0d`, `74f2114`): every name after `capture` in a check's Source:
+      paragraph, a bare name in the directory of the one before. Seen:
+      `emails-delete.txt` → `emails-deleted.txt` fails, naming it. The
+      section left `verify-check-group.sh`.*
 
 ## TD-42 — The harness doesn't check notification-service's health endpoints
 
@@ -1495,11 +1504,19 @@ done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
 `bin/verify-complete-RPN-2.sh`; see TD-39).
 
 ### Tasks
-- [ ] TD-46.1: rule (in each repo's `conductor/workflow.md` and
+- [~] TD-46.1: rule (in each repo's `conductor/workflow.md` and
       `docs/sandbox.md`): once a track is archived, its script folds into
       `ci.sh` or `bin/verify-port user-service`, or is deleted; done scripts stay
       as history, unchanged. Apply it to the existing scripts. Done when:
       every remaining script is run by CI or a regression entry point.
+      *2026-11-14: rule in user-service-rs and tests/contract `workflow.md` and
+      `docs/sandbox.md` ("Track scripts"). Retired: user-service-rs 12,
+      tests/contract 14 (each repo's archived `retire-scripts_20261113`
+      maps every section); `bin/verify-port` runs the two left
+      (`verify-rust-ci`, `verify-cluster-mode`). Kept as tools:
+      `verify-check-group.sh`, `verify-cargo-audit.sh`;
+      `verify-user-scala-confirmation.sh` is laptop B2. Left:
+      notification-service-rs (its own track).*
 
 ## TD-47 — A Rust port cites its sibling, not the Scala source
 

@@ -17,7 +17,7 @@ Steps:
   3. rust-ci     services/user-service-rs scripts/ci.sh (fmt, clippy, tests, coverage)
   4. build       the Rust service and probe, and the AsyncAPI HTML
   5. contract    every contract group against the Rust build, in one session
-  6. tracks      every track's scripts/verify-*.sh (--skip-ci: CI ran above)
+  6. tracks      the track scripts CI can't replace (--skip-ci: CI ran above)
   7. laptop-prep bin/verify-laptop-prep (the laptop pieces, as far as the sandbox can)
 
 Usage:
@@ -44,33 +44,10 @@ CONTRACT = GLUON / "tests" / "contract"
 RUST = GLUON / "services" / "user-service-rs"
 OWNER_BIN = Path("/home/claude/.local/bin")
 
-RUST_TRACK_SCRIPTS = [
-    "verify-rust-ci",
-    "verify-service-start",
-    "verify-readiness",
-    "verify-auth",
-    "verify-users-cors",
-    "verify-outbox",
-    "verify-tracing",
-    "verify-metrics",
-    "verify-logs",
-    "verify-openapi",
-    "verify-asyncapi",
-    "verify-probe",
-]
-CONTRACT_TRACK_SCRIPTS = [
-    "verify-isolated-runner",
-    "verify-rest-group",
-    "verify-schema-group",
-    "verify-outbox-group",
-    "verify-telemetry-groups",
-    "verify-docs-group",
-    "verify-cdc-group",
-    "verify-probe-stubs",
-    "verify-probe-group",
-    "verify-implicit-behaviours",
-    "verify-cluster-mode",
-]
+# The track scripts CI can't replace; the rest were retired into CI and the
+# harness (TECHNICAL_DEBT.md TD-46, docs/sandbox.md "Track scripts").
+RUST_TRACK_SCRIPTS = ["verify-rust-ci"]
+CONTRACT_TRACK_SCRIPTS = ["verify-cluster-mode"]
 
 
 @dataclass
@@ -261,7 +238,7 @@ CRITERIA = [
     ),
     ("C3  (sandbox part) cluster mode, against a started service", ["harness-ci"]),
     ("--  Rust CI: fmt, clippy, tests, coverage; payload schema = registry", ["rust-ci"]),
-    ("--  every track's verify script", ["tracks"]),
+    ("--  the track scripts CI can't replace", ["tracks"]),
     ("--  the laptop pieces: image build steps, switch, reset-data, values", ["laptop-prep"]),
     ("--  the sandbox reproducible (bin/sandbox-setup)", ["sandbox"]),
 ]
