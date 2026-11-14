@@ -1,0 +1,1 @@
+Perf 3b Phase 1 task 2: infra/k8s/observability/kustomization.yaml (namespace gluon-local, part-of=gluon-obs label incl. pod templates, empty resources); environments/local/README.md memory budget table (services 3Gi, infra 4.31Gi, obs <=3Gi, Gatling 1Gi).
