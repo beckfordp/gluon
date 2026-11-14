@@ -27,7 +27,7 @@ Each must be ticked in its own plan before the session that needs it starts.
 | TD-43.1 — `lib/gluon-rs`: service basics, test support; a sandbox repo | `TECHNICAL_DEBT.md`; notification-service RPN-4.1 | RPC-3 | the skeleton builds on them instead of copying user-service-rs |
 | RPN-7 — `telemetry` in `lib/gluon-rs` | notification-service | RPC-3 | otherwise cart makes a third copy of `telemetry` (TD-43) |
 | RPN-6 — `bin/verify-port <service> --env` and a criteria file | notification-service | RPC-11 | cart's exit criteria use the same mechanism |
-| `Supervisor` runs any harness process (the TD item that folds `target.py` in) | `TECHNICAL_DEBT.md` (to be raised with TD-45) | RPC-2, if done by then | the throwaway Redis uses it rather than a fourth copy of start/stop |
+| `Supervisor` runs any harness process: TD-48.1 folds `target.py` in | `TECHNICAL_DEBT.md` TD-48 | RPC-2, if done by then | the throwaway Redis uses it rather than a third copy of start/stop |
 | ADR 0029 accepted, option 3 extended to cart | [ADR 0029](../../../docs/adr/0029-after-the-rust-spike.md); user-service RUST-5 (laptop pass) | RPC-L0 | 0029 is Proposed and asks for a reason beyond the demo (D4) |
 
 Not needed: anything from RPN-8 on (`gluon-kafka`, the consumer groups). So once
