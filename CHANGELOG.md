@@ -895,3 +895,13 @@ own line. See each repo's own `git log` for full detail either way.
   plan files. `bin/sandbox-export` no longer ships `SANDBOX-PLAN.md`,
   `perf-work-sequence.md`, `TECHNICAL_DEBT.md`, read-only repos' `conductor/`,
   or working repos' `conductor/archive/` and `tracks.md` backlog.
+
+## 2026-11-14
+
+### Changed
+- **ADR 0029 accepted: further Rust ports (option 3).** The decision the
+  notification-service port already followed, recorded: edges inward, the
+  Scala service staying the default. The laptop pass is done (RUST-5.1–5.5:
+  the switch both ways with `bin/run-acceptance` 53/53, after the fix for the
+  stale `debezium_user` slot). ADR 0028's spike is accepted with it. RUST-5.6
+  (GitHub) waits for access.

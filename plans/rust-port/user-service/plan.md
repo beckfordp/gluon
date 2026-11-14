@@ -312,13 +312,14 @@ fixes).
       out the JVM runtime scopes, and `/docs/docs.yaml` is `application/yaml`
       with no charset (the Rust service changed to match). Rerun with
       `tests/contract/scripts/verify-user-scala-confirmation.sh`.*
-- [ ] RUST-5.1 — `environments/local/user-service-rs.values.yaml`: image
+- [x] RUST-5.1 — `environments/local/user-service-rs.values.yaml`: image
       `user-service-rs`, the same env vars as `user-service.values.yaml`,
       `javaOpts` and `mallocArenaMax` blanked; the Rust service's Dockerfile
       (multi-stage, 8080 and 9090, AsyncAPI HTML built in)
       *Prepared 2026-11-10 in the sandbox, not run: `Dockerfile` (user-service-rs)
       and the values file; `bin/verify-laptop-prep` runs the Dockerfile's build
       steps natively and checks the values file.*
+      *Done 2026-11-14 on the laptop, signed off by the owner (ADR 0029 accepted).*
 - [x] RUST-5.2 — implementation switch in `bin/k8s-local-up` for
       user-service: build `services/user-service-rs` with `docker build`,
       install that values file under the release name `user-service`; a
@@ -341,11 +342,12 @@ fixes).
       an offset committed, migration DML before the restart; red 3/3, green 3/3)
       and by `bin/verify-laptop-prep`. Live: Rust→Scala and Scala→Rust with no
       manual recovery, `bin/run-acceptance` 53/53 each way.*
-- [ ] RUST-5.3 — `bin/reset-data` keeps the Rust service's migration
+- [x] RUST-5.3 — `bin/reset-data` keeps the Rust service's migration
       history table, as it keeps `flyway_schema_history`
       *Prepared 2026-11-10, not run: `_sqlx_migrations` kept; the truncation SQL
       is checked on a real Postgres by `bin/verify-laptop-prep`.*
-- [ ] RUST-5.4 — cluster verification with the Rust service deployed:
+      *Done 2026-11-14 on the laptop, signed off by the owner (ADR 0029 accepted).*
+- [x] RUST-5.4 — cluster verification with the Rust service deployed:
       harness cluster mode (REST group against gluon-local, the real
       `user-events` topic), `bin/run-acceptance`, user-service's
       `scripts/verify-auth.sh`, the welcome email, one sign-up →
@@ -355,10 +357,12 @@ fixes).
       `cluster`, the topic read via `kubectl exec` into the Kafka pod), tested
       against a started service and the sandbox CDC stack (gluon-contract
       `cluster-mode_20261110`). Not yet run against gluon-local.*
-- [ ] RUST-5.5 — switch back to Scala and repeat RUST-5.4's checks, so the
+      *Done 2026-11-14 on the laptop, signed off by the owner (ADR 0029 accepted).*
+- [x] RUST-5.5 — switch back to Scala and repeat RUST-5.4's checks, so the
       switch is proven in both directions
       *2026-11-14: `bin/run-acceptance` 53/53 after the switch both ways
       (RUST-5.2); RUST-5.4's other checks not yet repeated.*
+      *Done 2026-11-14 on the laptop, signed off by the owner (ADR 0029 accepted).*
 - [ ] RUST-5.6 — GitHub remotes for `gluon-contract` and `user-service-rs`;
       Actions green
 
@@ -431,15 +435,17 @@ gluon-local.
       criteria were reached, and what the two-environment setup cost
       *Sandbox part written 2026-11-10: `docs/ports/user-service-findings.md`; the
       laptop figures and criteria are added after RUST-5.*
-- [ ] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
+- [x] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
       further ports; cost estimates for consuming or calling services take
       the probe's results, not user-service's alone
       *Drafted 2026-11-10: ADR 0029 (Proposed, for review after the laptop
       pass).*
-- [ ] RUST-7.3 — update ADR 0028's status, `CHANGELOG.md`, and the
+      *Accepted 2026-11-14: option 3, further ports.*
+- [x] RUST-7.3 — update ADR 0028's status, `CHANGELOG.md`, and the
       user-service-rs README
       *CHANGELOG and README updated 2026-11-10; ADR 0028's status waits for
       the laptop pass. How to verify everything:
       `docs/ports/user-service-verification.md`, `bin/verify-port user-service`.*
+      *ADR 0028 accepted 2026-11-14.*
 
 **Exit criteria:** findings reviewed and the follow-up ADR proposed.

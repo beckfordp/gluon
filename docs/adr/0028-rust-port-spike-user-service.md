@@ -1,7 +1,8 @@
 # 0028. Spike a wire-compatible Rust port of user-service
 
 ## Status
-Proposed (2026-11-08)
+Accepted (2026-11-14). Proposed 2026-11-08; the spike ran, and its follow-up is
+[ADR 0029](./0029-after-the-rust-spike.md) (option 3: further ports).
 
 ## Context
 The eight backend services are Scala (cats-effect, purerest, and purekafka for
