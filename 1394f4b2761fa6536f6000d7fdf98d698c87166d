@@ -1,0 +1,1 @@
+Perf 3b P4: gluon-red (10 panels) and gluon-kafka (8) ported from purerest's purerest.json/purekafka.json: grouped by service, $service variable (label_values of http_server_request_duration_seconds_count), $__rate_interval; kafka adds kafka-exporter consumer-group lag and topic write rate.
