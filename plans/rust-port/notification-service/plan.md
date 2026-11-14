@@ -209,7 +209,7 @@ one conductor track per repo, approved step by step. In order:
 5. TD-43.2 and user-service-rs's `verify-rust-ci.sh` portable (its backlog):
    `bin/verify-port`'s tracks step is red on macOS *(done 2026-11-14)*
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
-   *(TD-33 done 2026-11-14)*
+   *(done 2026-11-14)*
 7. RPN-5, green against Rust and Scala in one go
 8. RPN-6, with TD-39 decided
 9. RPN-7
@@ -230,7 +230,7 @@ Built and checked on macOS only; RPN-8.1 re-verifies on Linux before RPN-9.
       `kafka.py` split (TD-45), script retirement rule (TD-46), Scala
       citations (TD-47); the probe's retirement planned in RPN-8 and
       RPN-10–13)*
-- [ ] RPN-4.1 — a design review of all the Rust-port work so far, at the macro
+- [x] RPN-4.1 — a design review of all the Rust-port work so far, at the macro
       level (repo and crate boundaries, what the harness owns, what the two
       services share) and the micro level (modules, helpers, naming, tests),
       looking for duplication between user-service and notification-service.
@@ -242,6 +242,10 @@ Built and checked on macOS only; RPN-8.1 re-verifies on Linux before RPN-9.
       health checks in the harness), and from the review TD-43 (`lib/gluon-rs`
       with service basics and test support; shared `verify.sh`/`ci.sh` core),
       TD-44, TD-45, TD-46, TD-47. Not TD-38 (shellcheck).
+      *Done 2026-11-14 on the laptop: every listed TD item done except
+      TD-39, moved to RPN-6 (laptop run item 8). Both Rust services on
+      `lib/gluon-rs`; user-service 128/128 (`bin/verify-port user-service
+      --quick`); tests/contract `ci.sh` green (393 tests).*
 
 **Done when:** each TD item's own "Done when"; both Rust services build on
 `lib/gluon-rs`; user-service 128/128 green

@@ -905,3 +905,10 @@ own line. See each repo's own `git log` for full detail either way.
   the switch both ways with `bin/run-acceptance` 53/53, after the fix for the
   stale `debezium_user` slot). ADR 0028's spike is accepted with it. RUST-5.6
   (GitHub) waits for access.
+- **RPN-4.1 done: the review and tidy of the Rust-port work.** Both Rust
+  services share `lib/gluon-rs` (service basics, test support, the CI steps
+  and verify helpers), which run on Linux and macOS; gluon-rs's
+  `scripts/on-linux.sh` checks any Rust repo's script on Linux in Docker.
+  tests/contract has one helper per job and one profile per service, with
+  full failure reasons. `bin/verify-port user-service --quick` is green on the
+  laptop (128/128). TD-39 moves to RPN-6.
