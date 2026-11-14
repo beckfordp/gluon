@@ -1,0 +1,1 @@
+Perf 3b P4: grafana-oss 13.0.2, anonymous Viewer (Grafana 13 drops anonymous Admin) + viewers_can_edit for Explore, admin/admin login; datasource uid prometheus -> prometheus:9092; providers from config/grafana via configMapGenerators; read-only root, uid 472, plugin preinstall off, 192Mi (~149Mi peak), Recreate, LB :3000.
