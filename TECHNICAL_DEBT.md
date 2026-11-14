@@ -1347,9 +1347,13 @@ copies of a comparison rule drift; `expect`'s failures also spell out
 expected and actual (pytest doesn't rewrite asserts in `src/`).
 
 ### Tasks
-- [ ] TD-34.1: user-service's checks use `gluon_contract.expect` and
+- [x] TD-34.1: user-service's checks use `gluon_contract.expect` and
       `checks/support.py`'s `new_email`. Done when: no comparison helper
       defined in a check module; user-service 128/128 green.
+      *2026-11-14: tests/contract `af92f04` (track `one-helper_20261114`): every
+      duplicate, not just the comparisons (`PASSWORD`, `JSON`, the credentials
+      POST too); CI's guard `shared_helpers` fails a check module that redefines a
+      `support` or `expect` name. 128/128.*
 
 ## TD-35 — Postgres connection written out in several places in tests/contract
 
@@ -1358,8 +1362,10 @@ in `pytest_plugin.db`, `tests/integration/test_schema_snapshot.py`,
 `test_sent_email_seed.py` and the verify scripts' inline Python.
 
 ### Tasks
-- [ ] TD-35.1: one helper in `gluon_contract.postgres` (from a
+- [x] TD-35.1: one helper in `gluon_contract.postgres` (from a
       `PostgresEndpoint`). Done when: one definition; CI green.
+      *2026-11-14: tests/contract `f224c00`: `postgres.connect`; the guard allows
+      `psycopg.connect` nowhere else.*
 
 ## TD-36 — `sent-email.jsonl` parsed twice in tests/contract
 
@@ -1367,9 +1373,11 @@ in `pytest_plugin.db`, `tests/integration/test_schema_snapshot.py`,
 `sent_email.parse_rows` (RPN-4) parses the same file into typed rows.
 
 ### Tasks
-- [ ] TD-36.1: the capture check uses `sent_email.parse_rows`. Done when: one
+- [x] TD-36.1: the capture check uses `sent_email.parse_rows`. Done when: one
       parser; `uv run python -m gluon_contract.notification_capture check` and
       `tests/unit/test_notification_capture.py`'s broken-copy cases still behave.
+      *2026-11-14: tests/contract `e2c1d0f`: `sent_email.parse_row` per line, so the
+      capture check still reports every bad line; capture check PASS.*
 
 ## TD-37 — tests/contract CI depends on what has been built
 
@@ -1495,8 +1503,14 @@ Adding cart-service would touch all of them.
 notification-service and the probe checks use it without CDC.
 
 ### Tasks
-- [ ] TD-45.1: move it to `gluon_contract/kafka.py`. Done when: `cdc.py` holds
+- [x] TD-45.1: move it to `gluon_contract/kafka.py`. Done when: `cdc.py` holds
       only the Connect/Debezium stack; CI green.
+      *2026-11-14: tests/contract `9d87f2f`, `f414b2d`: `kafka.py` (broker, `Record`,
+      jar sets); process handling in `supervisor.py` (`Supervisor`), named for its
+      job; `cdc.py` keeps Connect, Debezium and `cdc_home`. Its contract runs showed
+      an older flake, fixed in `07a86f6`: a Postgres stop waited up to 60 s for
+      Debezium to confirm, `pg_ctl`'s own limit (now: replication connections ended
+      first; red first with a frozen `pg_recvlogical`).*
 
 ## TD-46 — Verify scripts pile up
 
@@ -1537,3 +1551,15 @@ is the Scala service.
 - [ ] TD-47.1: cite the Scala source for every contract value in both ports.
       Done when: `git grep -n 'as user-service-rs'` finds none in
       notification-service-rs sources.
+
+## TD-48 — The service under test has its own copy of process handling
+
+Found 2026-11-14 (tests/contract `one-helper_20261114`). `target.py` starts and
+stops the build under test with its own process group, SIGTERM then SIGKILL and
+log handling, the same job `supervisor.Supervisor` does for the Kafka broker and
+the Connect worker. cart-service's throwaway Redis (RPC-2) would make a third copy.
+
+### Tasks
+- [ ] TD-48.1: `TargetProcess` runs its process through `Supervisor`, which keeps
+      what `target.py` adds (readiness by URL, its own stop grace). Done when: one
+      place starts and stops a harness process; CI green; user-service 128/128.
