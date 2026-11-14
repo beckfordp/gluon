@@ -12,7 +12,8 @@ criteria (the laptop-only ones are listed as such). Logs go to a run
 directory, printed at the start.
 
 Steps:
-  1. sandbox     bin/sandbox-setup --check (toolchains, Node 24, CDC jars, repos)
+  1. sandbox     bin/sandbox-setup --check (toolchains, Node 24, CDC jars, repos);
+                 by default on Linux only, the sandbox's OS (not on the laptop)
   2. harness-ci  tests/contract scripts/ci.sh (unit + integration tests, lint, types)
   3. rust-ci     services/user-service-rs scripts/ci.sh (fmt, clippy, tests, coverage)
   4. build       the Rust service and probe, and the AsyncAPI HTML
@@ -281,6 +282,11 @@ def main() -> int:
     wanted = args.only or ["sandbox", "harness-ci", "rust-ci", "build", "contract"] + (
         [] if args.quick else ["tracks"]
     ) + ["laptop-prep"]
+    # bin/sandbox-setup checks the sandbox's Linux VM; elsewhere (the laptop)
+    # its step fails by design (TD-33). --only sandbox still runs it.
+    if not args.only and sys.platform != "linux":
+        wanted.remove("sandbox")
+        print("== sandbox: not run (not the sandbox: bin/sandbox-setup checks its Linux VM)\n")
     if (
         "contract" in wanted
         and "build" not in wanted

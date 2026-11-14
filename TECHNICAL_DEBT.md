@@ -1323,7 +1323,7 @@ already named for it (`checks/test_notification_rest.py`,
 `scripts/verify-{readiness,openapi,users-cors,asyncapi,metrics,auth}.sh`.
 
 ### Tasks
-- [~] TD-33.1: rename to `test_user_rest.py`, …, `verify-user-rest-group.sh`, …
+- [x] TD-33.1: rename to `test_user_rest.py`, …, `verify-user-rest-group.sh`, …
       and update every caller. Decide first whether finished sessions' done
       scripts (`bin/verify-complete-RPN-0.sh` … `-3.sh`) change or stay as
       history. Done when: `bin/verify-port user-service --quick` 128/128 green; every
@@ -1335,6 +1335,13 @@ already named for it (`checks/test_notification_rest.py`,
       done scripts kept as history. The `verify-*-group.sh` scripts aren't
       renamed: retired (TD-46). Left: `verify-port user-service` green in
       the sandbox.*
+      *Done 2026-11-14, on the laptop (the laptop run replaces the sandbox):
+      `bin/verify-port user-service --quick` exit 0, contract 128/128; the
+      tracks step green too. Its sandbox step now runs by default only on
+      Linux, the sandbox's OS: `bin/sandbox-setup` checks the sandbox VM and
+      fails on the laptop by design (`--only sandbox` still runs it). No old
+      name outside history (`test_probe.py` is the probe's, not
+      user-service's).*
 
 ## TD-34 — Two sets of response comparisons in tests/contract
 
