@@ -1563,3 +1563,46 @@ the Connect worker. cart-service's throwaway Redis (RPC-2) would make a third co
 - [ ] TD-48.1: `TargetProcess` runs its process through `Supervisor`, which keeps
       what `target.py` adds (readiness by URL, its own stop grace). Done when: one
       place starts and stops a harness process; CI green; user-service 128/128.
+
+## TD-49 — An OrbStack restart leaves Kafka Connect without connectors
+
+Found 2026-11-14 (RUST-5.4 on the laptop). After OrbStack restarts, Kafka Connect
+comes back with no connectors: they're registered once, by the
+`debezium-connector-register` Job (`infra/k8s/local-infra/debezium-connectors-register.yaml`),
+which has already completed. Nothing reports it. `bin/run-acceptance` then fails in
+seeding with a message that doesn't say why, and no events are published.
+
+### Tasks
+- [ ] TD-49.1: `bin/run-acceptance` first checks that every connector the register
+      Job names is RUNNING, and if not says to re-run the Job (or `bin/k8s-local-up`).
+      Done when: with the connectors deleted, it stops before seeding with that
+      message; with them present, the run is unchanged.
+- [ ] TD-49.2: the connectors survive a restart: `bin/k8s-local-up` re-registers
+      when Connect has none, or Connect's config topic outlives the restart. Done
+      when: after an OrbStack restart, the user outbox connector is RUNNING without
+      a manual step, and acceptance is 53/53.
+
+## TD-50 — US-9.5's stock check waits only 5 s
+
+Found 2026-11-14 (RUST-5.4 on the laptop). `tests/acceptance/steps/fulfilment.steps.ts`
+"its stock is released" uses `expect.poll` with Playwright's default 5 s timeout.
+The release goes order-service → Kafka → inventory, and "Cancelling while Packed"
+failed once against the Rust user-service (unrelated to it), then passed 4 times.
+
+### Tasks
+- [ ] TD-50.1: the step waits as long as the suite's other cross-service steps, with
+      that timeout named in one place. Done when: every `expect.poll` over an
+      asynchronous outcome gives a timeout; US-9.5 passes 10/10.
+
+## TD-51 — The Scala user-service build sometimes fails generating its AsyncAPI spec
+
+Found 2026-11-14 (RUST-5.2, switching back to Scala). `sbt Docker/publishLocal`
+in `services/user-service`, after an incremental compile of 21 sources, failed in
+`asyncApiGenerateSpec` with `ClassNotFoundException: userservice.AsyncApiChannels$`.
+The class was in `target/` afterwards, and the same command passed on retry. It looks
+like the generator loads classes before (or without) the fresh compile output.
+
+### Tasks
+- [ ] TD-51.1: reproduce (touch a source, build), then make `asyncApiGenerateSpec`
+      depend on `Compile / compile` and run on its full classpath. Done when: the
+      repro fails before the fix and passes 5/5 after.
