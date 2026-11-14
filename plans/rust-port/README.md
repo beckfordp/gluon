@@ -7,7 +7,7 @@ The Scala services stay the default.
 |---|---|---|---|
 | user-service | [Rust Port](./user-service/plan.md) | `RUST-N.M` (`RPU-N` new) | RUST-5 (laptop pass), 7 (findings) open |
 | notification-service | [Rust Port](./notification-service/plan.md) | `RPN-N` | RPN-4.1 next (laptop) |
-| cart-service | [Rust Port](./cart-service/plan.md) | `RPC-N` | not started |
+| cart-service | [Rust Port](./cart-service/plan.md) | `RPC-N` | planned; starts after RPN-7, decisions D1–D4 open |
 
 - Why and how: [ADR 0028](../../docs/adr/0028-rust-port-spike-user-service.md)
   (spike), [ADR 0029](../../docs/adr/0029-after-the-rust-spike.md) (after it),
