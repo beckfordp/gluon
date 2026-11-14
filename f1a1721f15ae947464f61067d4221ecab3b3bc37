@@ -1,0 +1,1 @@
+Perf 3b Phase 1 task 1: bin/lib/obs-budget.sh (jq) sums memory limits for app.kubernetes.io/part-of=gluon-obs pods (<=3Gi) and namespace (<=11Gi, leaving Gatling's 1Gi); flags missing limits and request!=limit; exit 3 over budget. 7 fixture cases in bin/test/obs-budget-test.sh. Live: 7.31Gi namespace, 0 obs.
