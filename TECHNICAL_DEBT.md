@@ -1454,11 +1454,20 @@ service never faces them there. user-service's versions (`test_user_rest.py`)
 port quickly once TD-34 shares their helpers.
 
 ### Tasks
-- [ ] TD-42.1: port them into `test_notification_rest.py`. Done when: they
+- [x] TD-42.1: port them into `test_notification_rest.py`. Done when: they
       pass against both notification-service builds (Rust in the sandbox,
       Scala on the laptop), and notification-service-rs's `tests/capture.rs`
       health test and its `http/` fixtures are gone (its `rust.md` §8
       exception).
+      *2026-11-14: tests/contract `service-profiles_20261114` (`f8bcc85`, `7871f51`):
+      unknown path, `/health` and `/health/ready` as captured (with Content-Length),
+      HEAD a text/plain 405 without Allow, readiness 503 with Postgres stopped and 200
+      once back. Red 3/3 against a patched Rust build; green against Rust (the 19
+      `/emails` checks still RPN-5's) and Scala (24/24, the whole group).
+      notification-service-rs `bd7d8da`: health test, `http/` fixtures and
+      `.gitattributes` gone; §8's exception is the schema fixture only. Not done here:
+      the paused-Postgres captures (`health-*-pg-paused`), which have no user-service
+      counterpart.*
 
 ## TD-43 — The Rust services share no code
 
@@ -1492,10 +1501,18 @@ only, notification-service's modules are `ns_capture`/`ns_scenarios`.
 Adding cart-service would touch all of them.
 
 ### Tasks
-- [ ] TD-44.1: one profile per service carrying its capture, variable prefix
+- [x] TD-44.1: one profile per service carrying its capture, variable prefix
       and stubs; the service argument required (no user-service default);
       `ns_*` → `notification_*` (with TD-33; done 2026-11-13). Done when: adding a service is
       one profile plus its checks; both services' groups as before.
+      *2026-11-14: tests/contract `service-profiles_20261114` (`24c7867`, `3e19dc3`,
+      `4ea17c2`, `d71425c`, `2842248`): `ServiceProfile` carries `capture()`, an optional
+      `prefix` and `stub` (how a stub for it answers; `http_stub` is generic, user-service's
+      `GET /users/{id}` is its profile's). A run names its service: without one, service
+      checks are a usage error; capture helpers take it. A made-up cart-service profile
+      reaches capture, env, config and stub with nothing else edited
+      (`tests/unit/test_services.py`). user-service 128/128; notification group as before.
+      gluon `789c7d4`: `bin/verify-port` passes `--service`.*
 
 ## TD-45 — The Kafka broker lives in cdc.py
 
@@ -1594,13 +1611,16 @@ failed once against the Rust user-service (unrelated to it), then passed 4 times
       that timeout named in one place. Done when: every `expect.poll` over an
       asynchronous outcome gives a timeout; US-9.5 passes 10/10.
 
-## TD-51 — The Scala user-service build sometimes fails generating its AsyncAPI spec
+## TD-51 — Scala builds sometimes fail generating their AsyncAPI spec
 
 Found 2026-11-14 (RUST-5.2, switching back to Scala). `sbt Docker/publishLocal`
 in `services/user-service`, after an incremental compile of 21 sources, failed in
 `asyncApiGenerateSpec` with `ClassNotFoundException: userservice.AsyncApiChannels$`.
 The class was in `target/` afterwards, and the same command passed on retry. It looks
 like the generator loads classes before (or without) the fresh compile output.
+
+*2026-11-14: notification-service too: its `sbt -batch stage` failed the same way
+(`ClassNotFoundException: notificationservice.AsyncApiChannels$`) and passed on retry.*
 
 ### Tasks
 - [ ] TD-51.1: reproduce (touch a source, build), then make `asyncApiGenerateSpec`
