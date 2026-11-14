@@ -1440,14 +1440,17 @@ the later names go unchecked.
 By decision in RPN-4 (option a), `test_notification_rest.py` has no checks of
 `/health`, `/health/ready`, HEAD, the unknown path, or readiness with Postgres
 stopped. notification-service-rs's own tests cover them (`tests/health.rs`,
-`tests/readiness.rs`, `scripts/verify-skeleton.sh`), but the harness doesn't
-run those, so the Scala service never faces them there. user-service's
-versions (`test_user_rest.py`) port quickly once TD-34 shares their helpers.
+`tests/readiness.rs`, and `tests/capture.rs` against capture files copied into
+its `tests/fixtures`, TD-46), but the harness doesn't run those, so the Scala
+service never faces them there. user-service's versions (`test_user_rest.py`)
+port quickly once TD-34 shares their helpers.
 
 ### Tasks
 - [ ] TD-42.1: port them into `test_notification_rest.py`. Done when: they
       pass against both notification-service builds (Rust in the sandbox,
-      Scala on the laptop).
+      Scala on the laptop), and notification-service-rs's `tests/capture.rs`
+      health test and its `http/` fixtures are gone (its `rust.md` §8
+      exception).
 
 ## TD-43 — The Rust services share no code
 
@@ -1504,7 +1507,7 @@ done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
 `bin/verify-complete-RPN-2.sh`; see TD-39).
 
 ### Tasks
-- [~] TD-46.1: rule (in each repo's `conductor/workflow.md` and
+- [x] TD-46.1: rule (in each repo's `conductor/workflow.md` and
       `docs/sandbox.md`): once a track is archived, its script folds into
       `ci.sh` or `bin/verify-port user-service`, or is deleted; done scripts stay
       as history, unchanged. Apply it to the existing scripts. Done when:
@@ -1517,6 +1520,12 @@ done scripts. Many overlap `ci.sh`; a rename (TD-33) touches them all;
       `verify-check-group.sh`, `verify-cargo-audit.sh`;
       `verify-user-scala-confirmation.sh` is laptop B2. Left:
       notification-service-rs (its own track).*
+      *2026-11-14: notification-service-rs `retire-scripts_20261114`:
+      `verify-skeleton.sh` retired (its `canon_http` copy with it); the
+      capture comparisons are `tests/capture.rs` against vendored fixtures,
+      allowed by a `rust.md` §8 exception until TD-42.1. Rule in its
+      `workflow.md`. Every remaining track script is now run by CI or
+      `bin/verify-port`.*
 
 ## TD-47 — A Rust port cites its sibling, not the Scala source
 
