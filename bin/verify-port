@@ -165,6 +165,8 @@ def step_contract(logs: Path) -> Step:
         "--no-sync",
         "pytest",
         "checks",
+        "--service",
+        "user-service",
         "-p",
         "no:cacheprovider",
         "-rA",

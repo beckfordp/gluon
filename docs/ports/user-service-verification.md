@@ -109,7 +109,7 @@ the Scala service (it serves its AsyncAPI HTML from its own `target/`):
 ```
 (cd services/user-service && sbt stage)
 cd tests/contract
-uv run pytest checks -rA --ignore checks/test_probe.py \
+uv run pytest checks --service user-service -rA --ignore checks/test_probe.py \
   --target-cmd "$PWD/../../services/user-service/target/universal/stage/bin/user-service" \
   --target-cwd "$PWD/../../services/user-service" --target-name user-service-scala
 ```
@@ -130,14 +130,15 @@ kubectl get deploy user-service -n gluon-local -o jsonpath='{.spec.template.spec
 kubectl get pods -n gluon-local -l app=user-service                                                      # Running, 1/1 ready
 ```
 
-The switch resets the `user` schema and restarts the user outbox connector
+The switch resets the `user` schema and Debezium's slot
+(`infra/k8s/local-infra/user-switch-reset.sql`) and restarts the user outbox connector
 (its log says so).
 
 **B4. Cluster mode against the Rust deployment (C3, RUST-5.4).**
 
 ```
 cd tests/contract
-uv run pytest checks -rA --base-url http://user-service.gluon-local.svc.cluster.local:8080
+uv run pytest checks --service user-service -rA --base-url http://user-service.gluon-local.svc.cluster.local:8080
 ```
 
 Passes when the 63 checks marked `cluster` (REST, docs, the real `user-events`
