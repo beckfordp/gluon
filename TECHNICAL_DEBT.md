@@ -1483,13 +1483,24 @@ parsing, the plain-text 404/405 and `/health`, `/health/ready` (two styles:
 lint table and toolchain. A cart port would make a third copy.
 
 ### Tasks
-- [ ] TD-43.1: create `lib/gluon-rs` (cargo workspace, `ci.sh`, conductor; a
+- [x] TD-43.1: create `lib/gluon-rs` (cargo workspace, `ci.sh`, conductor; a
       sandbox repo in `bin/lib/sandbox.py`) with a service-basics crate
       (environment, shutdown, Postgres pool and ping, plain-text errors,
       health and readiness routes) and a test-support crate (throwaway
       Postgres, starting the service under test). Both services use them.
       `telemetry` still moves in RPN-7. Done when: no copy of those pieces in
       either service; both services' `ci.sh` green; user-service 128/128.
+      *Done 2026-11-14:*
+      - *`lib/gluon-rs` with crates `service-basics` and `service-testing`;
+        33 tests, 96% of lines.*
+      - *notification-service-rs and user-service-rs on them. user-service
+        keeps its metered `Store::ping` behind the `Readiness` trait.*
+      - *Both services' `ci.sh` green; user-service 128/128.*
+      - *The Rust image builds with `--build-context gluon-rs` (gluon
+        `441d61b`); acceptance 53/53.*
+      - *The sandbox exports and saves gluon-rs.*
+      - *Open: both services' GitHub workflows must check out gluon-rs
+        (their backlogs).*
 - [ ] TD-43.2: one shared `scripts/lib/verify.sh` and a common `ci.sh` core;
       each repo keeps only its own steps (e.g. user-service's registry
       check). Done when: the two repos' copies are gone or differ only in
@@ -1568,9 +1579,13 @@ notification-service-rs `db.rs`: pool size "as user-service-rs". The value
 is the Scala service.
 
 ### Tasks
-- [ ] TD-47.1: cite the Scala source for every contract value in both ports.
+- [x] TD-47.1: cite the Scala source for every contract value in both ports.
       Done when: `git grep -n 'as user-service-rs'` finds none in
       notification-service-rs sources.
+      *Done 2026-11-14: the pool size cites `SentEmailStore.scala`
+      (`.pooled(max = 10)`), the only sibling citation; the grep is empty.
+      The pool size is now a parameter of gluon-rs `postgres::connect`, so
+      each port cites its own.*
 
 ## TD-48 — The service under test has its own copy of process handling
 

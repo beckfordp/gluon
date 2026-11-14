@@ -205,6 +205,7 @@ one conductor track per repo, approved step by step. In order:
 3. TD-40 (full failure reasons, before RPN-5's red → green)
 4. TD-43.1 with TD-47: `lib/gluon-rs` service basics and test support, both
    services on them, Scala citations; `lib/gluon-rs` added to the sandbox export
+   *(done 2026-11-14)*
 5. TD-43.2 and user-service-rs's `verify-rust-ci.sh` portable (its backlog):
    `bin/verify-port`'s tracks step is red on macOS
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
