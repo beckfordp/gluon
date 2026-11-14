@@ -158,8 +158,12 @@ archived; nothing uncommitted. Then it runs `bin/sandbox-save`.
 
 **Repos:** `tests/contract`.
 
-- [ ] RPN-3 — service name as a parameter: env contract, Postgres login,
-      captures per service, check groups selected per service
+- [x] RPN-3 — service name as a parameter: env contract, Postgres login,
+      captures per service, check groups selected per service *(done
+      2026-11-12, tests/contract tracks `multi-service-harness_20261112` and
+      `rpn3-review-fixes_20261112`, `8b893d4`; tick missed, criteria re-seen
+      2026-11-14: `ci.sh` PASS with the notification env contract tests,
+      user-service 128/128, nothing uncommitted)*
 
 **Done when:** `bin/verify-complete-RPN-3.sh` (written on the laptop) PASS,
 then it runs `bin/sandbox-save` (download the archive): `tests/contract`'s
