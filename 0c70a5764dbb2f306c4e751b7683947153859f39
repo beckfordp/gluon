@@ -1,0 +1,1 @@
+Perf 3b Phase 3 task 2: Elasticsearch 8.19.19 single-node, security/ML off, no mmap, heap 512m in 1152Mi, emptyDir 2Gi, Recreate; Kibana 8.19.19, Node heap 512 in 768Mi, telemetry off, LB :5601. Verified ES yellow, Kibana available. Stack 2.66Gi.
