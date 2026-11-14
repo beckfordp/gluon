@@ -192,6 +192,31 @@ is first seen green in RPN-5, and against Scala on the laptop. Health,
 readiness, HEAD on `/health` and the unknown path were left out by decision
 (TD-42, now in RPN-4.1). Technical debt found: TD-33–TD-42.
 
+### Laptop run — RPN-4.1 to RPN-8
+
+*Decided 2026-11-14:* RPN-4.1 through RPN-8 are done on the laptop, before the
+next sandbox session; the outstanding TD items are rolled in where first needed.
+On the laptop: no `bin/verify-complete-RPN-N.sh` or `sandbox-save`, no export;
+one conductor track per repo, approved step by step. In order:
+
+1. tests/contract `one-helper_20261114`: TD-34, TD-35, TD-36, TD-45 (and a new
+   TD item: `target.py`'s process handling into `Supervisor`)
+2. TD-44, then TD-42 (RPN-5's done criterion includes the TD-42 checks)
+3. TD-40 (full failure reasons, before RPN-5's red → green)
+4. TD-43.1 with TD-47: `lib/gluon-rs` service basics and test support, both
+   services on them, Scala citations; `lib/gluon-rs` added to the sandbox export
+5. TD-43.2 and user-service-rs's `verify-rust-ci.sh` portable (its backlog):
+   `bin/verify-port`'s tracks step is red on macOS
+6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
+7. RPN-5, green against Rust and Scala in one go
+8. RPN-6, with TD-39 decided
+9. RPN-7
+10. RPN-8
+11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
+    backlogs) and TD-38 (shellcheck in CI): they need GitHub
+
+Built and checked on macOS only; RPN-8.1 re-verifies on Linux before RPN-9.
+
 ### RPN-4.1 — Review and tidy
 
 **Laptop**, before the next sandbox session. **Repos:** `tests/contract`,
@@ -229,8 +254,8 @@ checks green); `tests/contract`'s `ci.sh` green.
 - [ ] RPN-5 — the route, the store's list query, CORS
 
 **Done when:** the whole REST group (`test_notification_rest.py`, the TD-42
-checks included) green against notification-service-rs in the sandbox, and,
-on the laptop, the same group green against the Scala service.
+checks included) green against notification-service-rs and against the Scala
+service, both on the laptop (laptop run, 2026-11-14; Linux in RPN-8.1).
 
 ### RPN-6 — Exit criteria and `bin/verify-port`
 
@@ -268,6 +293,18 @@ user-service-rs; notification-service-rs's checks still green.
       crate are retired after RPN-13 (design review RPN-4.1, M2)
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
+
+### RPN-8.1 — Re-verify on Linux after the laptop run
+
+**Sandbox**, first session back. **Repos:** every exported repo.
+
+- [ ] RPN-8.1 — confirm the laptop run (RPN-4.1–RPN-8, built on macOS)
+      holds on Linux, as RPN-0 did after RUST-5.0
+
+**Done when:** `bin/verify-complete-RPN-8.1.sh` PASS: `ci.sh` PASS in
+`tests/contract`, `lib/gluon-rs`, both Rust services; `bin/verify-port
+user-service --quick` PASS (128/128); notification-service's REST group green;
+`bin/verify-port notification-service --env sandbox` runs.
 
 ### RPN-9 — Kafka fixtures
 
