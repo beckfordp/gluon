@@ -1424,9 +1424,12 @@ the terminal width (`red  test_… - A...`). The script writes a junit report
 since RPN-4.
 
 ### Tasks
-- [ ] TD-40.1: read each check's outcome and message from the junit report.
+- [x] TD-40.1: read each check's outcome and message from the junit report.
       Done when: a red line shows its reason (`got 404 …`) in full, up to a
       fixed length.
+      *Done 2026-11-14 (tests/contract `e443960`): `gluon_contract.check_report`
+      reads the report; each red line carries its reason, whitespace collapsed,
+      cut at 200 characters with `…`. `--expect-red` uses it too.*
 
 ## TD-41 — `verify-check-group.sh` checks only `http/…` citations
 
