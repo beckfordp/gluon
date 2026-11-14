@@ -1,0 +1,1 @@
+Perf 3b P4: gluon-infra: Postgres connections/xact/locks/deadlocks, Redis memory/commands/hit ratio/clients, Connect connector+task status, Debezium connected/lag, source records written, scrape up. Kafka lag lives in gluon-kafka. check-obs-dashboards.sh PASS.
