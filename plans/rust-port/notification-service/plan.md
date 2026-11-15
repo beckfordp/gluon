@@ -194,8 +194,8 @@ readiness, HEAD on `/health` and the unknown path were left out by decision
 
 ### Laptop run — RPN-4.1 to RPN-8
 
-*Decided 2026-11-14:* RPN-4.1 through RPN-8 are done on the laptop, before the
-next sandbox session; the outstanding TD items are rolled in where first needed.
+*Decided 2026-11-14:* RPN-4.1 through RPN-8, except RPN-5 (sandbox), are done
+on the laptop; the outstanding TD items are rolled in where first needed.
 On the laptop: no `bin/verify-complete-RPN-N.sh` or `sandbox-save`, no export;
 one conductor track per repo, approved step by step. In order:
 
@@ -210,7 +210,7 @@ one conductor track per repo, approved step by step. In order:
    `bin/verify-port`'s tracks step is red on macOS *(done 2026-11-14)*
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
    *(done 2026-11-14)*
-7. RPN-5, green against Rust and Scala in one go
+7. RPN-5, in the sandbox
 8. RPN-6, with TD-39 decided
 9. RPN-7
 10. RPN-8
@@ -260,8 +260,8 @@ checks green); `tests/contract`'s `ci.sh` green.
 - [ ] RPN-5 — the route, the store's list query, CORS
 
 **Done when:** the whole REST group (`test_notification_rest.py`, the TD-42
-checks included) green against notification-service-rs and against the Scala
-service, both on the laptop (laptop run, 2026-11-14; Linux in RPN-8.1).
+checks included) green against notification-service-rs, in the sandbox only;
+`bin/verify-complete-RPN-5.sh` PASS.
 
 ### RPN-6 — Exit criteria and `bin/verify-port`
 
