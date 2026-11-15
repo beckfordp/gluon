@@ -2,11 +2,21 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/frontends/gshop" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/purerest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/cart-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/catalog-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/services/fulfilment-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/inventory-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/notification-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/services/notification-service-rs" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/order-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/services/payment-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/services/user-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/services/user-service-rs" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tests/acceptance" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tests/contract" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tests/performance" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tools/pure-service-generator" vcs="Git" />
   </component>
 </project>
