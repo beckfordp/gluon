@@ -94,6 +94,16 @@ history it doesn't need, and this script and its tests (laptop-only)."""
 NOT_EXPORTED_DIRS = frozenset({"plans"})
 """gluon directories that stay on the laptop: every plan, retro and work sequence."""
 
+NOT_EXPORTED_NESTED = frozenset(
+    {
+        Path("lib") / "gluon-rs" / "scripts" / "on-linux.sh",
+        Path("lib") / "gluon-rs" / "scripts" / "verify-linux-bed.sh",
+        Path("lib") / "gluon-rs" / "scripts" / "linux-bed" / "Dockerfile",
+    }
+)
+"""Nested-repo files that stay on the laptop: the Docker Linux test bed, which the
+sandbox (already Linux, no Docker) can't run."""
+
 CONDUCTOR = Path("conductor")
 """Each repo's Conductor directory: dropped from read-only repos, trimmed in working ones."""
 
@@ -193,6 +203,7 @@ LEFT_OUT = (
     ("`PLAN.md`, `plans/`", "Plans the sandbox session would act on."),
     ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
+    ("`lib/gluon-rs`'s `scripts/on-linux.sh`, `scripts/verify-linux-bed.sh`, `scripts/linux-bed/Dockerfile`", "The Docker Linux test bed: laptop-only, the sandbox is Linux without Docker."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
     ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox session would pick up; active tracks and `workflow.md` stay."),
 )
@@ -510,6 +521,7 @@ def export(out: Path, captures: Sequence[str], clean: bool) -> dict[str, object]
         for repo in repos:
             relative = repo.relative_to(GLUON)
             files = platform() if repo == GLUON else conductor_files(repo, tracked(repo))
+            files = [p for p in files if relative / p not in NOT_EXPORTED_NESTED]
             copy(files, repo, staging / relative)
             tracks = staging / relative / CONDUCTOR / "tracks.md"
             if repo != GLUON and tracks.is_file():
