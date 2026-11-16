@@ -125,7 +125,7 @@ Goal: an empty, green `tools/gluon-kube` that the sandbox scripts know about.
       `SANDBOX_REPOS` and `SHARED_REPOS` (saved and exported);
       `bin/sandbox-setup` syncs it in `projects` and checks what GK-1 found
       it needs (`bwrap`, `nsenter`, netlink); `tools/README.md` lists it.
-- [ ] GK-2.6 **(laptop)**: `gh repo create beckfordp/gluon-kube`, push,
+- [x] GK-2.6 **(laptop)**: `gh repo create beckfordp/gluon-kube`, push,
       CI green on GitHub.
 
 Done when: `scripts/ci.sh` green in the sandbox; `bin/sandbox-setup --check`
@@ -134,6 +134,10 @@ OK; `bin/sandbox-save` writes its patches.
 `package_20261115`; `bin/verify-complete-GK-2.sh`). No runtime dependency yet
 (pyroute2 comes with GK-4). The CI workflow's userns sysctl is unverified until
 GK-2.6.*
+*2026-11-16: GK-2.6 done on the laptop. History squashed to one commit; public
+repo `beckfordp/gluon-kube`; first CI run green (37 passed, 1 skipped: the
+gluon-checkout test). The userns sysctl and bubblewrap install ran, but no test
+creates a namespace yet: that's proven with GK-4's integration tests.*
 
 ## GK-3 — Reading the manifests (nothing runs)
 Goal: gluon-kube reads gluon-local's desired state exactly, and says what it
