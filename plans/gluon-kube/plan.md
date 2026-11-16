@@ -157,11 +157,16 @@ can't simulate.
       `.Release.Name`/`.Namespace`, `.Values.*`, `with`, `range`, `toYaml`,
       `nindent`, `quote`, `{{-`/`-}}` trimming. Anything else fails with
       the template, line and construct.
-- [ ] GK-3.5 **(laptop)**: capture `helm template` for every
+- [x] GK-3.5 **(laptop)**: capture `helm template` for every
       `environments/local/*.values.yaml` against `infra/k8s/gluon`, with
       provenance (helm version, gluon commit, exact commands), committed to
       `tests/fixtures/helm-template/`. A capture script written in the
       sandbox first (`scripts/capture-helm-template.sh`).
+      *2026-11-16: captured with `scripts/capture-laptop-reference.sh` (helm
+      v3.18.2; 9 values files and the chart defaults, `PROVENANCE.txt`,
+      `COMMANDS.txt`); gluon-kube `7d605a0`. The same run's `images/` and
+      `cluster/` (GK-4, GK-5 reference) travel as a separate upload,
+      `gluon-kube-reference.tar.gz`, unpacked beside `gluon/` in the workspace.*
 - [ ] GK-3.6: `gluon-kube template <release> <chart> -f <values>` equals the
       captures, compared as parsed documents. Until the captures arrive, the
       tests hold hand-derived expectations and say so.
