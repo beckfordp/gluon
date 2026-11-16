@@ -33,7 +33,7 @@ never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels but EXPORTED_PLANS: PLAN.md, the rest of plans/, CHANGELOG.md,
-this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
+this script and its tests (bin/verify-sandbox-tools) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
 instructions are written by hand. TECHNICAL_DEBT.md travels: the sandbox adds what
 it finds, and the laptop merges it.
@@ -85,7 +85,7 @@ NOT_EXPORTED = frozenset(
         Path("PLAN.md"),
         Path("CHANGELOG.md"),
         Path("bin") / "sandbox-export",
-        Path("bin") / "verify-complete-RPN-0.1.sh",
+        Path("bin") / "verify-sandbox-tools",
     }
 )
 """gluon files that stay on the laptop: plans the sandbox session would act on,
@@ -206,7 +206,7 @@ LEFT_OUT = (
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/` bar gluon-kube, the other test suites."),
     ("`PLAN.md`, `plans/` bar `plans/gluon-kube/plan.md`", "Plans the sandbox session would act on. The gluon-kube plan travels: drafted and kept up to date in the sandbox."),
     ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
-    ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
+    ("`bin/sandbox-export`, `bin/verify-sandbox-tools`", "Laptop-only: the export and its tests."),
     ("`lib/gluon-rs`'s `scripts/on-linux.sh`, `scripts/verify-linux-bed.sh`, `scripts/linux-bed/Dockerfile`", "The Docker Linux test bed: laptop-only, the sandbox is Linux without Docker."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
     ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox session would pick up; active tracks and `workflow.md` stay."),

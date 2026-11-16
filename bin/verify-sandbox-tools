@@ -9,12 +9,12 @@
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
 #   4. the touched Python scripts compile
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
-#   bin/verify-complete-RPN-0.1.sh
+#   bin/verify-sandbox-tools
 set -uo pipefail
 GLUON="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 cd "$GLUON" || exit 1
 
-LOGS="${TMPDIR:-/tmp}/verify-complete-RPN-0.1.$(date +%Y%m%d-%H%M%S)"
+LOGS="${TMPDIR:-/tmp}/verify-sandbox-tools.$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOGS"
 echo "RPN-0.1 done criteria — logs in $LOGS"
 

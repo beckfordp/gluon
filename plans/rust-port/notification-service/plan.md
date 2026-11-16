@@ -71,7 +71,7 @@ and four checks failed for it.
       `sandbox-import` branch, rebase, review, `--ff-only` into `main`, push,
       delete the branch (never pushed)
 
-**Done when:** `bin/verify-complete-RPN-0.1.sh` PASS: an export carries every
+**Done when:** `bin/verify-sandbox-tools` (was `verify-complete-RPN-0.1.sh`) PASS: an export carries every
 repo `PORTS` names (that exists) and the shared repos, and no other; the
 reference check warns for an unexported repo path and not for an exported or
 allowed one; `sandbox-save` prints the warning for an unlisted git repo and
