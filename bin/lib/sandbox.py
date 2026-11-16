@@ -22,13 +22,26 @@ PORTS = (
 """Scala service → its Rust port, each started or done in the sandbox; add a line per new port.
 bin/sandbox-export exports both sides (the Rust one once it exists on the laptop)."""
 
-SHARED_REPOS = (Path("tests") / "contract", Path("lib") / "purerest", Path("lib") / "gluon-rs")
+SHARED_REPOS = (
+    Path("tests") / "contract",
+    Path("lib") / "purerest",
+    Path("lib") / "gluon-rs",
+    Path("tools") / "gluon-kube",
+)
 """Repos every port needs: the contract harness, purerest/purekafka as the reference
-for the shared Rust layer, and gluon-rs, that layer (TD-43)."""
+for the shared Rust layer, gluon-rs, that layer (TD-43), and gluon-kube, the simulated
+gluon-local the ports run in (ADR 0030)."""
 
-SANDBOX_REPOS = (Path("tests") / "contract", *(rust for _, rust in PORTS), Path("lib") / "gluon-rs")
+SANDBOX_REPOS = (
+    Path("tests") / "contract",
+    *(rust for _, rust in PORTS),
+    Path("lib") / "gluon-rs",
+    Path("tools") / "gluon-kube",
+)
 """Git repos the sandbox commits to, relative to gluon's root: the harness, the Rust ports,
-and gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it)."""
+gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it), and gluon-kube (created in
+the sandbox, ADR 0030; its first order is the contract harness and the first port, so
+bin/sandbox-review's aliases keep their indices)."""
 
 NESTED_REPO_DIRS = ("services", "frontends", "tools", "lib", "tests")
 """gluon's gitignored directories of independent repos; only their README.md is gluon's."""

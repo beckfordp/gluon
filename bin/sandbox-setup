@@ -3,8 +3,9 @@
 
 """Set up (or check) the sandbox the user-service port is developed in (ADR 0028).
 
-The sandbox image provides Python, uv, Java, Node, git and the PostgreSQL 16
-binaries; this script verifies those and installs everything the spike added on
+The sandbox image provides Python, uv, Java, Node, git, the PostgreSQL 16
+binaries, and bwrap, unshare and nsenter with unprivileged user namespaces
+(tools/gluon-kube, ADR 0030); this script verifies those and installs everything the spike added on
 top, without root, into the home directory. It is idempotent: run it after a
 teardown, or any time, and it only installs what is missing. Every tool the
 spike adds to the sandbox is added here in the same change (plans/private/sandbox.md).
@@ -48,6 +49,8 @@ PACKAGE_SOURCES = {
 
 IMAGE_TOOLS = ("java", "node", "npm", "git", "curl", "gcc", "python3", "uv")
 PG_TOOLS = ("initdb", "pg_ctl", "createdb", "psql", "postgres")
+ISOLATION_TOOLS = ("bwrap", "unshare", "nsenter")
+"""What tools/gluon-kube runs pods with (ADR 0030; GK-1 found them enough, no root)."""
 PYTHON_VERSION = "3.13"
 
 RUSTUP_INIT_URL = "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"
@@ -228,6 +231,7 @@ def step_image(_install: bool) -> list[Result]:
             f"uv can't find Python {PYTHON_VERSION} (expected under /opt/uv-python)",
         )
     )
+    results.extend(isolation())
     pg_ctl = shutil.which("pg_ctl")
     if pg_ctl is None:
         results.append(Result("image", "MISSING", "PostgreSQL binaries: pg_ctl not on PATH"))
@@ -241,6 +245,33 @@ def step_image(_install: bool) -> list[Result]:
         )
     else:
         results.append(Result("image", "OK", f"{version} in {pg_bin}"))
+    return results
+
+
+def isolation() -> list[Result]:
+    """gluon-kube's isolation tools, and an unprivileged user namespace actually created."""
+    results = []
+    for tool in ISOLATION_TOOLS:
+        found = shutil.which(tool)
+        results.append(
+            Result("image", "OK", f"{tool}: {found}")
+            if found
+            else Result("image", "MISSING", f"{tool} not on PATH (image-provided; can't install)")
+        )
+    try:
+        created = subprocess.run(
+            ["unshare", "-Ur", "true"], check=False, capture_output=True, timeout=10
+        )
+        works = created.returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        works = False
+    results.append(
+        Result("image", "OK", "user namespaces: unprivileged `unshare -Ur` works")
+        if works
+        else Result(
+            "image", "MISSING", "user namespaces: `unshare -Ur` fails (gluon-kube needs it)"
+        )
+    )
     return results
 
 
@@ -573,6 +604,26 @@ def step_projects(install: bool) -> list[Result]:
                 Result("projects", "OK", "tests/contract: .venv present")
                 if venv_ok
                 else Result("projects", "MISSING", "tests/contract: no .venv (run without --check)")
+            )
+    kube = GLUON / "tools" / "gluon-kube"
+    if (kube / "uv.lock").is_file():
+        kube_venv = (kube / ".venv" / "bin" / "python").is_file()
+        if install:
+            run(["uv", "sync", "--locked", "--quiet"], cwd=kube)
+            results.append(
+                Result(
+                    "projects",
+                    "OK" if kube_venv else "INSTALLED",
+                    "tools/gluon-kube: uv sync --locked",
+                )
+            )
+        else:
+            results.append(
+                Result("projects", "OK", "tools/gluon-kube: .venv present")
+                if kube_venv
+                else Result(
+                    "projects", "MISSING", "tools/gluon-kube: no .venv (run without --check)"
+                )
             )
     rust_repo = GLUON / "services" / "user-service-rs"
     if (rust_repo / "Cargo.lock").is_file():

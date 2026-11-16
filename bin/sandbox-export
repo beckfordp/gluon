@@ -32,7 +32,7 @@ files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ON
 never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-No plan travels: PLAN.md, plans/, CHANGELOG.md,
+No plan travels but EXPORTED_PLANS: PLAN.md, the rest of plans/, CHANGELOG.md,
 this script and its tests (bin/verify-complete-RPN-0.1.sh) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
 instructions are written by hand. TECHNICAL_DEBT.md travels: the sandbox adds what
@@ -93,6 +93,10 @@ history it doesn't need, and this script and its tests (laptop-only)."""
 
 NOT_EXPORTED_DIRS = frozenset({"plans"})
 """gluon directories that stay on the laptop: every plan, retro and work sequence."""
+
+EXPORTED_PLANS = frozenset({Path("plans") / "gluon-kube" / "plan.md"})
+"""Plans under NOT_EXPORTED_DIRS that travel: ones drafted and kept up to date in the
+sandbox, which each session reads and amends; the laptop merges them back."""
 
 NOT_EXPORTED_NESTED = frozenset(
     {
@@ -199,8 +203,8 @@ LEFT_OUT = (
     ("Build output: `target/`, `.bsp/`, `node_modules/`, `.venv/`, `__pycache__/`", "Transient, and `.bsp/sbt.json` holds laptop paths."),
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
-    ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/`, the other test suites."),
-    ("`PLAN.md`, `plans/`", "Plans the sandbox session would act on."),
+    ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/` bar gluon-kube, the other test suites."),
+    ("`PLAN.md`, `plans/` bar `plans/gluon-kube/plan.md`", "Plans the sandbox session would act on. The gluon-kube plan travels: drafted and kept up to date in the sandbox."),
     ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-complete-RPN-0.1.sh`", "Laptop-only: the export and its tests."),
     ("`lib/gluon-rs`'s `scripts/on-linux.sh`, `scripts/verify-linux-bed.sh`, `scripts/linux-bed/Dockerfile`", "The Docker Linux test bed: laptop-only, the sandbox is Linux without Docker."),
@@ -241,7 +245,7 @@ def platform() -> list[Path]:
         for p in tracked(GLUON)
         if (p.parts[0] not in NESTED_REPO_DIRS or p == Path(p.parts[0]) / "README.md")
         and p not in NOT_EXPORTED
-        and p.parts[0] not in NOT_EXPORTED_DIRS
+        and (p.parts[0] not in NOT_EXPORTED_DIRS or p in EXPORTED_PLANS)
     ]
 
 

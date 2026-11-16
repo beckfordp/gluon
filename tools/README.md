@@ -1,10 +1,16 @@
 # tools/
 
-Platform *tooling* — a code generator, not a hosted service. Lives here as
-its own **independent git repository** —
-[`tools/pure-service-generator/`](./pure-service-generator) — pushed to
-its own GitHub remote (`beckfordp/pure-service-generator`), with its own
-`/conductor` backlog, its own CI.
+Platform *tooling*, not hosted services. Each lives here as its own
+**independent git repository**, with its own GitHub remote, `/conductor`
+backlog and CI:
+
+- [`tools/pure-service-generator/`](./pure-service-generator)
+  (`beckfordp/pure-service-generator`) — the service code generator.
+- [`tools/gluon-kube/`](./gluon-kube) (`beckfordp/gluon-kube`, created in the
+  sandbox 2026-11-15, not yet pushed) — a simulated gluon-local that runs the
+  Rust ports from the unchanged manifests in the sandbox, which has no Docker
+  or Kubernetes ([ADR 0030](../docs/adr/0030-gluon-kube-sandbox-kubernetes-runtime.md)).
+  Saved and exported by the sandbox scripts (`bin/lib/sandbox.py`).
 
 This directory itself is **not** tracked by gluon's own git repo (see
 `.gitignore`) — gluon just co-locates it on disk for convenience, same as

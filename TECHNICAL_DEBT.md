@@ -1478,6 +1478,8 @@ port quickly once TD-34 shares their helpers.
       `.gitattributes` gone; §8's exception is the schema fixture only. Not done here:
       the paused-Postgres captures (`health-*-pg-paused`), which have no user-service
       counterpart.*
+      *2026-11-15 (RPN-5): the 19 `/emails` and CORS checks are green against
+      notification-service-rs; the group is 24/24 against it.*
 
 ## TD-43 — The Rust services share no code
 
@@ -1664,3 +1666,45 @@ like the generator loads classes before (or without) the fresh compile output.
 - [ ] TD-51.1: reproduce (touch a source, build), then make `asyncApiGenerateSpec`
       depend on `Compile / compile` and run on its full classpath. Done when: the
       repro fails before the fix and passes 5/5 after.
+
+## TD-52 — The harness doesn't catch the Rust ports differing from Scala at the HTTP framework edge
+
+Found in RPN-5 (sandbox, 2026-11-15). Both Scala services run the same http4s
+`CORS.policy` and tapir's 405; each Rust port re-implements them, and the harness
+misses where they differ:
+- tapir's 405 carries no `Allow` (captures `emails-post.txt`, `health-head.txt`), but
+  the 405 checks (`assert_text_error`) don't look at it. axum adds one: user-service-rs
+  sends it on `POST /health` and `POST /users/{id}`.
+- Scala answers a preflight for a disallowed header 200 with only `Vary`
+  (notification-service capture `cors-preflight-bad-header.txt`); user-service-rs
+  answers it with the Allow-* headers. user-service has no capture of that case.
+
+### Tasks
+- [ ] TD-52.1: the 405 checks assert no `Allow` header, for both services. Done when:
+      user-service-rs fails them before its fix and passes after; notification-service
+      stays 24/24.
+- [ ] TD-52.2: a user-service capture of a refused preflight (laptop) and a check. Done
+      when: Scala passes it, and user-service-rs fails before its fix and passes after.
+- [ ] TD-52.3: one Scala-faithful CORS policy and 405 in gluon-rs `service-basics`, used
+      by both ports (exposed headers a parameter). Done when: no CORS or `Allow` code in
+      either port; both groups green.
+
+## TD-53 — gluon-rs's Cargo.lock pins crates the sandbox's crates.io mirror doesn't have
+
+Found in RPN-5 (sandbox, 2026-11-15). The laptop's `lib/gluon-rs/Cargo.lock` locks 13
+crates at versions the sandbox's mirror doesn't serve yet (e.g. ureq 3.5.2 and cc 1.11.2;
+the mirror has 3.5.1 and 1.11.0). So in the sandbox `cargo fetch --locked` fails and
+gluon-rs's `scripts/ci.sh` can't pass, even on an unchanged export; any unlocked cargo
+run re-resolves and downgrades them, a change that then travels back in the patches.
+user-service-rs and notification-service-rs lock versions the mirror has.
+
+RPN-5 worked around it: its gluon-rs lock change only adds `time` and its dependencies,
+and gluon-rs CI ran on a scratch copy with the sandbox-resolved lock.
+
+### Tasks
+- [ ] TD-53.1: keep the Rust repos' locks within what the sandbox can fetch: before an
+      export, `bin/sandbox-export` (or `bin/verify-laptop-prep`) checks each lock
+      against the mirror, or the laptop resolves gluon-rs's lock no newer than the
+      services'. Done when: `cargo fetch --locked` passes in the sandbox for all three
+      Rust repos on a fresh export.
+
