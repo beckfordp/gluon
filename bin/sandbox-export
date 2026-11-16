@@ -571,6 +571,13 @@ def empty(out: Path, clean: bool) -> None:
     print(f"emptied   {out}")
 
 
+def anonymous(info: tarfile.TarInfo) -> tarfile.TarInfo:
+    """The archive entry owned by root: the laptop's user name and ids stay out of its headers."""
+    info.uid = info.gid = 0
+    info.uname = info.gname = "root"
+    return info
+
+
 def main(argv: Sequence[str]) -> int:
     """Parses arguments and exports."""
     parser = argparse.ArgumentParser(
@@ -597,7 +604,7 @@ def main(argv: Sequence[str]) -> int:
     if not args.no_archive:
         archive = out.parent / f"{out.name}.tar.gz"
         with tarfile.open(archive, "w:gz") as tar:
-            tar.add(out, arcname=out.name)
+            tar.add(out, arcname=out.name, filter=anonymous)
         print(f"Archived  {archive} ({archive.stat().st_size // 1024} KiB)")
     return 0
 
