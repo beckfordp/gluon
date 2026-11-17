@@ -32,11 +32,11 @@ files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ON
 never are.
 Binary files outside ALLOWED_BINARIES stop the export.
 
-No plan travels but EXPORTED_PLANS: PLAN.md, the rest of plans/, CHANGELOG.md,
-this script and its tests (bin/verify-sandbox-tools) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
+No plan travels but EXPORTED_PLANS: PLAN.md, the rest of plans/, TECHNICAL_DEBT.md,
+CHANGELOG.md, this script and its tests (bin/verify-sandbox-tools) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
 conductor/archive/ and their tracks.md backlog. The sandbox session's
-instructions are written by hand. TECHNICAL_DEBT.md travels: the sandbox adds what
-it finds, and the laptop merges it.
+instructions are written by hand; what it finds comes back in its notes, not
+as TECHNICAL_DEBT.md edits.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -83,6 +83,7 @@ inside their captures as CAPTURE.sh."""
 NOT_EXPORTED = frozenset(
     {
         Path("PLAN.md"),
+        Path("TECHNICAL_DEBT.md"),
         Path("CHANGELOG.md"),
         Path("bin") / "sandbox-export",
         Path("bin") / "verify-sandbox-tools",
@@ -207,7 +208,7 @@ LEFT_OUT = (
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
     ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/` bar gluon-kube, the other test suites."),
-    ("`PLAN.md`, `plans/` bar `plans/gluon-kube/plan.md`", "Plans the sandbox session would act on. The gluon-kube plan travels: drafted and kept up to date in the sandbox."),
+    ("`PLAN.md`, `TECHNICAL_DEBT.md`, `plans/` bar `plans/gluon-kube/plan.md`", "Plans the sandbox session would act on. The gluon-kube plan travels: drafted and kept up to date in the sandbox."),
     ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-sandbox-tools`", "Laptop-only: the export and its tests."),
     ("`lib/gluon-rs`'s `scripts/on-linux.sh`, `scripts/verify-linux-bed.sh`, `scripts/linux-bed/Dockerfile`", "The Docker Linux test bed: laptop-only, the sandbox is Linux without Docker."),
