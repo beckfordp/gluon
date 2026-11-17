@@ -431,6 +431,11 @@ and gluon-rs CI ran on a scratch copy with the sandbox-resolved lock.
 notification-service-rs, and gluon-rs `scripts/ci.sh` is green on the laptop.
 TD-53.1 stays open until the sandbox's `cargo fetch --locked` passes.*
 
+*2026-11-17: user-service-rs's lock moved `libz-sys` 1.1.31 → 1.1.33
+(RUSTSEC-2026-0544, published 2026-11-11), a security fix the sandbox's mirror
+may not have yet. If `cargo fetch --locked` fails on it at the next export,
+refresh the mirror; don't roll the fix back.*
+
 ### Tasks
 - [ ] TD-53.1: keep the Rust repos' locks within what the sandbox can fetch: before an
       export, `bin/sandbox-export` (or `bin/verify-laptop-prep`) checks each lock
