@@ -277,9 +277,19 @@ TD-52, TD-53.
       description, environment `sandbox|laptop`, command) and
       `bin/verify-port <service> --env sandbox|laptop`, printing MET / NOT
       MET / LAPTOP and exiting 1 on any NOT MET for the current environment
+- [ ] RPN-6.1 — user-service's criteria (`CRITERIA`, `LAPTOP` in
+      `bin/verify-port`) to `docs/ports/user-service.criteria.json`: one
+      mechanism for every port, none in code *(added 2026-11-17)*
+- [ ] RPN-6.2 — `--env` replaces the `sys.platform != "linux"` guard on the
+      sandbox step: the environment is named, not guessed from the OS
+      *(added 2026-11-17)*
 
 **Done when:** `bin/verify-port notification-service --env sandbox` runs and
-lists every criterion NOT MET or LAPTOP; its own test shows the exit codes.
+lists C1 (the harness, isolated mode: the REST group, green since RPN-5) MET,
+every other criterion NOT MET or LAPTOP, so a criterion's command is seen
+running, not only listed; `bin/verify-port user-service --env sandbox` prints
+the same criteria as before RPN-6, read from its JSON; no criterion list and no
+OS check left in `bin/verify-port`; its own test shows the exit codes.
 
 ### RPN-7 — `telemetry` to `lib/gluon-rs`
 
