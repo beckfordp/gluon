@@ -257,11 +257,17 @@ checks green); `tests/contract`'s `ci.sh` green.
 
 **Repos:** `services/notification-service-rs`.
 
-- [ ] RPN-5 — the route, the store's list query, CORS
+- [x] RPN-5 — the route, the store's list query, CORS *(done 2026-11-15,
+      services/notification-service-rs track `emails_20261115`, sandbox)*
 
 **Done when:** the whole REST group (`test_notification_rest.py`, the TD-42
 checks included) green against notification-service-rs, in the sandbox only;
 `bin/verify-complete-RPN-5.sh` PASS.
+
+*As delivered:* `bin/verify-complete-RPN-5.sh` PASS; the REST group 24/24
+against notification-service-rs in the sandbox, and 24/24 against the staged
+Scala notification-service on the laptop (2026-11-17). Technical debt found:
+TD-52, TD-53.
 
 ### RPN-6 — Exit criteria and `bin/verify-port`
 

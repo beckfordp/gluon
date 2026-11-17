@@ -375,6 +375,9 @@ like the generator loads classes before (or without) the fresh compile output.
 *2026-11-14: notification-service too: its `sbt -batch stage` failed the same way
 (`ClassNotFoundException: notificationservice.AsyncApiChannels$`) and passed on retry.*
 
+*2026-11-17: again in notification-service's `sbt -batch stage` (RPN-5's Scala
+run, a clean checkout); passed on retry.*
+
 ### Tasks
 - [ ] TD-51.1: reproduce (touch a source, build), then make `asyncApiGenerateSpec`
       depend on `Compile / compile` and run on its full classpath. Done when: the
