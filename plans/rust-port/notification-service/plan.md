@@ -327,15 +327,28 @@ criterion MET), `bin/verify-port notification-service` PASS (24/24).
 
 **Repos:** `lib/gluon-rs`, `services/user-service-rs`.
 
-- [ ] RPN-8 — move the probe's envelope handling, DLQ, stream supervisor and
-      lag into a `gluon-kafka` crate; the probe uses it. The probe stands in
-      for notification-service's consumers (its checks are marked
+- [x] RPN-8 — move the probe's envelope handling, DLQ, stream supervisor and
+      lag into a `kafka-event-consumer` crate; the probe uses it. The probe
+      stands in for notification-service's consumers (its checks are marked
       user-service only for want of a consumer): as RPN-10–13 bring the real
       consumers, each probe check moves to notification-service's groups and
       runs against notification-service-rs; the probe and `events-probe`
       crate are retired after RPN-13 (design review RPN-4.1, M2)
+      *(done 2026-11-17, laptop)*
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
+
+*As delivered:* gluon-rs `crates/kafka-event-consumer` (named for its job,
+not `gluon-kafka`): envelope routing as a `Routes` trait and `handle_record`
+(Scala `EnvelopeHandler`'s shape, for notification-service's four
+consumers), the DLQ guard, the supervisor, event age and lag, the consume
+span. Broker-free only: rdkafka (consumer, DLQ producer, lag hook) stays in
+the probe until RPN-10, so gluon-rs's lock gained one package entry and no
+rdkafka (TD-53). The probe keeps its `UserRegistered` route; poison is now
+logged once, in Scala's wording. Coverage: gluon-rs 93.47%,
+user-service-rs 93.23%. `bin/verify-port user-service` PASS (128/128, probe
+10/10, every criterion MET), `bin/verify-port notification-service` PASS
+(24/24).
 
 ### RPN-9 — Re-verify on Linux
 
@@ -360,7 +373,7 @@ contract` 128/128 and `bin/verify-port notification-service --only contract`
 
 - [ ] RPN-10 — checks (welcome email, duplicate eventId, unrelated type,
       undecodable envelope and payload → DLQ, null value skipped) red; then
-      the consumer on `gluon-kafka` and the logging transport
+      the consumer on `kafka-event-consumer` and the logging transport
 
 Its checks reach notification-service's own broker (`Harness.kafka`) and
 stubs (`Harness.stubs`) through fixtures added here; the probe's are its own.

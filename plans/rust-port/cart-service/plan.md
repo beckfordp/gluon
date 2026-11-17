@@ -30,8 +30,9 @@ Each must be ticked in its own plan before the session that needs it starts.
 | `Supervisor` runs any harness process: TD-48.1 folds `target.py` in | `TECHNICAL_DEBT.md` TD-48 | RPC-2, if done by then | the throwaway Redis uses it rather than a third copy of start/stop |
 | ADR 0029 accepted, option 3 extended to cart | [ADR 0029](../../../docs/adr/0029-after-the-rust-spike.md); user-service RUST-5 (laptop pass) | RPC-L0 | 0029 is Proposed and asks for a reason beyond the demo (D4) |
 
-Not needed: anything from RPN-8 on (`gluon-kafka`, the consumer groups). So once
-RPN-7 is done, cart's sessions can interleave with RPN-8–22 (D1).
+Not needed: anything from RPN-8 on (`kafka-event-consumer`, the consumer
+groups). So once RPN-7 is done, cart's sessions can interleave with RPN-8–22
+(D1).
 
 **Inputs:** a capture `contracts/cart-service/<date>` (RPC-L0); the Scala
 sources of cart-service and purerest (`lib/purerest`), exported read-only, its
