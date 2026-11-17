@@ -211,13 +211,13 @@ one conductor track per repo, approved step by step. In order:
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
    *(done 2026-11-14)*
 7. RPN-5, in the sandbox
-8. RPN-6, with TD-39 decided *(2026-11-17: deferred to RPN-8.1's done script)*
+8. RPN-6, with TD-39 decided *(2026-11-17: deferred to RPN-9's done script)*
 9. RPN-7
 10. RPN-8
 11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
     backlogs) and TD-38 (shellcheck in CI): they need GitHub
 
-Built and checked on macOS only; RPN-8.1 re-verifies on Linux before its
+Built and checked on macOS only; RPN-9 re-verifies on Linux before its
 Kafka fixtures.
 
 ### RPN-4.1 — Review and tidy
@@ -337,26 +337,23 @@ criterion MET), `bin/verify-port notification-service` PASS (24/24).
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
 
-### RPN-8.1 — Re-verify on Linux, then Kafka fixtures
+### RPN-9 — Re-verify on Linux, then Kafka fixtures
 
 **Sandbox**, first session back. **Repos:** every exported repo (re-verify);
-`tests/contract` (fixtures). One session: RPN-9 folded in (2026-11-17).
+`tests/contract` (fixtures). One session: the Linux re-verify (was RPN-8.1)
+and the Kafka fixtures, merged 2026-11-17.
 
-- [ ] RPN-8.1 — first confirm the laptop run (RPN-4.1–RPN-8, built on
+- [ ] RPN-9 — first confirm the laptop run (RPN-4.1–RPN-8, built on
       macOS) holds on Linux, as RPN-0 did after RUST-5.0; stop there if it
       doesn't. Then the Kafka fixtures RPN-10–15 build on: produce with key
       and headers (incl. null values), an order-service stub beside the user
       stub, a DLQ reader, consumer-group offsets
 
-**Done when:** `bin/verify-complete-RPN-8.1.sh` PASS: `ci.sh` PASS in
+**Done when:** `bin/verify-complete-RPN-9.sh` PASS: `ci.sh` PASS in
 `tests/contract`, `lib/gluon-rs`, both Rust services; `bin/verify-port
 user-service --quick` PASS (128/128); `bin/verify-port notification-service`
 PASS (its REST group green); fixture self-tests green against the sandbox
 Kafka.
-
-### RPN-9 — Kafka fixtures
-
-Folded into RPN-8.1 (2026-11-17).
 
 ### RPN-10 — `user-events`
 

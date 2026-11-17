@@ -318,7 +318,7 @@ directory and the `bin/sandbox-save` ending (RPN-2's also `canon_http`).
       only its criteria. Done when: RPN-4's and later done scripts source it,
       their output unchanged.
 
-*2026-11-17 (RPN-6): decided, deferred to RPN-8.1's done script, the next one
+*2026-11-17 (RPN-6): decided, deferred to RPN-9's done script, the next one
 written: laptop runs write none.*
 
 
