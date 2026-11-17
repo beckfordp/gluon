@@ -211,7 +211,7 @@ one conductor track per repo, approved step by step. In order:
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
    *(done 2026-11-14)*
 7. RPN-5, in the sandbox
-8. RPN-6, with TD-39 decided
+8. RPN-6, with TD-39 decided *(2026-11-17: deferred to RPN-8.1's done script)*
 9. RPN-7
 10. RPN-8
 11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
@@ -269,27 +269,37 @@ against notification-service-rs in the sandbox, and 24/24 against the staged
 Scala notification-service on the laptop (2026-11-17). Technical debt found:
 TD-52, TD-53.
 
-### RPN-6 — Exit criteria and `bin/verify-port`
+### RPN-6 — Contract criteria and `bin/verify-port`
 
 **Repos:** `gluon` (`bin/`, `docs/ports/`).
 
-- [ ] RPN-6 — `docs/ports/notification-service.criteria.json` (id,
-      description, environment `sandbox|laptop`, command) and
-      `bin/verify-port <service> --env sandbox|laptop`, printing MET / NOT
-      MET / LAPTOP and exiting 1 on any NOT MET for the current environment
-- [ ] RPN-6.1 — user-service's criteria (`CRITERIA`, `LAPTOP` in
-      `bin/verify-port`) to `docs/ports/user-service.criteria.json`: one
-      mechanism for every port, none in code *(added 2026-11-17)*
-- [ ] RPN-6.2 — `--env` replaces the `sys.platform != "linux"` guard on the
-      sandbox step: the environment is named, not guessed from the OS
-      *(added 2026-11-17)*
+*Reworked 2026-11-17:* `verify-port` checks the contract only. The contract is
+the same in the sandbox, on the laptop and in the Linux test bed, so there is no
+`--env`: deployment (the switch, acceptance in the cluster, Tempo, Kibana,
+dashboards) is checked on the laptop (RPN-L1), and `bin/sandbox-setup --check`
+and `bin/verify-laptop-prep` run on their own.
 
-**Done when:** `bin/verify-port notification-service --env sandbox` runs and
-lists C1 (the harness, isolated mode: the REST group, green since RPN-5) MET,
-every other criterion NOT MET or LAPTOP, so a criterion's command is seen
-running, not only listed; `bin/verify-port user-service --env sandbox` prints
-the same criteria as before RPN-6, read from its JSON; no criterion list and no
-OS check left in `bin/verify-port`; its own test shows the exit codes.
+- [x] RPN-6 — `docs/ports/notification-service.criteria.json` (id,
+      description, the steps that decide it) and `bin/verify-port <service>`,
+      printing MET / NOT MET / not run and exiting 1 on any NOT MET or failed step
+- [x] RPN-6.1 — user-service's criteria (`CRITERIA` in `bin/verify-port`) to
+      `docs/ports/user-service.criteria.json`, its contract part only: one
+      mechanism for every port, none in code
+- [x] RPN-6.2 — the `sandbox` and `laptop-prep` steps out of `verify-port`, and
+      with them the OS guess (`sys.platform != "linux"`)
+
+**Done when:** `bin/verify-port notification-service` runs its steps and shows
+C1 (the harness, isolated mode: the REST group, green since RPN-5) MET;
+`bin/verify-port user-service` shows the contract criteria it showed before
+RPN-6, read from its JSON; no criterion list and no OS check left in
+`bin/verify-port`; `bin/test/verify-port-test.sh` shows the exit codes.
+
+*As delivered (2026-11-17, laptop):* `bin/verify-port notification-service`
+PASS: C1 MET (REST 24/24), ci MET. `bin/verify-port user-service --quick`:
+the same criteria states as before RPN-6 (C1, C10, C8, C3 MET; contract
+128/128), ci NOT MET on a new cargo-audit advisory (RUSTSEC-2026-0544,
+`libz-sys`, fixed separately in user-service-rs); `--only build contract`
+PASS. `bin/test/verify-port-test.sh` PASS (20 cases).
 
 ### RPN-7 — `telemetry` to `lib/gluon-rs`
 
@@ -325,8 +335,8 @@ user-service-rs; notification-service-rs's checks still green.
 
 **Done when:** `bin/verify-complete-RPN-8.1.sh` PASS: `ci.sh` PASS in
 `tests/contract`, `lib/gluon-rs`, both Rust services; `bin/verify-port
-user-service --quick` PASS (128/128); notification-service's REST group green;
-`bin/verify-port notification-service --env sandbox` runs.
+user-service --quick` PASS (128/128); `bin/verify-port notification-service`
+PASS (its REST group green).
 
 ### RPN-9 — Kafka fixtures
 
@@ -454,19 +464,21 @@ the capture.
 
 **Repos:** all of the above.
 
-- [ ] RPN-22 — every sandbox criterion met; `bin/sandbox-save`
+- [ ] RPN-22 — every contract criterion met; `bin/sandbox-save`
 
-**Done when:** `bin/verify-port notification-service --env sandbox` shows
-every sandbox criterion MET and the rest LAPTOP.
+**Done when:** `bin/verify-port notification-service` PASS (every contract
+criterion MET); `bin/sandbox-setup --check` PASS.
 
 ### RPN-L1 — Laptop verification
 
 **Environment:** laptop.
 
-- [ ] RPN-L1 — `bin/sandbox-import`; `bin/verify-port notification-service
-      --env laptop`: the harness against Scala, cluster mode, acceptance,
-      notification-service's 13 `verify-*.sh`, Tempo, Kibana, dashboard;
-      then switch back to Scala and repeat
+- [ ] RPN-L1 — `bin/sandbox-import`; `bin/verify-port notification-service`
+      (the contract, on the laptop); the harness against Scala; then the
+      deployment: cluster mode, acceptance, notification-service's 13
+      `verify-*.sh`, Tempo, Kibana, dashboard; then switch back to Scala and
+      repeat
 
-**Exit criteria:** `bin/verify-port notification-service --env laptop` all
-MET, in both directions of the switch.
+**Exit criteria:** `bin/verify-port notification-service` PASS; the harness
+green against Scala; every deployment check green, in both directions of the
+switch.

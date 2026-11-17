@@ -1,54 +1,178 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-"""Verify a service's Rust port in the sandbox, end to end (plans/private/ports/<service>-verification.md, private).
+"""Verify a service's Rust port against its contract (RPN-6).
 
-user-service (ADR 0028; plans/private/ports/user-service-verification.md, private) is the only port
-it verifies yet; notification-service follows with RPN-6.
+The contract is the same wherever this runs: the sandbox, the laptop, the
+Linux test bed. Its criteria are data, one file per service:
+docs/ports/<service>.criteria.json, each naming the steps whose outcome decides
+it (`contract:probe` for one contract group). The steps the criteria need run
+one at a time, each outcome printed as it finishes, then every criterion MET /
+NOT MET / not run. Logs go to a run directory, printed at the start.
 
-Runs every check the sandbox can run, one step at a time, printing each
-step's outcome as it finishes, then maps the results onto ADR 0028's success
-criteria (the laptop-only ones are listed as such). Logs go to a run
-directory, printed at the start.
+Deployment (the switch, acceptance in the cluster, Tempo, Kibana, dashboards)
+isn't the contract: it is checked on the laptop, by hand until RPN-L1
+(plans/private/ports/<service>-verification.md, private).
 
-Steps:
-  1. sandbox     bin/sandbox-setup --check (toolchains, Node 24, CDC jars, repos);
-                 by default on Linux only, the sandbox's OS (not on the laptop)
-  2. harness-ci  tests/contract scripts/ci.sh (unit + integration tests, lint, types)
-  3. rust-ci     services/user-service-rs scripts/ci.sh (fmt, clippy, tests, coverage)
-  4. build       the Rust service and probe, and the AsyncAPI HTML
-  5. contract    every contract group against the Rust build, in one session
-  6. tracks      the track scripts CI can't replace (--skip-ci: CI ran above)
-  7. laptop-prep bin/verify-laptop-prep (the laptop pieces, as far as the sandbox can)
+Steps (those a service has):
+  harness-ci  tests/contract scripts/ci.sh (unit + integration tests, lint, types)
+  rust-ci     the Rust port's scripts/ci.sh (fmt, clippy, tests, coverage)
+  build       the Rust service (and user-service's probe and AsyncAPI HTML)
+  contract    every contract group against the Rust build, in one session
+  tracks      the track scripts CI can't replace (--skip-ci: CI ran above)
+
+Exit: 0 when every criterion that ran is MET and every step passed; 1 on any
+NOT MET or failed step; 2 on bad arguments or criteria.
 
 Usage:
-  bin/verify-port user-service            everything (about an hour)
-  bin/verify-port user-service --quick    steps 1-5 and 7 without its release build (~20 min)
+  bin/verify-port user-service                   everything (~20 min)
+  bin/verify-port user-service --quick           without the track scripts
   bin/verify-port user-service --only contract tracks
+  bin/verify-port notification-service
 
 Run from the sandbox desktop's root terminal too: it re-runs itself as the
 repos' owner, as every verify script does.
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 GLUON = Path(__file__).resolve().parent.parent
 CONTRACT = GLUON / "tests" / "contract"
-RUST = GLUON / "services" / "user-service-rs"
+CRITERIA_DIR = GLUON / "docs" / "ports"
 OWNER_BIN = Path("/home/claude/.local/bin")
+LOGS_ROOT = Path("/tmp")
 
-# The track scripts CI can't replace; the rest were retired into CI and the
-# harness (TECHNICAL_DEBT.md TD-46, plans/private/sandbox.md "Track scripts").
-RUST_TRACK_SCRIPTS = ["verify-rust-ci"]
-CONTRACT_TRACK_SCRIPTS = ["verify-cluster-mode"]
+STEP_ORDER = ["harness-ci", "rust-ci", "build", "contract", "tracks"]
+
+
+@dataclass(frozen=True)
+class Service:
+    """What verifying one Rust port runs."""
+
+    name: str
+    rust: Path
+    packages: list[str]
+    probe: bool = False
+    """Its contract run passes the events probe (`--probe-cmd`)."""
+    asyncapi_html: bool = False
+    """Its build renders the AsyncAPI HTML (`scripts/asyncapi-html.sh`)."""
+    track_scripts: list[tuple[Path, str]] = field(default_factory=list)
+    """The track scripts CI can't replace; the rest were retired into CI and the
+    harness (TECHNICAL_DEBT.md TD-46, plans/private/sandbox.md "Track scripts")."""
+
+    @property
+    def steps(self) -> list[str]:
+        return [s for s in STEP_ORDER if s != "tracks" or self.track_scripts]
+
+
+USER_RS = GLUON / "services" / "user-service-rs"
+SERVICES = {
+    "user-service": Service(
+        "user-service",
+        USER_RS,
+        ["user-service", "events-probe"],
+        probe=True,
+        asyncapi_html=True,
+        track_scripts=[(USER_RS, "verify-rust-ci"), (CONTRACT, "verify-cluster-mode")],
+    ),
+    "notification-service": Service(
+        "notification-service",
+        GLUON / "services" / "notification-service-rs",
+        ["notification-service"],
+    ),
+}
+
+
+class CriteriaError(Exception):
+    """A criteria file that can't be used."""
+
+
+@dataclass(frozen=True)
+class Criterion:
+    id: str
+    description: str
+    needs: list[str]
+
+
+@dataclass(frozen=True)
+class Criteria:
+    service: str
+    criteria: list[Criterion]
+    guide: str = ""
+
+
+def load_criteria(path: Path, service: Service) -> Criteria:
+    """Reads and checks `path`: its service, unique ids, each needing known steps."""
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError) as error:
+        raise CriteriaError(f"{path}: {error}") from error
+    if data.get("service") != service.name:
+        raise CriteriaError(f"{path}: service {data.get('service')!r}, not {service.name!r}")
+    criteria, seen = [], set()
+    for raw in data.get("criteria", []):
+        try:
+            criterion = Criterion(raw["id"], raw["description"], list(raw["needs"]))
+        except (KeyError, TypeError) as error:
+            raise CriteriaError(f"{path}: a criterion lacks {error}") from error
+        if not criterion.needs:
+            raise CriteriaError(f"{path}: {criterion.id}: needs no step")
+        for need in criterion.needs:
+            step, _, group = need.partition(":")
+            if step not in service.steps or (group and step != "contract"):
+                raise CriteriaError(f"{path}: {criterion.id}: {service.name} has no step {need!r}")
+        if criterion.id in seen:
+            raise CriteriaError(f"{path}: duplicate id {criterion.id}")
+        seen.add(criterion.id)
+        criteria.append(criterion)
+    if not criteria:
+        raise CriteriaError(f"{path}: no criteria")
+    return Criteria(service.name, criteria, data.get("guide", ""))
+
+
+def steps_for(
+    criteria: Criteria, only: list[str] | None, quick: bool, built: bool
+) -> list[str]:
+    """The steps to run, in order: `only`, or every step the criteria need (not
+    `tracks` when quick); `build` before `contract`, unless `only` asks for
+    `contract` and the build is there (`built`)."""
+    if only:
+        wanted = set(only)
+        if "contract" in wanted and not built:
+            wanted.add("build")
+    else:
+        wanted = {need.partition(":")[0] for c in criteria.criteria for need in c.needs}
+        if "contract" in wanted:
+            wanted.add("build")
+        if quick:
+            wanted.discard("tracks")
+    return [s for s in STEP_ORDER if s in wanted]
+
+
+def evaluate(criteria: Criteria, steps: dict[str, "Step"]) -> list[tuple[Criterion, str]]:
+    """Each criterion's state: MET / NOT MET, or not run when none of its steps ran."""
+    states = []
+    for criterion in criteria.criteria:
+        outcomes = []
+        for need in criterion.needs:
+            name, _, group = need.partition(":")
+            if name in steps:
+                step = steps[name]
+                outcomes.append(step.groups.get(group, False) if group else step.ok)
+        state = "not run" if not outcomes else ("MET" if all(outcomes) else "NOT MET")
+        states.append((criterion, state))
+    return states
 
 
 @dataclass
@@ -63,13 +187,13 @@ class Step:
     """For the contract step: each group's outcome (all its checks green)."""
 
 
-def as_owner() -> None:
+def as_owner(service: Service) -> None:
     """Re-executes as the repos' owner when run as root (never writes as root)."""
-    owner = RUST.stat().st_uid
+    owner = service.rust.stat().st_uid
     if os.getuid() == owner:
         return
     if os.getuid() != 0:
-        sys.exit(f"FAIL run as the owner of {RUST}")
+        sys.exit(f"FAIL run as the owner of {service.rust}")
     import pwd
 
     entry = pwd.getpwuid(owner)
@@ -114,14 +238,6 @@ def last_line(text: str) -> str:
     return lines[-1] if lines else "(no output)"
 
 
-def step_sandbox(logs: Path) -> Step:
-    code, text = run(
-        logs / "sandbox.log", [str(GLUON / "bin" / "sandbox-setup"), "--check"], GLUON, 600
-    )
-    missing = [line for line in text.splitlines() if line.startswith("MISSING")]
-    return Step("sandbox", code == 0, last_line(text), missing)
-
-
 def step_ci(logs: Path, name: str, repo: Path) -> Step:
     code, text = run(logs / f"{name}.log", [str(repo / "scripts" / "ci.sh")], repo)
     if name == "harness-ci":
@@ -137,29 +253,31 @@ def step_ci(logs: Path, name: str, repo: Path) -> Step:
     return Step(name, code == 0, summary, [] if code == 0 else text.splitlines()[-10:])
 
 
-def step_build(logs: Path) -> Step:
-    code, text = run(
-        logs / "build.log",
-        ["cargo", "build", "-q", "--locked", "-p", "user-service", "-p", "events-probe"],
-        RUST,
-    )
+def step_build(logs: Path, service: Service) -> Step:
+    packages = [arg for package in service.packages for arg in ("-p", package)]
+    argv = ["cargo", "build", "-q", "--locked", *packages]
+    code, text = run(logs / "build.log", argv, service.rust)
     if code != 0:
         return Step("build", False, "cargo build failed", text.splitlines()[-10:])
-    code, text = run(logs / "asyncapi-html.log", [str(RUST / "scripts" / "asyncapi-html.sh")], RUST)
+    built = ", ".join(service.packages)
+    if not service.asyncapi_html:
+        return Step("build", True, built)
+    script = str(service.rust / "scripts" / "asyncapi-html.sh")
+    code, text = run(logs / "asyncapi-html.log", [script], service.rust)
     return Step(
         "build",
         code == 0,
-        "user-service, events-probe, AsyncAPI HTML" if code == 0 else "asyncapi-html.sh failed",
+        f"{built}, AsyncAPI HTML" if code == 0 else "asyncapi-html.sh failed",
         [] if code == 0 else text.splitlines()[-10:],
     )
 
 
 def group_name(module: str) -> str:
     """`test_user_rest` → `rest`: the group, without the service its module is named for."""
-    return module.removeprefix("test_").removeprefix("user_")
+    return module.removeprefix("test_").removeprefix("user_").removeprefix("notification_")
 
 
-def step_contract(logs: Path) -> Step:
+def step_contract(logs: Path, service: Service) -> Step:
     argv = [
         "uv",
         "run",
@@ -167,21 +285,21 @@ def step_contract(logs: Path) -> Step:
         "pytest",
         "checks",
         "--service",
-        "user-service",
+        service.name,
         "-p",
         "no:cacheprovider",
         "-rA",
         "--tb=line",
         "-q",
         "--target-cmd",
-        str(RUST / "target/debug/user-service"),
+        str(service.rust / "target/debug" / service.name),
         "--target-cwd",
-        str(RUST),
+        str(service.rust),
         "--target-name",
-        "user-service-rs",
-        "--probe-cmd",
-        str(RUST / "target/debug/events-probe"),
+        f"{service.name}-rs",
     ]
+    if service.probe:
+        argv += ["--probe-cmd", str(service.rust / "target/debug/events-probe")]
     code, text = run(logs / "contract.log", argv, CONTRACT)
     outcomes = re.findall(
         r"^(PASSED|FAILED|ERROR) checks/(test_\w+)\.py::(\S+)", text, re.MULTILINE
@@ -205,104 +323,58 @@ def step_contract(logs: Path) -> Step:
     return Step("contract", ok, summary, failed, by_group)
 
 
-def step_tracks(logs: Path) -> Step:
+def step_tracks(logs: Path, service: Service) -> Step:
     failed, passed = [], 0
-    for repo, scripts in ((RUST, RUST_TRACK_SCRIPTS), (CONTRACT, CONTRACT_TRACK_SCRIPTS)):
-        for script in scripts:
-            args = [str(repo / "scripts" / f"{script}.sh")]
-            if script != "verify-rust-ci":
-                args.append("--skip-ci")
-            print(f"     {repo.name}/scripts/{script}.sh", flush=True)
-            code, text = run(logs / f"{repo.name}-{script}.log", args, repo)
-            line = last_line(text)
-            print(f"     {'ok  ' if code == 0 else 'FAIL'} {line}", flush=True)
-            if code == 0:
-                passed += 1
-            else:
-                failed.append(f"{repo.name}/{script}: {line}")
+    for repo, script in service.track_scripts:
+        args = [str(repo / "scripts" / f"{script}.sh")]
+        if script != "verify-rust-ci":
+            args.append("--skip-ci")
+        print(f"     {repo.name}/scripts/{script}.sh", flush=True)
+        code, text = run(logs / f"{repo.name}-{script}.log", args, repo)
+        line = last_line(text)
+        print(f"     {'ok  ' if code == 0 else 'FAIL'} {line}", flush=True)
+        if code == 0:
+            passed += 1
+        else:
+            failed.append(f"{repo.name}/{script}: {line}")
     return Step(
         "tracks", not failed, f"{passed} of {passed + len(failed)} track scripts pass", failed
     )
-
-
-def step_laptop_prep(logs: Path, quick: bool) -> Step:
-    argv = [str(GLUON / "bin" / "verify-laptop-prep")] + (["--skip-docker-steps"] if quick else [])
-    code, text = run(logs / "laptop-prep.log", argv, GLUON)
-    fails = [line for line in text.splitlines() if line.startswith("FAIL")]
-    return Step("laptop-prep", code == 0, last_line(text), fails)
-
-
-CRITERIA = [
-    ("C1  the harness green against the Rust service, isolated mode", ["contract", "harness-ci"]),
-    ("C10 the consumer probe group green", ["contract:probe"]),
-    (
-        "C8  (sandbox part) the metric families, labels and buckets dashboards query",
-        ["contract:metrics"],
-    ),
-    ("C3  (sandbox part) cluster mode, against a started service", ["harness-ci"]),
-    ("--  Rust CI: fmt, clippy, tests, coverage; payload schema = registry", ["rust-ci"]),
-    ("--  the track scripts CI can't replace", ["tracks"]),
-    ("--  the laptop pieces: image build steps, switch, reset-data, values", ["laptop-prep"]),
-    ("--  the sandbox reproducible (bin/sandbox-setup)", ["sandbox"]),
-]
-LAPTOP = [
-    "C2  the harness green against the Scala service (B2)",
-    "C3  cluster mode green for the deployed implementation, both ways (B4, B9)",
-    "C4  bin/run-acceptance and user-service's verify-auth.sh unchanged (B5)",
-    "C5  the welcome email sent (B6)",
-    "C6  one sign-up → notification trace in Tempo (B7)",
-    "C7  the Rust service's logs in Kibana by trace_id (B7)",
-    "C8  the Service dashboard's panels (B8)",
-    "C9  image size, startup time, idle memory in the cluster (B9)",
-]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("service", choices=["user-service", "notification-service"])
-    parser.add_argument(
-        "--quick", action="store_true", help="skip the track scripts and the release build"
-    )
-    parser.add_argument(
-        "--only",
-        nargs="+",
-        choices=["sandbox", "harness-ci", "rust-ci", "build", "contract", "tracks", "laptop-prep"],
-    )
+    parser.add_argument("service", choices=sorted(SERVICES))
+    parser.add_argument("--quick", action="store_true", help="skip the track scripts")
+    parser.add_argument("--only", nargs="+", choices=STEP_ORDER)
     args = parser.parse_args()
-    if args.service != "user-service":
-        print(f"verify-port: {args.service} isn't verified yet (RPN-6)", file=sys.stderr)
+    service = SERVICES[args.service]
+    try:
+        criteria = load_criteria(CRITERIA_DIR / f"{service.name}.criteria.json", service)
+    except CriteriaError as error:
+        print(f"verify-port: {error}", file=sys.stderr)
         return 2
-    as_owner()
+    unknown = [s for s in args.only or [] if s not in service.steps]
+    if unknown:
+        print(f"verify-port: {service.name} has no step {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    as_owner(service)
     os.environ["PATH"] = f"{OWNER_BIN}:{Path.home() / '.cargo/bin'}:{os.environ.get('PATH', '')}"
-    logs = Path(f"/tmp/verify-port-{args.service}-{time.strftime('%Y%m%d-%H%M%S')}")
-    logs.mkdir(parents=True)
-    print(f"{args.service} port verification — logs in {logs}\n", flush=True)
-    wanted = args.only or ["sandbox", "harness-ci", "rust-ci", "build", "contract"] + (
-        [] if args.quick else ["tracks"]
-    ) + ["laptop-prep"]
-    # bin/sandbox-setup checks the sandbox's Linux VM; elsewhere (the laptop)
-    # its step fails by design (TD-33). --only sandbox still runs it.
-    if not args.only and sys.platform != "linux":
-        wanted.remove("sandbox")
-        print("== sandbox: not run (not the sandbox: bin/sandbox-setup checks its Linux VM)\n")
-    if (
-        "contract" in wanted
-        and "build" not in wanted
-        and not (RUST / "target/debug/events-probe").exists()
-    ):
-        wanted.insert(wanted.index("contract"), "build")
-    steps: dict[str, Step] = {}
-    actions = {
-        "sandbox": lambda: step_sandbox(logs),
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    logs = Path(tempfile.mkdtemp(prefix=f"verify-port-{service.name}-{stamp}-", dir=LOGS_ROOT))
+    print(f"{service.name} port verification — logs in {logs}\n", flush=True)
+    built = all((service.rust / "target/debug" / p).exists() for p in service.packages)
+    wanted = steps_for(criteria, args.only, args.quick, built)
+    actions: dict[str, Callable[[], Step]] = {
         "harness-ci": lambda: step_ci(logs, "harness-ci", CONTRACT),
-        "rust-ci": lambda: step_ci(logs, "rust-ci", RUST),
-        "build": lambda: step_build(logs),
-        "contract": lambda: step_contract(logs),
-        "tracks": lambda: step_tracks(logs),
-        "laptop-prep": lambda: step_laptop_prep(logs, args.quick),
+        "rust-ci": lambda: step_ci(logs, "rust-ci", service.rust),
+        "build": lambda: step_build(logs, service),
+        "contract": lambda: step_contract(logs, service),
+        "tracks": lambda: step_tracks(logs, service),
     }
+    steps: dict[str, Step] = {}
     for number, name in enumerate(wanted, 1):
         print(f"== {number}. {name} ==", flush=True)
         step = actions[name]()
@@ -310,25 +382,22 @@ def main() -> int:
         print(f"{'ok  ' if step.ok else 'FAIL'} {name}: {step.summary}", flush=True)
         for line in step.detail[:20]:
             print(f"       {line}", flush=True)
-    print("\n== ADR 0028 success criteria ==")
-    for criterion, needs in CRITERIA:
-        outcomes = []
-        for need in needs:
-            name, _, group = need.partition(":")
-            if name in steps:
-                step = steps[name]
-                outcomes.append(step.groups.get(group, False) if group else step.ok)
-        state = "not run" if not outcomes else ("MET" if all(outcomes) else "NOT MET")
-        print(f"{state:<8} {criterion}")
-    for criterion in LAPTOP:
-        print(f"{'LAPTOP':<8} {criterion}")
-    print("(LAPTOP: plans/private/ports/user-service-verification.md, Part B)")
+    print(f"\n== {service.name} contract criteria ==")
+    states = evaluate(criteria, steps)
+    width = max(len(c.id) for c in criteria.criteria)
+    for criterion, state in states:
+        print(f"{state:<8} {criterion.id:<{width}} {criterion.description}")
+    if criteria.guide:
+        print(f"({criteria.guide})")
+    unmet = [c.id for c, state in states if state == "NOT MET"]
     failed = [s.name for s in steps.values() if not s.ok]
     print()
-    if failed:
-        print(f"FAIL: {', '.join(failed)} (logs in {logs})")
+    if unmet or failed:
+        reasons = [f"NOT MET: {', '.join(unmet)}"] if unmet else []
+        reasons += [f"failed: {', '.join(failed)}"] if failed else []
+        print(f"FAIL: {'; '.join(reasons)} (logs in {logs})")
         return 1
-    print(f"PASS: every sandbox check passed ({len(steps)} steps; logs in {logs})")
+    print(f"PASS: every criterion run is MET ({len(steps)} steps; logs in {logs})")
     return 0
 
 

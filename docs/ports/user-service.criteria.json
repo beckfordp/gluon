@@ -1,0 +1,18 @@
+{
+  "service": "user-service",
+  "guide": "deployment criteria C2–C9: plans/private/ports/user-service-verification.md, Part B (laptop, private)",
+  "criteria": [
+    {"id": "C1", "needs": ["contract", "harness-ci"],
+     "description": "the harness green against the Rust service, isolated mode"},
+    {"id": "C10", "needs": ["contract:probe"],
+     "description": "the consumer probe group green"},
+    {"id": "C8", "needs": ["contract:metrics"],
+     "description": "(contract part) the metric families, labels and buckets dashboards query"},
+    {"id": "C3", "needs": ["harness-ci"],
+     "description": "(contract part) cluster mode, against a started service"},
+    {"id": "ci", "needs": ["rust-ci"],
+     "description": "Rust CI: fmt, clippy, tests, coverage; payload schema = registry"},
+    {"id": "tracks", "needs": ["tracks"],
+     "description": "the track scripts CI can't replace"}
+  ]
+}

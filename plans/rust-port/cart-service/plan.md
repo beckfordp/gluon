@@ -26,7 +26,7 @@ Each must be ticked in its own plan before the session that needs it starts.
 | TD-44 — one profile per service in `tests/contract` | `TECHNICAL_DEBT.md`; [notification-service](../notification-service/plan.md) RPN-4.1 | RPC-2 | adding cart is one profile plus its checks, with no user-service defaults |
 | TD-43.1 — `lib/gluon-rs`: service basics, test support; a sandbox repo | `TECHNICAL_DEBT.md`; notification-service RPN-4.1 | RPC-3 | the skeleton builds on them instead of copying user-service-rs |
 | RPN-7 — `telemetry` in `lib/gluon-rs` | notification-service | RPC-3 | otherwise cart makes a third copy of `telemetry` (TD-43) |
-| RPN-6 — `bin/verify-port <service> --env` and a criteria file | notification-service | RPC-11 | cart's exit criteria use the same mechanism |
+| RPN-6 — `bin/verify-port <service>` and a contract criteria file | notification-service | RPC-11 | cart's exit criteria use the same mechanism |
 | `Supervisor` runs any harness process: TD-48.1 folds `target.py` in | `TECHNICAL_DEBT.md` TD-48 | RPC-2, if done by then | the throwaway Redis uses it rather than a third copy of start/stop |
 | ADR 0029 accepted, option 3 extended to cart | [ADR 0029](../../../docs/adr/0029-after-the-rust-spike.md); user-service RUST-5 (laptop pass) | RPC-L0 | 0029 is Proposed and asks for a reason beyond the demo (D4) |
 
@@ -209,11 +209,11 @@ contract unit test green.
 
 **Repos:** `gluon` (`bin/`, `docs/ports/`).
 
-- [ ] RPC-11 — `docs/ports/cart-service.criteria.json`; `bin/verify-port
-      cart-service --env sandbox|laptop` (RPN-6's mechanism)
+- [ ] RPC-11 — `docs/ports/cart-service.criteria.json`; cart-service in
+      `bin/verify-port`'s services (RPN-6's mechanism: the contract only)
 
-**Done when:** `bin/verify-port cart-service --env sandbox` lists every
-criterion NOT MET or LAPTOP.
+**Done when:** `bin/verify-port cart-service` runs its steps and shows each
+criterion MET or NOT MET.
 
 ### RPC-12 — Laptop preparation
 
@@ -229,22 +229,23 @@ criterion NOT MET or LAPTOP.
 
 **Repos:** all of the above.
 
-- [ ] RPC-13 — every sandbox criterion met; `bin/sandbox-save`
+- [ ] RPC-13 — every contract criterion met; `bin/sandbox-save`
 
-**Done when:** `bin/verify-port cart-service --env sandbox` shows every sandbox
-criterion MET and the rest LAPTOP.
+**Done when:** `bin/verify-port cart-service` PASS (every contract criterion
+MET); `bin/sandbox-setup --check` PASS.
 
 ### RPC-L2 — Laptop verification
 
 **Laptop.**
 
-- [ ] RPC-L2 — `bin/sandbox-import`; `bin/verify-port cart-service --env
-      laptop`: the harness against Scala, cluster mode, gshop's cart journeys
+- [ ] RPC-L2 — `bin/sandbox-import`; `bin/verify-port cart-service` (the
+      contract, on the laptop); the harness against Scala; then the
+      deployment: cluster mode, gshop's cart journeys
       in the acceptance suite (US-2), cart-service's ten `verify-*.sh`, Tempo,
       Kibana, dashboard; then switch back to Scala and repeat
 
-**Exit criteria:** `bin/verify-port cart-service --env laptop` all MET, in both
-directions of the switch.
+**Exit criteria:** `bin/verify-port cart-service` PASS; the harness green
+against Scala; every deployment check green, in both directions of the switch.
 
 ## Carried over
 
