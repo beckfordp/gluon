@@ -211,7 +211,8 @@ one conductor track per repo, approved step by step. In order:
 6. TD-33 (`verify-port user-service` green, on the laptop), then tick RPN-4.1
    *(done 2026-11-14)*
 7. RPN-5, in the sandbox
-8. RPN-6, with TD-39 decided *(2026-11-17: deferred to RPN-9's done script)*
+8. RPN-6, with TD-39 decided *(2026-11-17: deferred to the next done script;
+   RPN-9 has none)*
 9. RPN-7
 10. RPN-8
 11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
@@ -349,11 +350,12 @@ and the Kafka fixtures, merged 2026-11-17.
       and headers (incl. null values), an order-service stub beside the user
       stub, a DLQ reader, consumer-group offsets
 
-**Done when:** `bin/verify-complete-RPN-9.sh` PASS: `ci.sh` PASS in
-`tests/contract`, `lib/gluon-rs`, both Rust services; `bin/verify-port
-user-service --quick` PASS (128/128); `bin/verify-port notification-service`
-PASS (its REST group green); fixture self-tests green against the sandbox
-Kafka.
+**Done when** (checked by hand, no done script): `cargo fetch --locked`
+passes in the three Rust repos (TD-53.1); `ci.sh` PASS in `tests/contract`,
+`lib/gluon-rs`, both Rust services; `bin/verify-port user-service --only
+contract` 128/128 and `bin/verify-port notification-service --only contract`
+24/24, both unchanged from the laptop (fixtures add no contract group);
+fixture self-tests green against the sandbox Kafka.
 
 ### RPN-10 — `user-events`
 
