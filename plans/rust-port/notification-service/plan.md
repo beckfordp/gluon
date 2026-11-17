@@ -306,11 +306,21 @@ PASS. `bin/test/verify-port-test.sh` PASS (20 cases).
 **Repos:** `lib/gluon-rs` (new), `services/user-service-rs`,
 `services/notification-service-rs`.
 
-- [ ] RPN-7 — move `telemetry` into `lib/gluon-rs` (created in RPN-4.1,
-      TD-43); both Rust services depend on it by path
+- [x] RPN-7 — move `telemetry` into `lib/gluon-rs` (created in RPN-4.1,
+      TD-43); user-service-rs depends on it by path, notification-service-rs
+      when it first uses it (RPN-16–18) *(done 2026-11-17, laptop)*
 
 **Done when:** all three repos' `ci.sh` PASS; the harness 128/128 against
 user-service-rs; notification-service-rs's checks still green.
+
+*As delivered:* gluon-rs `crates/telemetry` (unchanged copy, its two scripts,
+`clippy.toml` idents widened), CI green, 93%. The move took user-service-rs's
+coverage to 72%: telemetry's tests had hidden the probe's harness-only code.
+So, before it: user-service-rs's store behind a `UserStore` trait with
+in-memory route tests (its backlog, RPN-5 decision 1), and `ci_coverage`
+leaving out the probe's `main.rs`/`run.rs` (checked by C10, retired after
+RPN-13); coverage 90.70%. `bin/verify-port user-service` PASS (128/128, every
+criterion MET), `bin/verify-port notification-service` PASS (24/24).
 
 ### RPN-8 — Consumer pieces to `lib/gluon-rs`
 
