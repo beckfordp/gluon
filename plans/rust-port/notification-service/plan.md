@@ -218,8 +218,7 @@ one conductor track per repo, approved step by step. In order:
 11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
     backlogs) and TD-38 (shellcheck in CI): they need GitHub
 
-Built and checked on macOS only; RPN-9 re-verifies on Linux before its
-Kafka fixtures.
+Built and checked on macOS only; RPN-9 re-verifies on Linux.
 
 ### RPN-4.1 — Review and tidy
 
@@ -338,24 +337,22 @@ criterion MET), `bin/verify-port notification-service` PASS (24/24).
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
 
-### RPN-9 — Re-verify on Linux, then Kafka fixtures
+### RPN-9 — Re-verify on Linux
 
-**Sandbox**, first session back. **Repos:** every exported repo (re-verify);
-`tests/contract` (fixtures). One session: the Linux re-verify (was RPN-8.1)
-and the Kafka fixtures, merged 2026-11-17.
+**Sandbox**, first session back. **Repos:** every exported repo. (Was
+RPN-8.1; its Kafka fixtures dropped 2026-11-17: the probe checks already
+produce with key, headers and null values, read DLQs and wait on committed
+offsets. What's missing comes with the checks that need it, RPN-10 and
+RPN-12.)
 
-- [ ] RPN-9 — first confirm the laptop run (RPN-4.1–RPN-8, built on
-      macOS) holds on Linux, as RPN-0 did after RUST-5.0; stop there if it
-      doesn't. Then the Kafka fixtures RPN-10–15 build on: produce with key
-      and headers (incl. null values), an order-service stub beside the user
-      stub, a DLQ reader, consumer-group offsets
+- [ ] RPN-9 — confirm the laptop run (RPN-4.1–RPN-8, built on macOS) holds
+      on Linux, as RPN-0 did after RUST-5.0
 
 **Done when** (checked by hand, no done script): `cargo fetch --locked`
 passes in the three Rust repos (TD-53.1); `ci.sh` PASS in `tests/contract`,
 `lib/gluon-rs`, both Rust services; `bin/verify-port user-service --only
 contract` 128/128 and `bin/verify-port notification-service --only contract`
-24/24, both unchanged from the laptop (fixtures add no contract group);
-fixture self-tests green against the sandbox Kafka.
+24/24, both unchanged from the laptop.
 
 ### RPN-10 — `user-events`
 
@@ -364,6 +361,9 @@ fixture self-tests green against the sandbox Kafka.
 - [ ] RPN-10 — checks (welcome email, duplicate eventId, unrelated type,
       undecodable envelope and payload → DLQ, null value skipped) red; then
       the consumer on `gluon-kafka` and the logging transport
+
+Its checks reach notification-service's own broker (`Harness.kafka`) and
+stubs (`Harness.stubs`) through fixtures added here; the probe's are its own.
 
 **Done when:** `user-events` group green.
 
@@ -382,7 +382,9 @@ capture's (ids and times aside).
 **Repos:** `tests/contract`, `services/notification-service-rs`.
 
 - [ ] RPN-12 — customer, guest fallback, user 400 → guest, unknown customer,
-      unknown order (ADR 0025, ADM-10)
+      unknown order (ADR 0025, ADM-10); the order-service stub answers as the
+      capture's stub log does (`services.py` `order_lookup`; today it finds
+      nothing), also used by RPN-14–15
 
 **Done when:** resolution group green.
 
