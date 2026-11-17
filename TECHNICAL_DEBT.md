@@ -406,6 +406,10 @@ misses where they differ:
       by both ports (exposed headers a parameter). Done when: no CORS or `Allow` code in
       either port; both groups green.
 
+*2026-11-17 (RPN-5 retro): TD-52.3 also brings the one no-route marker,
+`Unrouted`, into `service-basics` (if RPN-7 hasn't): the fallback sets it, CORS
+reads it; see `plans/private/ports/notification-service-design-differences.md` (private), "Decided".*
+
 
 ## TD-53 — gluon-rs's Cargo.lock pins crates the sandbox's crates.io mirror doesn't have
 

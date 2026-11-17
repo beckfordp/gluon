@@ -266,7 +266,7 @@ Goal: ADR 0030's remaining success criteria.
 - [ ] GK-7.3: notification-service-rs alongside it, if its dependencies
       allow (its Scala callers and callees show `ImageUnavailable`).
 - [ ] GK-7.4: gluon: `bin/verify-port` gains a `cluster` step using
-      gluon-kube; `docs/ports/*-verification.md` updated.
+      gluon-kube; `plans/private/ports/*-verification.md` updated.
 
 Done when: every ADR 0030 success criterion met in the sandbox.
 

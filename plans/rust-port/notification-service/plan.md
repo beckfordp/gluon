@@ -8,7 +8,7 @@ The second Rust port ([ADR 0029](../../../docs/adr/0029-after-the-rust-spike.md)
 option 3, edges inward): notification-service, wire-compatible with the Scala
 service, which stays the default. Built in the sandbox in **sessions**
 `RPN-N`, then verified on the laptop. Findings and the exit criteria:
-[`docs/ports/user-service-findings.md`](../../../docs/ports/user-service-findings.md).
+`plans/private/ports/user-service-findings.md` (private).
 
 **Session rules:**
 - About 2–3 hours each, at least 5 turns; never more

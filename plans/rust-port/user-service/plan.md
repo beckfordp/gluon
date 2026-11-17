@@ -433,7 +433,7 @@ gluon-local.
       where it is now documented, library maturity notes, image size,
       startup time and idle memory (no load comparison), which success
       criteria were reached, and what the two-environment setup cost
-      *Sandbox part written 2026-11-10: `docs/ports/user-service-findings.md`; the
+      *Sandbox part written 2026-11-10: `plans/private/ports/user-service-findings.md` (private); the
       laptop figures and criteria are added after RUST-5.*
 - [ ] RUST-7.2 — follow-up ADR: stop, keep as a showcase service, or plan
       further ports; cost estimates for consuming or calling services take
@@ -446,7 +446,7 @@ gluon-local.
       user-service-rs README
       *CHANGELOG and README updated 2026-11-10; ADR 0028's status waits for
       the laptop pass. How to verify everything:
-      `docs/ports/user-service-verification.md`, `bin/verify-port user-service`.*
+      `plans/private/ports/user-service-verification.md` (private), `bin/verify-port user-service`.*
       *2026-11-14: ADR 0028's status updated (accepted); the rest of RUST-7 is
       deferred, no longer a gate on ADR 0029.*
 
