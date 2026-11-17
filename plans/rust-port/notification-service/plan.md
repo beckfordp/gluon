@@ -217,7 +217,8 @@ one conductor track per repo, approved step by step. In order:
 11. Anywhere after 6: GitHub Actions green (tests/contract and user-service-rs
     backlogs) and TD-38 (shellcheck in CI): they need GitHub
 
-Built and checked on macOS only; RPN-8.1 re-verifies on Linux before RPN-9.
+Built and checked on macOS only; RPN-8.1 re-verifies on Linux before its
+Kafka fixtures.
 
 ### RPN-4.1 — Review and tidy
 
@@ -336,27 +337,26 @@ criterion MET), `bin/verify-port notification-service` PASS (24/24).
 
 **Done when:** both `ci.sh` PASS; probe group 10/10; harness 128/128.
 
-### RPN-8.1 — Re-verify on Linux after the laptop run
+### RPN-8.1 — Re-verify on Linux, then Kafka fixtures
 
-**Sandbox**, first session back. **Repos:** every exported repo.
+**Sandbox**, first session back. **Repos:** every exported repo (re-verify);
+`tests/contract` (fixtures). One session: RPN-9 folded in (2026-11-17).
 
-- [ ] RPN-8.1 — confirm the laptop run (RPN-4.1–RPN-8, built on macOS)
-      holds on Linux, as RPN-0 did after RUST-5.0
+- [ ] RPN-8.1 — first confirm the laptop run (RPN-4.1–RPN-8, built on
+      macOS) holds on Linux, as RPN-0 did after RUST-5.0; stop there if it
+      doesn't. Then the Kafka fixtures RPN-10–15 build on: produce with key
+      and headers (incl. null values), an order-service stub beside the user
+      stub, a DLQ reader, consumer-group offsets
 
 **Done when:** `bin/verify-complete-RPN-8.1.sh` PASS: `ci.sh` PASS in
 `tests/contract`, `lib/gluon-rs`, both Rust services; `bin/verify-port
 user-service --quick` PASS (128/128); `bin/verify-port notification-service`
-PASS (its REST group green).
+PASS (its REST group green); fixture self-tests green against the sandbox
+Kafka.
 
 ### RPN-9 — Kafka fixtures
 
-**Repos:** `tests/contract`.
-
-- [ ] RPN-9 — produce with key and headers (incl. null values), an
-      order-service stub beside the user stub, a DLQ reader, consumer-group
-      offsets
-
-**Done when:** fixture self-tests green against the sandbox Kafka.
+Folded into RPN-8.1 (2026-11-17).
 
 ### RPN-10 — `user-events`
 
