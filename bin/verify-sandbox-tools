@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory() as out:
     manifest = export.export(Path(out) / "gluon", [], False)
 got = {repo["path"] for repo in manifest["repos"]}
 want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "services/user-service",
-        "services/user-service-rs", "services/notification-service"}
+        "services/user-service-rs", "services/notification-service", "tools/gluon-kube"}
 want |= {"services/notification-service-rs"} if Path("services/notification-service-rs").is_dir() else set()
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
