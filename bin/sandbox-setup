@@ -16,7 +16,7 @@ Usage:
   bin/sandbox-setup --only rust vim
                                limit to the named steps
 
-Steps: network, image, rust, node, cdc, vim, shell, git-init, git-identity, projects.
+Steps: network, image, rust, node, cdc, vim, shellcheck, shell, git-init, git-identity, projects.
 """
 
 import argparse
@@ -110,6 +110,8 @@ CDC_SETS: dict[str, tuple[tuple[tuple[str, str, str], ...], bool]] = {
 
 VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2")
 VIM_ROOT = HOME / ".local" / "vim-root"
+SHELLCHECK_ROOT = HOME / ".local" / "shellcheck-root"
+"""shellcheck (RPN-10), unpacked from Ubuntu's .deb as vim is."""
 APT_STATE = HOME / ".local" / "apt"
 VIMRC = """\" Sandbox defaults for reading code (bin/sandbox-setup; rewritten by it)
 syntax on
@@ -428,6 +430,32 @@ def step_cdc(install: bool) -> list[Result]:
     ]
 
 
+def apt_unpack(packages: Sequence[str], root: Path) -> None:
+    """Downloads `packages`' .debs from Ubuntu's archive and unpacks them into `root`
+    (replaced), without root: apt's state lives under APT_STATE."""
+    apt_opts = [
+        "-o",
+        f"Dir::State::Lists={APT_STATE / 'lists'}",
+        "-o",
+        f"Dir::Cache={APT_STATE / 'cache'}",
+        "-o",
+        "Debug::NoLocking=1",
+        "-o",
+        f"APT::Sandbox::User={os.environ.get('USER') or Path.home().name}",
+    ]
+    for sub in ("lists/partial", "cache/archives/partial", "deb"):
+        (APT_STATE / sub).mkdir(parents=True, exist_ok=True)
+    run(["apt-get", *apt_opts, "update"])
+    debs = APT_STATE / "deb"
+    for old in debs.glob("*.deb"):
+        old.unlink()
+    run(["apt-get", *apt_opts, "download", *packages], cwd=debs)
+    shutil.rmtree(root, ignore_errors=True)
+    root.mkdir(parents=True)
+    for deb in sorted(debs.glob("*.deb")):
+        run(["dpkg-deb", "-x", str(deb), str(root)])
+
+
 def step_vim(install: bool) -> list[Result]:
     """vim 9.1 from Ubuntu's .debs, unpacked without root, with vim/view wrappers."""
     vim = VIM_ROOT / "usr" / "bin" / "vim.basic"
@@ -435,27 +463,7 @@ def step_vim(install: bool) -> list[Result]:
     if not vim.is_file():
         if not install:
             return [Result("vim", "MISSING", "vim not unpacked (run without --check)")]
-        apt_opts = [
-            "-o",
-            f"Dir::State::Lists={APT_STATE / 'lists'}",
-            "-o",
-            f"Dir::Cache={APT_STATE / 'cache'}",
-            "-o",
-            "Debug::NoLocking=1",
-            "-o",
-            f"APT::Sandbox::User={os.environ.get('USER') or Path.home().name}",
-        ]
-        for sub in ("lists/partial", "cache/archives/partial", "deb"):
-            (APT_STATE / sub).mkdir(parents=True, exist_ok=True)
-        run(["apt-get", *apt_opts, "update"])
-        debs = APT_STATE / "deb"
-        for old in debs.glob("*.deb"):
-            old.unlink()
-        run(["apt-get", *apt_opts, "download", *VIM_PACKAGES], cwd=debs)
-        shutil.rmtree(VIM_ROOT, ignore_errors=True)
-        VIM_ROOT.mkdir(parents=True)
-        for deb in sorted(debs.glob("*.deb")):
-            run(["dpkg-deb", "-x", str(deb), str(VIM_ROOT)])
+        apt_unpack(VIM_PACKAGES, VIM_ROOT)
         status = "INSTALLED"
     runtime = next((VIM_ROOT / "usr" / "share" / "vim").glob("vim[0-9]*"), None)
     if runtime is None:
@@ -488,6 +496,30 @@ def step_vim(install: bool) -> list[Result]:
         vimrc.write_text(VIMRC, encoding="utf-8")
     version = first_line([str(target / "vim"), "--version"])
     return [Result("vim", status, f"{version}; vim, view in {target}; read-only: vim -M <file>")]
+
+
+def step_shellcheck(install: bool) -> list[Result]:
+    """shellcheck from Ubuntu's .deb, unpacked without root, linked onto the PATH
+    (lints the bin/ and scripts/ shell scripts; its libraries are the image's)."""
+    binary = SHELLCHECK_ROOT / "usr" / "bin" / "shellcheck"
+    link = bin_dir() / "shellcheck"
+    status = "OK"
+    if not binary.is_file():
+        if not install:
+            return [Result("shellcheck", "MISSING", "not unpacked (run without --check)")]
+        apt_unpack(("shellcheck",), SHELLCHECK_ROOT)
+        status = "INSTALLED"
+    if install:
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.unlink(missing_ok=True)
+        link.symlink_to(binary)
+    elif not link.exists():
+        return [Result("shellcheck", "MISSING", f"unpacked but no {link}")]
+    version = next(
+        (line for line in run([str(binary), "--version"]).splitlines() if "version:" in line),
+        "version unknown",
+    )
+    return [Result("shellcheck", status, f"{version} at {binary}, as {link}")]
 
 
 def step_shell(install: bool) -> list[Result]:
@@ -661,6 +693,7 @@ STEPS: dict[str, Callable[[bool], list[Result]]] = {
     "node": step_node,
     "cdc": step_cdc,
     "vim": step_vim,
+    "shellcheck": step_shellcheck,
     "shell": step_shell,
     "git-init": step_git_init,
     "git-identity": step_git_identity,
