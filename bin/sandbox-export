@@ -26,6 +26,7 @@ allowed match with the reason it's fine, for the sandbox reviewer.
 Usage:
   bin/sandbox-export [--out DIR] [--clean] [--capture SERVICE=DIR ...]
                      [--no-auto-captures] [--no-archive] [--yes]
+                     [--no-plans] [--prefix NAME]
 
 First, build output (BUILD_DIRS) in those repos is removed, unasked; then untracked
 files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY
@@ -37,6 +38,14 @@ CHANGELOG.md, this script and its tests (bin/verify-sandbox-tools) stay on the l
 conductor/archive/ and their tracks.md backlog. The sandbox session's
 instructions are written by hand; what it finds comes back in its notes, not
 as TECHNICAL_DEBT.md edits.
+
+--no-plans exports no plan at all, for a session run beside one that owns them (the
+gluon-kube spike): no EXPORTED_PLANS, no live Conductor track in any repo, and
+PLANLESS_READ_ONLY repos lose conductor/ as read-only repos do, so only the other
+session commits there. Conductor's product, workflow and style guides stay.
+
+--prefix NAME names the archive NAME-OUT.tar.gz (the archive's root stays OUT's
+name), to tell two exports apart in the sandbox's uploads.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -98,6 +107,13 @@ NOT_EXPORTED_DIRS = frozenset({"plans"})
 EXPORTED_PLANS = frozenset({Path("plans") / "gluon-kube" / "plan.md"})
 """Plans under NOT_EXPORTED_DIRS that travel: ones drafted and kept up to date in the
 sandbox, which each session reads and amends; the laptop merges them back."""
+
+PLANLESS_READ_ONLY = frozenset({Path("tools") / "gluon-kube"})
+"""SANDBOX_REPOS a --no-plans export treats as read-only: the spike's, whose session
+runs beside the planless one and is the only one to commit there."""
+
+PREFIX = re.compile(r"^[a-z][a-z0-9-]*$")
+"""A --prefix: one lower-case word, safe in a file name."""
 
 NOT_EXPORTED_NESTED = frozenset(
     {
@@ -217,6 +233,12 @@ LEFT_OUT = (
 )
 """What the export leaves out and why; reproduced in EXPORT-REVIEW.md."""
 
+PLANLESS_LEFT_OUT = (
+    ("`plans/gluon-kube/plan.md`, every live Conductor track (`conductor/tracks/`, `tracks.md`'s list)", "A planless export (`--no-plans`): this session works from its own prompt, beside the gluon-kube spike's session, which owns the plans."),
+    ("`conductor/` in `tools/gluon-kube`", "The spike's repo, read-only here: only the spike's session commits to it."),
+)
+"""What a --no-plans export also leaves out; added to LEFT_OUT in EXPORT-REVIEW.md."""
+
 CAPTURE_EDITS = (
     ("`stdout.log`, `CAPTURE.sh`", "laptop paths in JVM warnings and the script", "`/Users/<user>/<path-to>/gluon/…`"),
     ("`kafka/consumer-groups.txt`", "consumer client hosts (Docker-network addresses)", "`192.0.2.1` (RFC 5737 documentation address)"),
@@ -242,35 +264,44 @@ def tracked(repo: Path) -> list[Path]:
     return [p for p in paths if (repo / p).is_file() and not (repo / p).is_symlink() and not excluded(p)]
 
 
-def platform() -> list[Path]:
-    """gluon's own tracked files: the nested repos' directories only contribute their README.md."""
+def platform(plans: bool = True) -> list[Path]:
+    """gluon's own tracked files: the nested repos' directories only contribute their README.md;
+    EXPORTED_PLANS only with `plans`."""
     return [
         p
         for p in tracked(GLUON)
         if (p.parts[0] not in NESTED_REPO_DIRS or p == Path(p.parts[0]) / "README.md")
         and p not in NOT_EXPORTED
-        and (p.parts[0] not in NOT_EXPORTED_DIRS or p in EXPORTED_PLANS)
+        and (p.parts[0] not in NOT_EXPORTED_DIRS or (plans and p in EXPORTED_PLANS))
     ]
 
 
-def conductor_files(repo: Path, files: list[Path]) -> list[Path]:
-    """`files` without what CONDUCTOR holds beyond a working repo's live tracks."""
-    working = repo.relative_to(GLUON) in SANDBOX_REPOS
+def conductor_files(repo: Path, files: list[Path], plans: bool = True) -> list[Path]:
+    """`files` without what CONDUCTOR holds beyond a working repo's live tracks; without
+    `plans`, without those tracks too, and PLANLESS_READ_ONLY repos count as read-only."""
+    relative = repo.relative_to(GLUON)
+    working = relative in SANDBOX_REPOS and (plans or relative not in PLANLESS_READ_ONLY)
+    dropped = (CONDUCTOR / "archive",) if plans else (CONDUCTOR / "archive", CONDUCTOR / "tracks")
     return [
         p
         for p in files
-        if not p.is_relative_to(CONDUCTOR) or (working and not p.is_relative_to(CONDUCTOR / "archive"))
+        if not p.is_relative_to(CONDUCTOR) or (working and not any(p.is_relative_to(d) for d in dropped))
     ]
 
 
-def strip_backlog(text: str) -> str:
-    """tracks.md without its Backlog items and intro; the heading stays as patch context."""
-    start = text.find("\n## Backlog")
+def strip_section(text: str, heading: str) -> str:
+    """tracks.md without the items and intro under `## heading`; the heading stays as patch context."""
+    start = text.find(f"\n## {heading}\n")
     if start < 0:
         return text
     following = text.find("\n## ", start + 1)
     end = following if following >= 0 else len(text)
-    return text[:start] + "\n## Backlog\n" + text[end:]
+    return text[:start] + f"\n## {heading}\n" + text[end:]
+
+
+def strip_backlog(text: str) -> str:
+    """tracks.md without its Backlog items and intro."""
+    return strip_section(text, "Backlog")
 
 
 def dirty(repo: Path) -> list[str]:
@@ -484,6 +515,8 @@ def review(
     lines += [f"| {count} | {why} |" for why, count in ref_allowed.items()] or ["| 0 | — |"]
     lines += ["", "## Left out", "", "| What | Why |", "|---|---|"]
     lines += [f"| {what} | {why} |" for what, why in LEFT_OUT]
+    if not manifest["plans"]:
+        lines += [f"| {what} | {why} |" for what, why in PLANLESS_LEFT_OUT]
     lines += [
         "",
         "## Matches that look private, and why they aren't",
@@ -511,8 +544,9 @@ def review(
     return "\n".join(lines)
 
 
-def export(out: Path, captures: Sequence[str], clean: bool) -> dict[str, object]:
-    """Stages and scans the export, then empties `out` and writes it there; returns its manifest."""
+def export(out: Path, captures: Sequence[str], clean: bool, plans: bool = True) -> dict[str, object]:
+    """Stages and scans the export, then empties `out` and writes it there; returns its manifest.
+    Without `plans`, no plan travels (--no-plans)."""
     nested = export_repos()
     repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
@@ -521,6 +555,7 @@ def export(out: Path, captures: Sequence[str], clean: bool) -> dict[str, object]
         raise SystemExit(f"Uncommitted changes; commit or stash first:\n{lines}")
     manifest: dict[str, object] = {
         "created": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "plans": plans,
     }
     with tempfile.TemporaryDirectory() as scratch:
         staging = Path(scratch) / "gluon"
@@ -528,12 +563,13 @@ def export(out: Path, captures: Sequence[str], clean: bool) -> dict[str, object]
         entries = []
         for repo in repos:
             relative = repo.relative_to(GLUON)
-            files = platform() if repo == GLUON else conductor_files(repo, tracked(repo))
+            files = platform(plans) if repo == GLUON else conductor_files(repo, tracked(repo), plans)
             files = [p for p in files if relative / p not in NOT_EXPORTED_NESTED]
             copy(files, repo, staging / relative)
             tracks = staging / relative / CONDUCTOR / "tracks.md"
             if repo != GLUON and tracks.is_file():
-                tracks.write_text(strip_backlog(tracks.read_text()))
+                stripped = strip_backlog(tracks.read_text())
+                tracks.write_text(stripped if plans else strip_section(stripped, "Tracks"))
             head = git(repo, "rev-parse", "HEAD").strip()
             entries.append({"path": relative.as_posix(), "head": head, "files": len(files)})
             print(f"copied    {relative} @ {head[:7]} ({len(files)} files)")
@@ -572,6 +608,11 @@ def empty(out: Path, clean: bool) -> None:
     print(f"emptied   {out}")
 
 
+def archive_name(out: Path, prefix: str | None) -> str:
+    """The archive's file name: OUT's name, after `prefix` if given."""
+    return f"{prefix}-{out.name}.tar.gz" if prefix else f"{out.name}.tar.gz"
+
+
 def anonymous(info: tarfile.TarInfo) -> tarfile.TarInfo:
     """The archive entry owned by root: the laptop's user name and ids stay out of its headers."""
     info.uid = info.gid = 0
@@ -590,7 +631,11 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
     parser.add_argument("--yes", action="store_true", help="remove untracked files unasked (build output always is)")
+    parser.add_argument("--no-plans", action="store_true", help="no plan, no live track; gluon-kube read-only")
+    parser.add_argument("--prefix", metavar="NAME", help="archive as NAME-OUT.tar.gz")
     args = parser.parse_args(argv)
+    if args.prefix is not None and not PREFIX.match(args.prefix):
+        raise SystemExit(f"--prefix must match {PREFIX.pattern}")
     out = args.out.expanduser().resolve()
     if out == GLUON or GLUON in out.parents:
         raise SystemExit("--out must be outside gluon")
@@ -600,10 +645,10 @@ def main(argv: Sequence[str]) -> int:
     if out.exists() and any(out.iterdir()) and not args.clean and not (out / MANIFEST).is_file():
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
     clean([GLUON, *(GLUON / r for r in export_repos())], args.yes)
-    export(out, captures, args.clean)
+    export(out, captures, args.clean, plans=not args.no_plans)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:
-        archive = out.parent / f"{out.name}.tar.gz"
+        archive = out.parent / archive_name(out, args.prefix)
         with tarfile.open(archive, "w:gz") as tar:
             tar.add(out, arcname=out.name, filter=anonymous)
         print(f"Archived  {archive} ({archive.stat().st_size // 1024} KiB)")

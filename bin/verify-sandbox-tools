@@ -8,6 +8,10 @@
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
 #   4. the touched Python scripts compile
+#   5. a default export carries the gluon-kube spike's plan and live track
+#   6. a --no-plans export carries no plan, no live track, no gluon-kube
+#      conductor/, and keeps Conductor's workflow
+#   7. --prefix names the archive; tracks.md loses a section's items, not its heading
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
 #   bin/verify-sandbox-tools
 set -uo pipefail
@@ -57,6 +61,39 @@ want |= {"services/notification-service-rs"} if Path("services/notification-serv
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
 sys.exit(0 if got == want else f"want {sorted(want)}, got {sorted(got)}")'
+
+check "default export carries the spike's plan and live track" plans.log '
+with tempfile.TemporaryDirectory() as out:
+    root = Path(out) / "gluon"
+    manifest = export.export(root, [], False)
+    plan = (root / "plans" / "gluon-kube" / "plan.md").is_file()
+    tracks = sorted(p.name for p in (root / "tools" / "gluon-kube" / "conductor" / "tracks").iterdir())
+print("plan:", plan, "gluon-kube tracks:", tracks, "plans:", manifest["plans"])
+sys.exit(0 if plan and tracks and manifest["plans"] else "spike plan or track missing")'
+
+check "--no-plans export carries no plan and no live track" noplans.log '
+with tempfile.TemporaryDirectory() as out:
+    root = Path(out) / "gluon"
+    manifest = export.export(root, [], False, plans=False)
+    plans = sorted(str(p.relative_to(root)) for p in (root / "plans").rglob("*")) if (root / "plans").exists() else []
+    live = sorted(str(p.relative_to(root)) for p in root.rglob("conductor/tracks/*"))
+    kube = (root / "tools" / "gluon-kube" / "conductor").exists()
+    workflow = (root / "tests" / "contract" / "conductor" / "workflow.md").is_file()
+    listed = [line for p in root.rglob("conductor/tracks.md")
+              for line in p.read_text().split("## Tracks", 1)[-1].split("## Backlog", 1)[0].splitlines()
+              if line.startswith("- [")]
+    review = (root / "EXPORT-REVIEW.md").read_text()
+print("plans:", plans, "live:", live, "gluon-kube conductor:", kube, "workflow:", workflow, "listed:", listed)
+sys.exit(0 if not plans and not live and not kube and workflow and not listed
+         and not manifest["plans"] and "--no-plans" in review else "plan material exported")'
+
+check "--prefix names the archive; a stripped section keeps its heading" prefix.log '
+names = (export.archive_name(Path("w/gluon"), "spike"), export.archive_name(Path("w/gluon"), None))
+text = "# T\n\n## Tracks\n\n- [~] **Track: x**\n\n---\n\n## Backlog\n- y\n"
+stripped = export.strip_section(export.strip_backlog(text), "Tracks")
+print(names, repr(stripped))
+sys.exit(0 if names == ("spike-gluon.tar.gz", "gluon.tar.gz")
+         and stripped == "# T\n\n## Tracks\n\n## Backlog\n" else "unexpected")'
 
 check "reference check warns only for a repo not exported" refs.log '
 with tempfile.TemporaryDirectory() as scratch:
