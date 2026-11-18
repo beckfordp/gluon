@@ -450,6 +450,13 @@ most, now in gluon-rs's lock too (kafka-client → rdkafka). The session committ
 repo; that commit is dropped on import. `bin/sandbox-setup --check` didn't catch
 the failing fetch (TD-61).*
 
+*2026-11-18 (laptop): libz-sys is gone. rdkafka's `libz` feature was its only user
+(gzip for librdkafka) and nothing in gluon compresses Kafka messages, so gluon-rs
+`kafka-client` drops it (gluon-rs `09f8454`, user-service-rs `a610a72`): no pin, no
+RUSTSEC-2026-0544. Both CIs green, coverage unchanged; probe 10/10, harness 128/128.
+If a producer ever compresses with gzip, the Rust consumers can't read it: turn the
+feature back on. TD-53.1 stays open for the other crates.*
+
 ---
 
 ## TD-54 — The probe group's wait and lookup helpers aren't shared
