@@ -1326,3 +1326,20 @@ is the Scala service.
       The pool size is now a parameter of gluon-rs `postgres::connect`, so
       each port cites its own.*
 
+## TD-58 — The Kafka consume loop lives in user-service-rs's probe — **RESOLVED 2026-11-17**
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S5).
+`services/user-service-rs/crates/events-probe/src/run.rs` held the rdkafka consumer
+loop, the `KafkaPublisher` for dead letters and the librdkafka statistics context
+feeding the lag gauge. gluon-rs `kafka-event-consumer` deliberately has no Kafka
+client, so the probe's was the only loop, and notification-service-rs's consumers
+need exactly it; RPN-10's green phase would have copied it.
+
+### Tasks
+- [x] TD-58.1: move the loop, publisher and context into gluon-rs.
+      *Done 2026-11-17 (sandbox, gluon-rs track `kafka-client`): a crate of its own,
+      `kafka-client` (`EventConsumer`, `KafkaPublisher`, `LagContext`,
+      `ConsumerSettings`), so `kafka-event-consumer` stays client-free; `stream.rs`
+      left out of coverage (needs a broker). events-probe consumes through it,
+      `run.rs` gone. gluon-rs 93.04%, user-service-rs 93.28%; probe 10/10, harness
+      128/128. Review findings: TD-64.*

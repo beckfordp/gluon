@@ -19,7 +19,7 @@ that repo's own `conductor/tracks.md`, not in this repo.
 | [Performance 1–11](./plans/performance/plan.md), [work sequence](./plans/performance/work-sequence.md) | `PERF-N.M` | active (Perf 5 on) |
 | [Acceptance](./plans/acceptance/README.md) | `ACC-N.M` | 1–7 done, [archived](./plans/archive/acceptance.md) |
 | [Rust port](./plans/rust-port/README.md) — [user-service](./plans/rust-port/user-service/plan.md) | `RUST-N.M` (`RPU-N` new) | RUST-5, 7 open |
-| [Rust port](./plans/rust-port/README.md) — [notification-service](./plans/rust-port/notification-service/plan.md) | `RPN-N` | RPN-4.1 next (laptop) |
+| [Rust port](./plans/rust-port/README.md) — [notification-service](./plans/rust-port/notification-service/plan.md) | `RPN-N` | RPN-10 red done; RPN-10 green, RPN-11 next (sandbox) |
 | [Rust port](./plans/rust-port/README.md) — [cart-service](./plans/rust-port/cart-service/plan.md) | `RPC-N` | not started |
 | [gluon-kube](./plans/gluon-kube/plan.md) (ADR 0030; drafted in the sandbox, exported) | `GK-N.M` | GK-1, 2 done; GK-3 phase 2 next |
 | [Walking skeleton, Phases 1–10b](./plans/archive/walking-skeleton.md) | `US-N.M` | done |

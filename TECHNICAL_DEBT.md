@@ -444,6 +444,177 @@ refresh the mirror; don't roll the fix back.*
       services'. Done when: `cargo fetch --locked` passes in the sandbox for all three
       Rust repos on a fresh export.
 
+*2026-11-17 (sandbox, RPN-10, was TD-S10): the mirror still has libz-sys 1.1.31 at
+most, now in gluon-rs's lock too (kafka-client → rdkafka). The session committed
+1.1.33 and pinned 1.1.31 in a last `chore(sandbox): libz-sys 1.1.31 …` commit per
+repo; that commit is dropped on import. `bin/sandbox-setup --check` didn't catch
+the failing fetch (TD-61).*
+
+---
+
+## TD-54 — The probe group's wait and lookup helpers aren't shared
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S1). `tests/contract/checks/test_probe.py`
+keeps `wait_until` and `lookups` private; `checks/test_notification_user_events.py`
+counts the user-service stub's lookups inline, a second copy of `lookups`. The order-,
+payment- and fulfilment-events groups will need both, and CI's shared-helper guard
+only protects names in `checks/support.py` and `gluon_contract.expect`.
+
+### Tasks
+- [ ] TD-54.1: move both to `checks/support.py` and import them. Done when: one
+      definition each; probe 10/10, user-events group unchanged.
+
+---
+
+## TD-55 — Two envelope builders in the harness
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S2). `checks/test_probe.py` `envelope()`
+(fresh ids, `source: user-service`) and `gluon_contract/notification_scenarios.py`
+`envelope()` (the capture's ids) each write down the shared envelope
+(docs/system-design.md "Envelope"); a change must be made in both.
+
+### Tasks
+- [ ] TD-55.1: one builder in `gluon_contract`, ids as parameters (or retire the
+      probe's with the probe, after RPN-13). Done when: one envelope builder.
+
+---
+
+## TD-56 — Two broker fixtures
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S3). `gluon_contract/pytest_plugin.py` has
+the session's own `kafka` fixture (the probe group) and `harness.kafka` (started for a
+service whose profile reads Kafka). They never meet today, but a check asking for
+`kafka` in a notification-service run would start a second broker the service doesn't
+read.
+
+### Tasks
+- [ ] TD-56.1: `kafka` returns `harness.kafka` when the run's service has one. Done
+      when: a notification-service run starts one broker.
+
+---
+
+## TD-57 — `sent_email.body` isn't part of the consumer checks' contract
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S4). `notification_scenarios.SentEmail`
+leaves `body` out ("less what varies by run"), so no consumer check compares the body
+of the email it finds, though `GET /emails` returns it and the capture has every body
+(`db/sent-email.jsonl`). A port could send the wrong text and every consumer check stays
+green; only the REST group, which seeds rows, sees bodies.
+
+### Tasks
+- [ ] TD-57.1: decide whether the body is contract; if so, add it to the scenario table
+      for events whose body doesn't vary by run, from the capture. Done when: decided,
+      and (if contract) a wrong body turns a consumer check red.
+
+---
+
+## TD-59 — notification-service's recipient lookup lives in user-service-rs
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S6).
+`services/user-service-rs/crates/events-probe/src/lookup.rs` is notification-service's
+`UserClient` (ADR 0025: `GET /users/{id}` through purerest's retry and circuit breaker),
+written for the probe. The order-, payment- and fulfilment-events consumers need it
+(user-events doesn't: the email is in the payload); copying it makes two.
+
+### Tasks
+- [ ] TD-59.1: move it to notification-service-rs (or gluon-rs, if another port calls
+      user-service) with the first consumer that looks up a recipient (RPN-12). Done
+      when: one copy, outside events-probe.
+
+---
+
+## TD-60 — `verify-port --only contract` can run without the files the contract needs
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S7). `bin/verify-port`'s `steps_for`
+skips the build when the binaries exist, but user-service's build also renders the
+AsyncAPI HTML (`scripts/asyncapi-html.sh`). After `cargo clean` and a plain
+`cargo build` the docs group fails 16/22 for a reason that isn't the port's: a false
+regression.
+
+### Tasks
+- [ ] TD-60.1: `built` also requires `target/asyncapi-docs/index.html` when the service
+      has `asyncapi_html` (or runs `asyncapi-html.sh` when it's missing). Done when: the
+      case above runs the docs group green.
+
+---
+
+## TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S8). In `--check` mode
+`bin/sandbox-setup`'s `step_projects` always reports user-service-rs `OK … cargo fetch
+--locked`; only install mode fetches. It said "Sandbox ready" while `cargo fetch
+--locked` failed (TD-53).
+
+### Tasks
+- [ ] TD-61.1: check mode runs `cargo fetch --locked --offline` for every Rust repo and
+      reports MISSING on failure. Done when: a lock the mirror can't serve is reported.
+
+---
+
+## TD-62 — `verify-check-group.sh` gives a misleading error for a missing group file
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S9). Given a group file that doesn't
+exist, pytest never loads the harness plugin and rejects its options ("unrecognized
+arguments: --service --target-cmd …", then "no readable junit report"); nothing says
+the file is missing. It reads as a broken harness.
+
+### Tasks
+- [ ] TD-62.1: `tests/contract/scripts/verify-check-group.sh` checks the group file
+      exists and says so (exit 2, as for a usage error). Done when: a typo'd path names
+      the file.
+
+---
+
+## TD-63 — RPN-10 review Lows in tests/contract
+
+From the sandbox review of RPN-10 and the source-citations track (2026-11-17; were
+TD-S11–S18), against `tests/contract`'s `python.md`, `general.md`,
+`product-guidelines.md` and `rust.md`'s principles read language-neutrally. The
+Mediums were fixed in the session (source-citations); these weren't.
+
+### Tasks
+- [ ] TD-63.1: `test_notification_user_events.py` `test_a_null_value_is_skipped` judges
+      two behaviours (skip and the replay's totals); split out a seventh check (the done
+      script's RED list and the plan's count change with it).
+- [ ] TD-63.2: `consumption.Replay.records` is a mutable `list`: a tuple, other
+      attributes read-only.
+- [ ] TD-63.3: `consumption._why_not` mixes the Kafka lookup with the message: a pure
+      `why_not(record, committed, joined) -> str`, unit-tested; I/O stays in `Replay`.
+- [ ] TD-63.4: `consumption` is typed on notification-service's `Scenario`: a small
+      Protocol (key, value, traceparent, comment).
+- [ ] TD-63.5: `sent_email.insert`/`rows` take `psycopg.Connection[Any]`: no `Any`.
+- [ ] TD-63.6: the user-events module asserts the broker twice (`replayed`, `broker`):
+      the fixture uses `broker(harness)`.
+- [ ] TD-63.7: `notification_scenarios.scenarios()` raises plain `ValueError`:
+      `UnknownTopicError(ValueError)`.
+- [ ] TD-63.8: `check_sources`'s `_CITATION`/`_REMARK` regex is dense and still stops
+      at prose between names and remarks nested two deep: a small tokenizer.
+
+---
+
+## TD-64 — kafka-client review findings (High first)
+
+From the sandbox review of gluon-rs `kafka-client` and events-probe (2026-11-17; were
+TD-S19–S23) against `rust.md`'s checklist. H1–H3 came with the code moved from
+events-probe's `run.rs`; the move kept behaviour. **Fix TD-64.1–64.3 before
+notification-service-rs adopts `kafka-client` (RPN-10 green phase)**, so they don't
+spread to every port.
+
+### Tasks
+- [ ] TD-64.1 (High): `EventConsumer::consume` → `Result<(), String>`, and
+      `kafka-event-consumer`'s `Publish`, `Routes`, `handle_record`, `supervise` errors
+      are `String`: a `thiserror` enum (subscribe, all brokers down, commit, dead-letter
+      failed); `supervise` generic over `E: Display`.
+- [ ] TD-64.2 (High): `stream.rs` reads `SystemTime::now()` for event age: an injected
+      clock on `EventConsumer`, wired in `main`.
+- [ ] TD-64.3 (High): `commit_message(…, CommitMode::Sync)` per record blocks a tokio
+      worker: `tokio::task::block_in_place` around it; at-least-once unchanged; probe
+      group re-run.
+- [ ] TD-64.4: `ConsumerMetrics` built twice per stream (`subscribe`'s `LagContext`,
+      `consume`'s ages): build once in `consume`.
+- [ ] TD-64.5: `ConsumerSettings`' broker, group and topic are plain strings:
+      `GroupId`, `Topic` newtypes parsed where config is read.
+
 
 ---
 
@@ -487,3 +658,4 @@ Resolved, every task done; the full write-up is in
 - TD-45 — The Kafka broker lives in cdc.py — 2026-11-14
 - TD-46 — Verify scripts pile up — 2026-11-14
 - TD-47 — A Rust port cites its sibling, not the Scala source — 2026-11-14
+- TD-58 — The Kafka consume loop lives in user-service-rs's probe — 2026-11-17

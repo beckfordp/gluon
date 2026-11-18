@@ -380,6 +380,15 @@ stubs (`Harness.stubs`) through fixtures added here; the probe's are its own.
 
 **Done when:** `user-events` group green.
 
+*2026-11-17 (sandbox): red phase done. tests/contract
+`checks/test_notification_user_events.py`, six checks, each PENDING ("not yet
+implemented") against notification-service-rs (`verify-check-group.sh
+--expect-red`); replay and consumer-group wait in `gluon_contract.consumption`;
+REST group still 24/24, user-service 128/128 (`bin/verify-complete-RPN-10.sh`).
+The consume loop moved from the probe to gluon-rs `kafka-client` (TD-58), which
+the green phase builds on; fix TD-64.1–64.3 first. Debt found: TD-54–57,
+TD-59–63.*
+
 ### RPN-11 — Audited send
 
 **Repos:** `tests/contract`, `services/notification-service-rs`.
