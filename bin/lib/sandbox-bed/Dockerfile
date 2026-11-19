@@ -2,9 +2,9 @@
 # The sandbox bed's image (bin/sandbox-bed): what the sandbox's image provides, as
 # plans/private/sandbox.md "Provided by the image" lists it, so bin/sandbox-setup meets
 # here what it meets there and installs the rest itself (Rust, Node 24, Maven, the CDC
-# jars, vim, shellcheck). x86_64, as the sandbox is: build and run with
-# --platform linux/amd64. Not the sandbox: its network is the laptop's, and no `ip` or
-# iptables, as there.
+# jars, vim, shellcheck). x86_64, as the sandbox is (--platform linux/amd64); arm64
+# for bin/sandbox-bed up --native. Not the sandbox: its network is the laptop's, and
+# no `ip` or iptables, as there.
 FROM ubuntu:24.04
 
 ARG NODE_VERSION=22.21.1
@@ -21,7 +21,9 @@ RUN apt-get update \
       /usr/lib/postgresql/16/bin/postgres /usr/local/bin/
 
 # Node 22 with its npm 10 (the image's node; setup adds Node 24 beside it).
-RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+ARG TARGETARCH
+RUN arch="$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" \
+ && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${arch}.tar.xz" \
       | tar -xJ -C /usr/local --strip-components=1
 
 # The two users' layout: the session runs as model; /home/claude/.local/bin is on the

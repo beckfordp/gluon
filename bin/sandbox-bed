@@ -4,11 +4,16 @@
 # (bin/sandbox-export --no-plans) is unpacked into a container shaped like the sandbox's
 # image (bin/lib/sandbox-bed/Dockerfile), bin/sandbox-setup installs the rest as the
 # model user, and gluon-kube runs a service there, port-forwarded to the laptop:
-#   bin/sandbox-bed up [SERVICE]   export, set up, `gkube up SERVICE` (user-service),
-#                                  forward its port 8080 to http://localhost:8080
+#   bin/sandbox-bed up [--native] [SERVICE]
+#                                  export, set up, `gkube up SERVICE` (user-service),
+#                                  forward its port 8080 to http://localhost:8080;
+#                                  linux/amd64 as the sandbox (emulated on an arm64
+#                                  laptop), or --native arm64: fast, for iterating,
+#                                  but not the sandbox's architecture
 #   bin/sandbox-bed shell          a shell as model in /workspace/gluon
 #   bin/sandbox-bed down [--purge] stop the cluster and the container; --purge also
-#                                  drops the cached installs (Rust, Node, CDC jars)
+#                                  drops the cached installs (Rust, Node, CDC jars),
+#                                  both architectures'
 # What it doesn't prove: the bed has the laptop's network (the sandbox reaches only
 # the package sources in plans/private/sandbox.md) and OrbStack's kernel. It runs
 # privileged, for gluon-kube's nested user namespaces. The export removes build output
@@ -17,10 +22,10 @@ set -euo pipefail
 GLUON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BED="$GLUON/bin/lib/sandbox-bed"
 NAME=gluon-sandbox-bed
-PLATFORM=linux/amd64
+ARCHES="amd64 arm64"
 
 usage() {
-  echo "usage: bin/sandbox-bed up [SERVICE] | shell | down [--purge]" >&2
+  echo "usage: bin/sandbox-bed up [--native] [SERVICE] | shell | down [--purge]" >&2
   exit 2
 }
 
@@ -30,11 +35,19 @@ as_model() {
 }
 
 up() {
-  local service="${1:-user-service}" image
-  image="$NAME:$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)"
+  local arch=amd64 service image
+  if [ "${1:-}" = --native ]; then
+    case "$(uname -m)" in
+      arm64 | aarch64) arch=arm64 ;;
+      *) echo "bin/sandbox-bed: --native needs an arm64 machine; this is amd64 already" >&2; exit 2 ;;
+    esac
+    shift
+  fi
+  service="${1:-user-service}"
+  image="$NAME:$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)-$arch"
   if ! docker image inspect "$image" > /dev/null 2>&1; then
     echo "== building $image (once per Dockerfile change)"
-    docker build --platform "$PLATFORM" -t "$image" "$BED"
+    docker build --platform "linux/$arch" -t "$image" "$BED"
   fi
 
   # Global, not local: the EXIT trap runs after up returns.
@@ -45,9 +58,10 @@ up() {
 
   echo "== starting $NAME"
   docker rm -f "$NAME" > /dev/null 2>&1 || true
-  docker run -d --name "$NAME" --platform "$PLATFORM" --privileged \
+  # Caches per architecture: one's Rust and Node binaries don't run on the other.
+  docker run -d --name "$NAME" --platform "linux/$arch" --privileged \
     -p 127.0.0.1:8080:8080 \
-    -v "$NAME-model:/home/model" -v "$NAME-bin:/home/claude/.local/bin" \
+    -v "$NAME-model-$arch:/home/model" -v "$NAME-bin-$arch:/home/claude/.local/bin" \
     "$image" > /dev/null
   docker cp "$scratch/gluon.tar.gz" "$NAME:/tmp/gluon.tar.gz"
   docker exec -u root "$NAME" bash -c \
@@ -75,6 +89,9 @@ up() {
   echo "  Swagger UI  http://localhost:8080/docs/"
   echo "  AsyncAPI    http://localhost:8080/docs/asyncapi/"
   echo "Not proven here: the sandbox's network limits, its kernel. Stop: bin/sandbox-bed down"
+  if [ "$arch" = arm64 ]; then
+    echo "Native arm64: fast, but not the sandbox's architecture; run bin/sandbox-bed up (amd64) before export"
+  fi
 }
 
 down() {
@@ -84,6 +101,10 @@ down() {
     echo "removed $NAME"
   fi
   if [ "${1:-}" = --purge ]; then
+    local arch
+    for arch in $ARCHES; do
+      docker volume rm "$NAME-model-$arch" "$NAME-bin-$arch" > /dev/null 2>&1 || true
+    done
     docker volume rm "$NAME-model" "$NAME-bin" > /dev/null 2>&1 || true
     echo "removed the cached installs"
   fi
