@@ -545,20 +545,6 @@ so only notification-service-rs's own `tests/domain.rs` pins the welcome body.*
 
 ---
 
-## TD-59 — notification-service's recipient lookup lives in user-service-rs
-
-Found in RPN-10 (sandbox, 2026-11-17; was TD-S6).
-`services/user-service-rs/crates/events-probe/src/lookup.rs` is notification-service's
-`UserClient` (ADR 0025: `GET /users/{id}` through purerest's retry and circuit breaker),
-written for the probe. The order-, payment- and fulfilment-events consumers need it
-(user-events doesn't: the email is in the payload); copying it makes two.
-
-### Tasks
-- [ ] TD-59.1: move it to notification-service-rs (or gluon-rs, if another port calls
-      user-service) with the first consumer that looks up a recipient (RPN-12). Done
-      when: one copy, outside events-probe.
-
----
 
 ## TD-62 — `verify-check-group.sh` gives a misleading error for a missing group file
 
@@ -721,3 +707,4 @@ Resolved, every task done; the full write-up is in
 - TD-60 — `verify-port --only contract` can run without the files the contract needs — 2026-11-19
 - TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking — 2026-11-19
 - TD-64 — kafka-client review findings (High first) — 2026-11-19
+- TD-59 — notification-service's recipient lookup lives in user-service-rs — 2026-11-20

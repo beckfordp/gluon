@@ -1419,3 +1419,21 @@ spread to every port.
 It returns `KafkaError`, but runs `DeadLetter` and `supervise` with their
 `Result<_, String>` underneath; H1–H3 now reach both services and the probe. The session's export left out this file and `plans/`, so it couldn't see
 the warning.*
+
+## TD-59 — notification-service's recipient lookup lives in user-service-rs — **RESOLVED 2026-11-20**
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S6).
+`services/user-service-rs/crates/events-probe/src/lookup.rs` is notification-service's
+`UserClient` (ADR 0025: `GET /users/{id}` through purerest's retry and circuit breaker),
+written for the probe. The order-, payment- and fulfilment-events consumers need it
+(user-events doesn't: the email is in the payload); copying it makes two.
+
+### Tasks
+- [x] TD-59.1: move it to notification-service-rs (or gluon-rs, if another port calls
+      user-service) with the first consumer that looks up a recipient (RPN-12). Done
+      when: one copy, outside events-probe.
+      — **done 2026-11-20** (all-Rust prep P2): gluon-rs crate `user-client` (`94243a5`;
+      `UserClient`, `LookupError`, 100% lines), since the probe and notification-service-rs
+      both call user-service. The probe uses it (user-service-rs `39db09c`; 128/128, probe
+      10/10). notification-service-rs's resolver replaces `LookupError::NotPorted` with it
+      in RPN-12 (cheat sheet).
