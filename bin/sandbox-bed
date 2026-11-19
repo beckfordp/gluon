@@ -30,13 +30,14 @@ as_model() {
 }
 
 up() {
-  local service="${1:-user-service}" image scratch
+  local service="${1:-user-service}" image
   image="$NAME:$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)"
   if ! docker image inspect "$image" > /dev/null 2>&1; then
     echo "== building $image (once per Dockerfile change)"
     docker build --platform "$PLATFORM" -t "$image" "$BED"
   fi
 
+  # Global, not local: the EXIT trap runs after up returns.
   scratch="$(mktemp -d)"
   trap 'rm -rf "$scratch"' EXIT
   echo "== exporting (bin/sandbox-export --no-plans)"
