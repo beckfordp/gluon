@@ -208,6 +208,21 @@ RULES = (
     Rule("private ip", "`10.244.x.x`, `10.96.x.x` in gluon-kube and its docs",
          "Kubernetes' default pod and Service ranges, which gluon-kube's simulated cluster allocates from; no real network.",
          re.compile(r"^10\.(?:244|96)\.\d{1,3}\.\d{1,3}$")),
+    Rule("private ip", "`192.168.139.x`, `192.168.194.x` in gluon-kube's laptop reference",
+         "OrbStack's VM-internal node, pod and Service addresses, captured from gluon-local; not routable off the laptop.",
+         re.compile(r"^192\.168\.(?:139|194)\.\d{1,3}$"),
+         only_in=re.compile(r"^tools/gluon-kube/laptop-reference/")),
+    Rule("private ip", "`10.0.0.1`, `10.0.0.2` in the acceptance suite's unit tests",
+         "Dummy addresses in a host-resolver-rules test; no network.",
+         re.compile(r"^10\.0\.0\.[12]$"), only_in=re.compile(r"^tests/acceptance/tests/unit/")),
+    Rule("home path", "`/home/appuser`, `/home/curl_user` in gluon-kube's images",
+         "The users inside the upstream Kafka and curl images (their /etc/passwd and config).",
+         re.compile(r"^/home/(?:appuser|curl_user)$"),
+         only_in=re.compile(r"^tools/gluon-kube/(?:laptop-reference/images|src/gluon_kube/images)/")),
+    Rule("email", "Maintainer labels in upstream image metadata",
+         "Published in the curl and Debezium images' labels; captured by `docker inspect`.",
+         re.compile(r"."),
+         only_in=re.compile(r"^tools/gluon-kube/laptop-reference/images/[^/]+\.inspect\.json$")),
 )
 """Every allowed kind of match; EXPORT-REVIEW.md reproduces this table."""
 
