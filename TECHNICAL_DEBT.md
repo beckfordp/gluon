@@ -264,10 +264,19 @@ the tables existed.
 - [ ] TD-30.2: alert when a connector task is not RUNNING (Kafka Connect JMX
       task status via the existing exporter) — Grafana alert rule, ties into
       PERF-11.4.
-- [ ] TD-30.3: after a DB wipe, connectors must not start before the outbox
+- [x] TD-30.3: after a DB wipe, connectors must not start before the outbox
       tables exist — e.g. `bin/k8s-local-up` restarts FAILED tasks (or re-runs
       the register Job) after the service rollouts; prove by wiping a
-      `*-postgres` and redeploying.
+      `*-postgres` and redeploying. — **done 2026-11-19** (all-Rust prep P2): `bin/lib/connectors.sh` `connectors_ensure`, called by
+      `bin/k8s-local-up` after the rollouts, restarts FAILED tasks until every
+      connector the register Job names is RUNNING (2 min, else FAIL). Restarts retry
+      while Connect answers 409 (rebalancing), which used to stop k8s-local-up under
+      `set -e` (gluon-kube finding 4b); the user-service switch's restart uses it too.
+      Proof: user-postgres recreated (emptyDir), `USER_SERVICE_IMPL=rust
+      bin/k8s-local-up user-service`: Connect logged the task FAILED at 19:34:26
+      ("Unable to create filtered publication"), then k8s-local-up's
+      `restart?onlyFailed=true` (202) at 19:38:45, "restart successful"; all four
+      connectors RUNNING, exit 0, no manual step.
 
 
 ## TD-31 — Kafka OOMKilled wipes every topic; Connect then can't restart
@@ -345,10 +354,14 @@ which has already completed. Nothing reports it. `bin/run-acceptance` then fails
 seeding with a message that doesn't say why, and no events are published.
 
 ### Tasks
-- [ ] TD-49.1: `bin/run-acceptance` first checks that every connector the register
+- [x] TD-49.1: `bin/run-acceptance` first checks that every connector the register
       Job names is RUNNING, and if not says to re-run the Job (or `bin/k8s-local-up`).
       Done when: with the connectors deleted, it stops before seeding with that
-      message; with them present, the run is unchanged.
+      message; with them present, the run is unchanged. — **done 2026-11-19**
+      (all-Rust prep P2): preflight `connectors_check` (`bin/lib/connectors.sh`).
+      With user-outbox-connector deleted it stopped before the coverage matrix:
+      "connector user-outbox-connector: MISSING" / "run bin/k8s-local-up (it
+      re-registers and restarts them)".
 - [ ] TD-49.2: the connectors survive a restart: `bin/k8s-local-up` re-registers
       when Connect has none, or Connect's config topic outlives the restart. Done
       when: after an OrbStack restart, the user outbox connector is RUNNING without
@@ -531,34 +544,6 @@ written for the probe. The order-, payment- and fulfilment-events consumers need
 - [ ] TD-59.1: move it to notification-service-rs (or gluon-rs, if another port calls
       user-service) with the first consumer that looks up a recipient (RPN-12). Done
       when: one copy, outside events-probe.
-
----
-
-## TD-60 — `verify-port --only contract` can run without the files the contract needs
-
-Found in RPN-10 (sandbox, 2026-11-17; was TD-S7). `bin/verify-port`'s `steps_for`
-skips the build when the binaries exist, but user-service's build also renders the
-AsyncAPI HTML (`scripts/asyncapi-html.sh`). After `cargo clean` and a plain
-`cargo build` the docs group fails 16/22 for a reason that isn't the port's: a false
-regression.
-
-### Tasks
-- [ ] TD-60.1: `built` also requires `target/asyncapi-docs/index.html` when the service
-      has `asyncapi_html` (or runs `asyncapi-html.sh` when it's missing). Done when: the
-      case above runs the docs group green.
-
----
-
-## TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking
-
-Found in RPN-10 (sandbox, 2026-11-17; was TD-S8). In `--check` mode
-`bin/sandbox-setup`'s `step_projects` always reports user-service-rs `OK … cargo fetch
---locked`; only install mode fetches. It said "Sandbox ready" while `cargo fetch
---locked` failed (TD-53).
-
-### Tasks
-- [ ] TD-61.1: check mode runs `cargo fetch --locked --offline` for every Rust repo and
-      reports MISSING on failure. Done when: a lock the mirror can't serve is reported.
 
 ---
 
@@ -751,3 +736,5 @@ Resolved, every task done; the full write-up is in
 - TD-46 — Verify scripts pile up — 2026-11-14
 - TD-47 — A Rust port cites its sibling, not the Scala source — 2026-11-14
 - TD-58 — The Kafka consume loop lives in user-service-rs's probe — 2026-11-17
+- TD-60 — `verify-port --only contract` can run without the files the contract needs — 2026-11-19
+- TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking — 2026-11-19

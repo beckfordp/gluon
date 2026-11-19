@@ -1343,3 +1343,39 @@ need exactly it; RPN-10's green phase would have copied it.
       left out of coverage (needs a broker). events-probe consumes through it,
       `run.rs` gone. gluon-rs 93.04%, user-service-rs 93.28%; probe 10/10, harness
       128/128. Review findings: TD-64.*
+
+## TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S8). In `--check` mode
+`bin/sandbox-setup`'s `step_projects` always reports user-service-rs `OK … cargo fetch
+--locked`; only install mode fetches. It said "Sandbox ready" while `cargo fetch
+--locked` failed (TD-53).
+
+### Tasks
+- [x] TD-61.1: check mode runs `cargo fetch --locked --offline` for every Rust repo and
+      reports MISSING on failure. Done when: a lock the mirror can't serve is reported.
+      — **done 2026-11-19** (all-Rust prep P2): `rust_dependencies` in
+      `bin/sandbox-setup` fetches when installing and checks offline in both modes,
+      for every `SANDBOX_REPOS` repo with a `Cargo.lock` (user-service-rs,
+      notification-service-rs, gluon-rs; the new ports as they appear). A lock naming a
+      crate never fetched reports MISSING ("--offline was specified"). Two more
+      untruthful checks fixed the same day, found by the sandbox bed: the network check's
+      Ubuntu archive 403 (urllib's User-Agent; 9d990fe) and vim reported OK without
+      running (94030df).
+
+## TD-60 — `verify-port --only contract` can run without the files the contract needs
+
+Found in RPN-10 (sandbox, 2026-11-17; was TD-S7). `bin/verify-port`'s `steps_for`
+skips the build when the binaries exist, but user-service's build also renders the
+AsyncAPI HTML (`scripts/asyncapi-html.sh`). After `cargo clean` and a plain
+`cargo build` the docs group fails 16/22 for a reason that isn't the port's: a false
+regression.
+
+### Tasks
+- [x] TD-60.1: `built` also requires `target/asyncapi-docs/index.html` when the service
+      has `asyncapi_html` (or runs `asyncapi-html.sh` when it's missing). Done when: the
+      case above runs the docs group green. — **done 2026-11-19** (all-Rust prep P2):
+      `is_built` requires the binaries and, for a service with `asyncapi_html`,
+      `target/asyncapi-docs/index.html`; else `--only contract` builds first. Proof:
+      `bin/verify-port user-service --only contract` with `target/` gone (removed by a
+      sandbox export) built the binaries and the HTML, then docs 22/22, 128/128.
