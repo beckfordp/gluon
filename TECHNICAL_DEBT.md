@@ -419,9 +419,16 @@ misses where they differ:
       stays 24/24.
 - [ ] TD-52.2: a user-service capture of a refused preflight (laptop) and a check. Done
       when: Scala passes it, and user-service-rs fails before its fix and passes after.
-- [ ] TD-52.3: one Scala-faithful CORS policy and 405 in gluon-rs `service-basics`, used
+- [x] TD-52.3: one Scala-faithful CORS policy and 405 in gluon-rs `service-basics`, used
       by both ports (exposed headers a parameter). Done when: no CORS or `Allow` code in
       either port; both groups green.
+      — **done 2026-11-19** (all-Rust prep P2): gluon-rs `service-basics` (`aea98c1`):
+      `cors` (`CorsPolicy`, exposed headers a parameter; `Unrouted`),
+      `text_error::without_allow`, `edge::edge` wrapping the finished router (layered
+      alone, axum's `Allow` survives: that was user-service-rs's bug). notification-service-rs
+      `5674540` (38/38), user-service-rs `0b1bb15` (128/128; now Scala's on all four differences,
+      tests red then green). TD-52.1 and 52.2 (harness checks, a Scala capture) stay for
+      after the export.
 
 *2026-11-17 (RPN-5 retro): TD-52.3 also brings the one no-route marker,
 `Unrouted`, into `service-basics` (if RPN-7 hasn't): the fallback sets it, CORS
@@ -456,6 +463,12 @@ refresh the mirror; don't roll the fix back.*
       against the mirror, or the laptop resolves gluon-rs's lock no newer than the
       services'. Done when: `cargo fetch --locked` passes in the sandbox for all three
       Rust repos on a fresh export.
+      — **laptop side done 2026-11-19** (all-Rust prep P2, gluon `5aeabb2`):
+      `bin/check-locks` fails when a crate locked in any SANDBOX_REPOS repo is younger
+      than 14 days (the mirror lagged 3–6+ days: ureq 3.5.2, libz-sys 1.1.33), naming
+      the `cargo update --precise` fallback; `bin/sandbox-export` refuses on it
+      (`--no-lock-check` to override). Today: 282 crates, all by 2026-11-05. Tick when
+      the session's `bin/sandbox-setup --check` reports the three locks fetched (TD-61).
 
 *2026-11-17 (sandbox, RPN-10, was TD-S10): the mirror still has libz-sys 1.1.31 at
 most, now in gluon-rs's lock too (kafka-client → rdkafka). The session committed
