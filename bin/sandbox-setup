@@ -22,7 +22,6 @@ Steps: network, image, rust, node, cdc, vim, shellcheck, shell, git-init, git-id
 import argparse
 import json
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -39,16 +38,10 @@ HOME = Path.home()
 
 # --- What the sandbox needs, recorded in one place -------------------------
 
-ARCHES = {"x86_64": ("x86_64", "x64"), "aarch64": ("aarch64", "arm64")}
-"""Machine → (Rust/Debian triple prefix, Node package suffix). The sandbox is x86_64;
-aarch64 is the laptop's native sandbox bed (bin/sandbox-bed up --native)."""
-MACHINE = platform.machine()
-TRIPLE_ARCH, NODE_ARCH = ARCHES.get(MACHINE, ARCHES["x86_64"])
-
 PACKAGE_SOURCES = {
     "PyPI": "https://pypi.org/simple/pip/",
     "crates.io": "https://index.crates.io/config.json",
-    "Rust toolchains": f"https://static.rust-lang.org/rustup/dist/{TRIPLE_ARCH}-unknown-linux-gnu/rustup-init",
+    "Rust toolchains": "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init",
     "npm": "https://registry.npmjs.org/typescript",
     "Maven Central": "https://repo1.maven.org/maven2/org/apache/kafka/kafka_2.13/maven-metadata.xml",
     "Ubuntu archive": "http://archive.ubuntu.com/ubuntu/",
@@ -60,7 +53,7 @@ ISOLATION_TOOLS = ("bwrap", "unshare", "nsenter")
 """What tools/gluon-kube runs pods with (ADR 0030; GK-1 found them enough, no root)."""
 PYTHON_VERSION = "3.13"
 
-RUSTUP_INIT_URL = f"https://static.rust-lang.org/rustup/dist/{TRIPLE_ARCH}-unknown-linux-gnu/rustup-init"
+RUSTUP_INIT_URL = "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"
 RUST_TOOLCHAIN = "1.99.1"
 """Matches services/user-service-rs/rust-toolchain.toml (RUST-2.2)."""
 RUST_COMPONENTS = ("rustfmt", "clippy", "llvm-tools-preview")
@@ -71,7 +64,7 @@ CARGO_HOME = HOME / ".cargo"
 
 NODE_VERSION = "24.21.0"
 """Node for the AsyncAPI HTML (RUST-4.2): @asyncapi/generator 3.x needs >= 24.11
-and the image has 22. npm's node-linux-<arch> package (the official binary), run
+and the image has 22. npm's node-linux-x64 package (the official binary), run
 as `node24`; the image's npm drives it."""
 NODE_ROOT = HOME / ".local" / f"node-{NODE_VERSION}"
 
@@ -248,10 +241,6 @@ def step_image(_install: bool) -> list[Result]:
             f"uv can't find Python {PYTHON_VERSION} (expected under /opt/uv-python)",
         )
     )
-    if MACHINE not in ARCHES:
-        results.append(
-            Result("image", "MISSING", f"unsupported architecture {MACHINE} (want {', '.join(ARCHES)})")
-        )
     results.extend(isolation())
     pg_ctl = shutil.which("pg_ctl")
     if pg_ctl is None:
@@ -359,7 +348,7 @@ def step_rust(install: bool) -> list[Result]:
 
 
 def step_node(install: bool) -> list[Result]:
-    """Node 24 from npm's node-linux-<arch> into ~/.local, linked onto the PATH as node24."""
+    """Node 24 from npm's node-linux-x64 into ~/.local, linked onto the PATH as node24."""
     node = NODE_ROOT / "bin" / "node"
     status = "OK"
     if first_line([str(node), "--version"]) != f"v{NODE_VERSION}":
@@ -370,8 +359,8 @@ def step_node(install: bool) -> list[Result]:
                 )
             ]
         with tempfile.TemporaryDirectory() as scratch:
-            run(["npm", "pack", f"node-linux-{NODE_ARCH}@{NODE_VERSION}", "--silent"], cwd=Path(scratch))
-            tarball = Path(scratch) / f"node-linux-{NODE_ARCH}-{NODE_VERSION}.tgz"
+            run(["npm", "pack", f"node-linux-x64@{NODE_VERSION}", "--silent"], cwd=Path(scratch))
+            tarball = Path(scratch) / f"node-linux-x64-{NODE_VERSION}.tgz"
             run(["tar", "xzf", str(tarball), "-C", scratch])
             shutil.rmtree(NODE_ROOT, ignore_errors=True)
             shutil.copytree(Path(scratch) / "package", NODE_ROOT, symlinks=True)
@@ -505,7 +494,7 @@ def step_vim(install: bool) -> list[Result]:
         "#!/usr/bin/env bash\n"
         "# vim unpacked from Ubuntu's .debs by bin/sandbox-setup (no root in the sandbox).\n"
         f'export VIMRUNTIME="{runtime}"\n'
-        f'export LD_LIBRARY_PATH="{VIM_ROOT}/usr/lib/{TRIPLE_ARCH}-linux-gnu'
+        f'export LD_LIBRARY_PATH="{VIM_ROOT}/usr/lib/x86_64-linux-gnu'
         '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n'
         # The desktop terminal runs as root, whose HOME has no .vimrc: use this one.
         f'[ -f "$HOME/.vimrc" ] || export VIMINIT="source {HOME / ".vimrc"}"\n'
