@@ -184,6 +184,11 @@ RULES = (
     Rule("email", "`sandbox@gluon.local`",
          "The git identity for commits made in the sandbox; `.local` isn't routable.",
          re.compile(r"^sandbox@gluon\.local$")),
+    Rule("email", "`acceptance-<run>-<suffix>@gluon.test` in the full-stack capture",
+         "Addresses the acceptance suite generates per run (tests/acceptance/src/testData.ts);"
+         " `.test` is reserved for testing (RFC 2606) and no mailbox exists.",
+         re.compile(r"^acceptance-[0-9]+-[a-z0-9]+@gluon\.test$"),
+         only_in=re.compile(r"^tests/contract/contracts/full-stack/")),
     Rule("email", "`support@asyncapi.org`, `i@izs.me`",
          "Contacts of upstream open-source projects, published in their packages.",
          re.compile(r"^(?:support@asyncapi\.org|i@izs\.me)$")),
