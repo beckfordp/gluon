@@ -56,11 +56,15 @@ if [ ! -d "$SUITE_DIR" ]; then
   exit 1
 fi
 # The suite pins Node 26 (.nvmrc; engines >= 24); a shell's PATH may still have an
-# older node first, so fall back to nvm's newest installed 26.
+# older node first, so fall back to nvm's newest installed 26, or the sandbox's node24
+# (bin/sandbox-setup).
 if [ "$(node_major node || echo 0)" -lt 24 ]; then
   nvm26=$(ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v26.* 2>/dev/null | sort -V | tail -1)
   if [ -n "$nvm26" ] && [ -x "$nvm26/bin/node" ]; then
     export PATH="$nvm26/bin:$PATH"
+  elif node24=$(command -v node24) && [ "$(node_major "$node24" || echo 0)" -ge 24 ]; then
+    node24_dir=$(dirname "$(readlink -f "$node24")")
+    export PATH="$node24_dir:$PATH"
   else
     echo "FAIL: node $(node -v 2>/dev/null || echo missing); need >= 24 (nvm install 26)" >&2
     exit 1

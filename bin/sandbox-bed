@@ -50,11 +50,18 @@ up() {
     -v "$NAME-model:/home/model" -v "$NAME-bin:/home/claude/.local/bin" \
     "$image" > /dev/null
   docker cp "$scratch/gluon.tar.gz" "$NAME:/tmp/gluon.tar.gz"
+  # The other uploads, beside gluon as in the sandbox (bin/fetch-playwright-browsers).
+  local upload
+  for upload in "$GLUON"/../sandbox/workspace/ms-playwright-*-linux-x64.tar.gz; do
+    [ -f "$upload" ] && docker cp "$upload" "$NAME:/workspace/"
+  done
   docker exec -u root "$NAME" bash -c \
     'tar -xzf /tmp/gluon.tar.gz -C /workspace && chown -R model:model /workspace /home/model'
 
+  # Playwright's CDN pointed nowhere: the sandbox can't reach it, so the upload is used.
   echo "== bin/sandbox-setup (as model)"
-  as_model 'bin/sandbox-setup && bin/sandbox-setup --check'
+  as_model 'export PLAYWRIGHT_DOWNLOAD_HOST=http://127.0.0.1:9
+    bin/sandbox-setup && bin/sandbox-setup --check'
 
   echo "== gkube up $service"
   as_model "gkube cluster start && gkube up $service && gkube get pods"

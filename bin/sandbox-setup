@@ -16,12 +16,15 @@ Usage:
   bin/sandbox-setup --only rust vim
                                limit to the named steps
 
-Steps: network, image, rust, node, cdc, vim, shellcheck, shell, git-init, git-identity, projects.
+Steps: network, image, rust, node, cdc, vim, shellcheck, redis, shell, git-init, git-identity,
+projects, browsers. Each uses what the sandbox already provides (on the PATH, a mirror)
+and installs its own copy only when that is missing.
 """
 
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -127,6 +130,57 @@ if !has('gui_running')
   execute "set <S-Tab>=\\e[Z"
 endif
 """
+REDIS_MAJOR = 7
+"""gluon-local's Redis (cart, catalog, order) is redis:7; Ubuntu 24.04's .deb is 7.0."""
+REDIS_PACKAGES = ("redis-server", "redis-tools")
+REDIS_ROOT = HOME / ".local" / "redis-root"
+
+ACCEPTANCE = GLUON / "tests" / "acceptance"
+NPM_PROJECTS = (Path("tests") / "acceptance", Path("frontends") / "gshop")
+"""npm projects the session runs (all-Rust prep P6); both need Node >= 24 (engines)."""
+PLAYWRIGHT_CACHE = Path(
+    os.environ.get("PLAYWRIGHT_BROWSERS_PATH") or HOME / ".cache" / "ms-playwright"
+)
+BROWSERS_UPLOAD = "ms-playwright"
+"""bin/fetch-playwright-browsers' archive, uploaded beside gluon.tar.gz: either
+`ms-playwright-<version>-linux-x64.tar.gz` or, unpacked by the upload, `ms-playwright/`."""
+CHROMIUM_LIB_PACKAGES = (
+    "libglib2.0-0t64",
+    "libatk1.0-0t64",
+    "libatk-bridge2.0-0t64",
+    "libatspi2.0-0t64",
+    "libdbus-1-3",
+    "libnss3",
+    "libnspr4",
+    "libx11-6",
+    "libxcb1",
+    "libxcomposite1",
+    "libxdamage1",
+    "libxext6",
+    "libxfixes3",
+    "libxrandr2",
+    "libxkbcommon0",
+    "libgbm1",
+    "libasound2t64",
+    "libfontconfig1",
+    "fontconfig-config",
+    "fonts-liberation",
+)
+"""The headless shell's libraries a minimal Ubuntu 24.04 lacks (the bed's ldd), and fonts."""
+CHROMIUM_LIBS = HOME / ".local" / "chromium-libs"
+LAUNCH_PROBE = """
+const { chromium } = require('@playwright/test');
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  await page.setContent('<p>gshop</p>');
+  const text = await page.textContent('p');
+  console.log(`${browser.version()} ${text}`);
+  await browser.close();
+})().catch((error) => { console.error(error.message); process.exit(1); });
+"""
+"""Headless Chromium launched as the acceptance suite launches it, a page rendered."""
+
 MANAGED_MARK = "bin/sandbox-setup"
 """A ~/.vimrc whose first line carries this is ours to rewrite; any other is left alone."""
 
@@ -331,7 +385,10 @@ def step_rust(install: bool) -> list[Result]:
         status = "INSTALLED"
     for tool, version in CARGO_TOOLS.items():
         subcommand = tool.removeprefix("cargo-")
-        if version not in first_line([str(cargo_bin / tool), subcommand, "--version"]):
+        on_path = first_line([tool, subcommand, "--version"])
+        if version not in on_path and version not in first_line(
+            [str(cargo_bin / tool), subcommand, "--version"]
+        ):
             if not install:
                 return [Result("rust", "MISSING", f"{tool} {version} not installed")]
             run([str(cargo_bin / "cargo"), "install", tool, "--version", version, "--locked"])
@@ -347,8 +404,27 @@ def step_rust(install: bool) -> list[Result]:
     return [Result("rust", status, f"{version}; {tools}; linked into {bin_dir()}")]
 
 
+def provided_node() -> str | None:
+    """A Node >= 24.11 on the PATH that isn't ours (the image's, a mirror's), or None."""
+    found = shutil.which("node")
+    match = re.match(r"v(\d+)\.(\d+)", first_line([found, "--version"]) if found else "")
+    if found is None or match is None or (int(match[1]), int(match[2])) < (24, 11):
+        return None
+    return None if Path(found).resolve().is_relative_to(NODE_ROOT) else found
+
+
 def step_node(install: bool) -> list[Result]:
     """Node 24 from npm's node-linux-x64 into ~/.local, linked onto the PATH as node24."""
+    link = bin_dir() / "node24"
+    provided = provided_node()
+    if provided is not None:
+        if install:
+            link.parent.mkdir(parents=True, exist_ok=True)
+            link.unlink(missing_ok=True)
+            link.symlink_to(provided)
+        elif not link.exists() or link.resolve() != Path(provided).resolve():
+            return [Result("node", "MISSING", f"{provided} is Node >= 24 but {link} isn't it")]
+        return [Result("node", "OK", f"{first_line([provided, '--version'])} provided, as {link}")]
     node = NODE_ROOT / "bin" / "node"
     status = "OK"
     if first_line([str(node), "--version"]) != f"v{NODE_VERSION}":
@@ -365,7 +441,6 @@ def step_node(install: bool) -> list[Result]:
             shutil.rmtree(NODE_ROOT, ignore_errors=True)
             shutil.copytree(Path(scratch) / "package", NODE_ROOT, symlinks=True)
         status = "INSTALLED"
-    link = bin_dir() / "node24"
     if install:
         link.parent.mkdir(parents=True, exist_ok=True)
         link.unlink(missing_ok=True)
@@ -438,10 +513,11 @@ def step_cdc(install: bool) -> list[Result]:
     ]
 
 
-def apt_unpack(packages: Sequence[str], root: Path) -> None:
-    """Downloads `packages`' .debs from Ubuntu's archive and unpacks them into `root`
-    (replaced), without root: apt's state lives under APT_STATE."""
-    apt_opts = [
+def apt_opts() -> list[str]:
+    """apt without root: its state under APT_STATE, no locks, downloads as this user."""
+    for sub in ("lists/partial", "cache/archives/partial", "deb"):
+        (APT_STATE / sub).mkdir(parents=True, exist_ok=True)
+    return [
         "-o",
         f"Dir::State::Lists={APT_STATE / 'lists'}",
         "-o",
@@ -451,13 +527,34 @@ def apt_unpack(packages: Sequence[str], root: Path) -> None:
         "-o",
         f"APT::Sandbox::User={os.environ.get('USER') or Path.home().name}",
     ]
-    for sub in ("lists/partial", "cache/archives/partial", "deb"):
-        (APT_STATE / sub).mkdir(parents=True, exist_ok=True)
-    run(["apt-get", *apt_opts, "update"])
+
+
+def apt_not_installed(packages: Sequence[str]) -> list[str]:
+    """`packages` and everything they depend on (recursively, no recommends) that the
+    image hasn't installed: what to unpack so they run here."""
+    opts = apt_opts()
+    run(["apt-get", *opts, "update"])
+    skip = ("--no-recommends", "--no-suggests", "--no-conflicts", "--no-breaks")
+    tree = run(
+        ["apt-cache", *opts, "depends", "--recurse", *skip, "--no-replaces", "--no-enhances"]
+        + list(packages)
+    )
+    closure = {line for line in tree.splitlines() if line and line[0] not in " <"}
+    installed = {
+        line.split(":")[0] for line in run(["dpkg-query", "-W", "-f", "${Package}\\n"]).split()
+    }
+    return sorted(closure - installed)
+
+
+def apt_unpack(packages: Sequence[str], root: Path) -> None:
+    """Downloads `packages`' .debs from Ubuntu's archive and unpacks them into `root`
+    (replaced), without root: apt's state lives under APT_STATE."""
+    opts = apt_opts()
+    run(["apt-get", *opts, "update"])
     debs = APT_STATE / "deb"
     for old in debs.glob("*.deb"):
         old.unlink()
-    run(["apt-get", *apt_opts, "download", *packages], cwd=debs)
+    run(["apt-get", *opts, "download", *packages], cwd=debs)
     shutil.rmtree(root, ignore_errors=True)
     root.mkdir(parents=True)
     for deb in sorted(debs.glob("*.deb")):
@@ -530,6 +627,181 @@ def step_shellcheck(install: bool) -> list[Result]:
         "version unknown",
     )
     return [Result("shellcheck", status, f"{version} at {binary}, as {link}")]
+
+
+def redis_major() -> int | None:
+    """The major version of the `redis-server` on the PATH, or None if none runs."""
+    match = re.search(r"v=(\d+)\.", first_line(["redis-server", "--version"]))
+    return int(match[1]) if match else None
+
+
+def lib_path(root: Path) -> str:
+    """The library directories of .debs unpacked into `root`."""
+    return f"{root}/usr/lib/x86_64-linux-gnu:{root}/lib/x86_64-linux-gnu"
+
+
+def step_redis(install: bool) -> list[Result]:
+    """redis-server 7 for the Redis-backed ports' tests (all-Rust prep P6): the image's or
+    a mirror's if on the PATH, else Ubuntu's .debs unpacked without root, with wrappers."""
+    found, target = shutil.which("redis-server"), bin_dir()
+    ours = found is not None and Path(found) == target / "redis-server"
+    major = redis_major()
+    if major is not None and major >= REDIS_MAJOR:
+        where = f"unpacked in {REDIS_ROOT}" if ours else "provided"
+        return [Result("redis", "OK", f"{first_line(['redis-server', '--version'])} ({where})")]
+    if not install:
+        return [Result("redis", "MISSING", f"no redis-server {REDIS_MAJOR} on the PATH")]
+    apt_unpack(apt_not_installed(REDIS_PACKAGES), REDIS_ROOT)
+    target.mkdir(parents=True, exist_ok=True)
+    for tool in ("redis-server", "redis-cli"):
+        write_executable(
+            target / tool,
+            "#!/usr/bin/env bash\n"
+            "# Unpacked from Ubuntu's .debs by bin/sandbox-setup (none on the PATH).\n"
+            f'export LD_LIBRARY_PATH="{lib_path(REDIS_ROOT)}'
+            '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n'
+            f'exec "{REDIS_ROOT}/usr/bin/{tool}" "$@"\n',
+        )
+    version = first_line([str(target / "redis-server"), "--version"])
+    if not version:
+        return [Result("redis", "MISSING", f"{target / 'redis-server'} doesn't run")]
+    return [Result("redis", "INSTALLED", f"{version}; redis-server, redis-cli in {target}")]
+
+
+def node24_env() -> dict[str, str]:
+    """The environment with Node >= 24 (`node24`'s directory) first on the PATH: the npm
+    projects' engines; the image's npm and npx run on it."""
+    env = dict(os.environ, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD="1")
+    node24 = bin_dir() / "node24"
+    if node24.exists():
+        env["PATH"] = f"{node24.resolve().parent}{os.pathsep}{env.get('PATH', '')}"
+    return env
+
+
+def npm_dependencies(relative: Path, install: bool) -> Result:
+    """An npm project's locked dependencies (`npm ci`), installed once."""
+    project = GLUON / relative
+    if (project / "node_modules" / ".package-lock.json").is_file():
+        return Result("projects", "OK", f"{relative}: node_modules present")
+    if not install:
+        return Result("projects", "MISSING", f"{relative}: no node_modules (run without --check)")
+    run(["npm", "ci", "--no-audit", "--no-fund", "--loglevel=error"], cwd=project, env=node24_env())
+    return Result("projects", "INSTALLED", f"{relative}: npm ci")
+
+
+def headless_shell_revision() -> str:
+    """The headless shell revision tests/acceptance's Playwright launches."""
+    browsers = ACCEPTANCE / "node_modules" / "playwright-core" / "browsers.json"
+    entries = json.loads(browsers.read_text(encoding="utf-8"))["browsers"]
+    return next(b["revision"] for b in entries if b["name"] == "chromium-headless-shell")
+
+
+def browsers_from_upload() -> str | None:
+    """Copies the uploaded browsers (bin/fetch-playwright-browsers) into the Playwright
+    cache; the upload's name, or None without one."""
+    uploads = GLUON.parent
+    unpacked = uploads / BROWSERS_UPLOAD
+    archives = sorted(uploads.glob(f"{BROWSERS_UPLOAD}-*-linux-x64.tar.gz"))
+    with tempfile.TemporaryDirectory() as scratch:
+        if not unpacked.is_dir():
+            if not archives:
+                return None
+            run(["tar", "xzf", str(archives[-1]), "-C", scratch])
+            unpacked = Path(scratch) / BROWSERS_UPLOAD
+        PLAYWRIGHT_CACHE.mkdir(parents=True, exist_ok=True)
+        for browser in unpacked.iterdir():
+            if (
+                browser.is_dir()
+                and not browser.name.startswith(".")
+                and not (PLAYWRIGHT_CACHE / browser.name).exists()
+            ):
+                shutil.copytree(browser, PLAYWRIGHT_CACHE / browser.name, symlinks=True)
+    return unpacked.name if unpacked.parent == uploads else archives[-1].name
+
+
+def missing_libraries(binary: Path, libs: Path | None) -> list[str]:
+    """The shared libraries `binary` can't find (ldd), with `libs`' unpacked ones added."""
+    env = dict(os.environ)
+    if libs is not None:
+        env["LD_LIBRARY_PATH"] = lib_path(libs)
+    out = run(["ldd", str(binary)], env=env)
+    return [line.split()[0] for line in out.splitlines() if "not found" in line]
+
+
+def step_browsers(install: bool) -> list[Result]:
+    """Headless Chromium for the acceptance suite (all-Rust prep P6), checked by launching
+    it. First what's there: the Playwright cache, then Playwright's own download (a
+    mirror may serve it), then the upload; its libraries the image's, else unpacked."""
+    if not (ACCEPTANCE / "node_modules" / "@playwright" / "test").is_dir():
+        return [Result("browsers", "MISSING", "tests/acceptance has no node_modules (projects)")]
+    revision = headless_shell_revision()
+    shell = PLAYWRIGHT_CACHE / f"chromium_headless_shell-{revision}"
+    status, source = "OK", "the Playwright cache"
+    if not (shell / "INSTALLATION_COMPLETE").is_file():
+        if not install:
+            return [Result("browsers", "MISSING", f"no {shell} (run without --check)")]
+        status = "INSTALLED"
+        try:
+            env = dict(node24_env(), PLAYWRIGHT_DOWNLOAD_CONNECTION_TIMEOUT="20000")
+            env.pop("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")
+            run(
+                ["npx", "playwright", "install", "--only-shell", "chromium"],
+                cwd=ACCEPTANCE,
+                env=env,
+            )
+            source = "Playwright's download"
+        except (RuntimeError, subprocess.TimeoutExpired):
+            upload = browsers_from_upload()
+            if upload is None or not (shell / "INSTALLATION_COMPLETE").is_file():
+                return [
+                    Result(
+                        "browsers",
+                        "MISSING",
+                        f"no {shell.name}: Playwright's download failed and the upload "
+                        f"({BROWSERS_UPLOAD}-*-linux-x64.tar.gz beside gluon) lacks it",
+                    )
+                ]
+            source = f"the upload ({upload})"
+    binary = next(shell.glob("*/chrome-headless-shell"))
+    real = binary.with_name(f"{binary.name}.real")
+    libraries = "the image's libraries"
+    if missing_libraries(real if real.exists() else binary, None):
+        if not install and not real.exists():
+            return [Result("browsers", "MISSING", f"{binary} lacks libraries (run setup)")]
+        if install and missing_libraries(real if real.exists() else binary, CHROMIUM_LIBS):
+            apt_unpack(apt_not_installed(CHROMIUM_LIB_PACKAGES), CHROMIUM_LIBS)
+            (CHROMIUM_LIBS / "fonts.conf").write_text(
+                f"<fontconfig><dir>{CHROMIUM_LIBS}/usr/share/fonts</dir>"
+                "<cachedir>~/.cache/fontconfig</cachedir></fontconfig>\n"
+            )
+            status = "INSTALLED"
+        still = missing_libraries(real if real.exists() else binary, CHROMIUM_LIBS)
+        if still:
+            return [Result("browsers", "MISSING", f"{binary.name} lacks {', '.join(still)}")]
+        if not real.exists():
+            binary.rename(real)
+            write_executable(
+                binary,
+                "#!/usr/bin/env bash\n"
+                "# Chromium's libraries unpacked from Ubuntu's .debs by bin/sandbox-setup.\n"
+                f'export LD_LIBRARY_PATH="{lib_path(CHROMIUM_LIBS)}'
+                '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n'
+                f'export FONTCONFIG_FILE="{CHROMIUM_LIBS}/fonts.conf"\n'
+                f'exec "{real}" "$@"\n',
+            )
+        libraries = f"libraries unpacked in {CHROMIUM_LIBS}"
+    try:
+        launched = run(["node", "-e", LAUNCH_PROBE], cwd=ACCEPTANCE, env=node24_env()).strip()
+    except (RuntimeError, subprocess.TimeoutExpired) as error:
+        return [Result("browsers", "MISSING", f"headless Chromium doesn't launch: {error}")]
+    return [
+        Result(
+            "browsers",
+            status,
+            f"Chromium {launched.split()[0]} headless shell {revision} from {source}; "
+            f"{libraries}; launched, a page rendered",
+        )
+    ]
 
 
 def step_shell(install: bool) -> list[Result]:
@@ -674,6 +946,9 @@ def step_projects(install: bool) -> list[Result]:
     for relative in SANDBOX_REPOS:
         if (GLUON / relative / "Cargo.lock").is_file():
             results.append(rust_dependencies(relative, install))
+    for relative in NPM_PROJECTS:
+        if (GLUON / relative / "package-lock.json").is_file():
+            results.append(npm_dependencies(relative, install))
     if not results:
         results.append(Result("projects", "INFO", "no sandbox project with a lock file yet"))
     return results
@@ -720,10 +995,12 @@ STEPS: dict[str, Callable[[bool], list[Result]]] = {
     "cdc": step_cdc,
     "vim": step_vim,
     "shellcheck": step_shellcheck,
+    "redis": step_redis,
     "shell": step_shell,
     "git-init": step_git_init,
     "git-identity": step_git_identity,
     "projects": step_projects,
+    "browsers": step_browsers,
 }
 
 

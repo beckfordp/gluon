@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Playwright's linux-x64 Chromium for the sandbox (laptop only; all-Rust prep P6). The
+# sandbox can't reach Playwright's CDN, so the browsers the acceptance suite's Playwright
+# needs are installed here, in a linux/amd64 container, and archived for upload beside
+# gluon.tar.gz. bin/sandbox-setup's `browsers` step installs them into the Playwright
+# cache.
+#   bin/fetch-playwright-browsers [OUT_DIR]   (default ../sandbox/workspace)
+# Writes OUT_DIR/ms-playwright-<version>-linux-x64.tar.gz, unpacking to ms-playwright/.
+set -euo pipefail
+GLUON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="${1:-$GLUON/../sandbox/workspace}"
+VERSION="$(sed -n 's/.*"@playwright\/test": "\([0-9.]*\)".*/\1/p' "$GLUON/tests/acceptance/package.json")"
+NODE_IMAGE="node:24.11.1-bookworm-slim"
+[ -n "$VERSION" ] || { echo "FAIL: no @playwright/test version in tests/acceptance/package.json" >&2; exit 1; }
+
+mkdir -p "$OUT"
+OUT="$(cd "$OUT" && pwd)"
+archive="ms-playwright-$VERSION-linux-x64.tar.gz"
+echo "== Playwright $VERSION: chromium, linux/amd64 ($NODE_IMAGE)"
+docker run --rm --platform linux/amd64 -v "$OUT:/out" "$NODE_IMAGE" bash -euc "
+  export PLAYWRIGHT_BROWSERS_PATH=/tmp/ms-playwright npm_config_update_notifier=false
+  npx -y playwright@$VERSION install chromium
+  tar -czf /out/$archive -C /tmp ms-playwright
+  chown $(id -u):$(id -g) /out/$archive
+"
+echo "Wrote $OUT/$archive ($(du -h "$OUT/$archive" | cut -f1)): upload it beside gluon.tar.gz"
+tar -tzf "$OUT/$archive" | awk -F/ 'NF > 2 && $3 == "" { print "  " $2 }' | sort -u
