@@ -588,37 +588,6 @@ Mediums were fixed in the session (source-citations); these weren't.
 
 ---
 
-## TD-64 — kafka-client review findings (High first)
-
-From the sandbox review of gluon-rs `kafka-client` and events-probe (2026-11-17; were
-TD-S19–S23) against `rust.md`'s checklist. H1–H3 came with the code moved from
-events-probe's `run.rs`; the move kept behaviour. **Fix TD-64.1–64.3 before
-notification-service-rs adopts `kafka-client` (RPN-10 green phase)**, so they don't
-spread to every port.
-
-### Tasks
-- [ ] TD-64.1 (High): `EventConsumer::consume` → `Result<(), String>`, and
-      `kafka-event-consumer`'s `Publish`, `Routes`, `handle_record`, `supervise` errors
-      are `String`: a `thiserror` enum (subscribe, all brokers down, commit, dead-letter
-      failed); `supervise` generic over `E: Display`.
-- [ ] TD-64.2 (High): `stream.rs` reads `SystemTime::now()` for event age: an injected
-      clock on `EventConsumer`, wired in `main`.
-- [ ] TD-64.3 (High): `commit_message(…, CommitMode::Sync)` per record blocks a tokio
-      worker: `tokio::task::block_in_place` around it; at-least-once unchanged; probe
-      group re-run.
-- [ ] TD-64.4: `ConsumerMetrics` built twice per stream (`subscribe`'s `LagContext`,
-      `consume`'s ages): build once in `consume`.
-- [ ] TD-64.5: `ConsumerSettings`' broker, group and topic are plain strings:
-      `GroupId`, `Topic` newtypes parsed where config is read.
-
-*2026-11-18 (sandbox, RPN-11): not fixed first. notification-service-rs adopted
-`kafka-client` through the new `kafka_client::supervised::run_supervised` (was S-1).
-It returns `KafkaError`, but runs `DeadLetter` and `supervise` with their
-`Result<_, String>` underneath; H1–H3 now reach both services and the probe. The session's export left out this file and `plans/`, so it couldn't see
-the warning.*
-
----
-
 ## TD-65 — notification-service-rs has no observability parity, and nothing checks it
 
 Found in RPN-11 (sandbox, 2026-11-18; were items 10–12: H6, P3 in full, P5, S-7).
@@ -738,3 +707,4 @@ Resolved, every task done; the full write-up is in
 - TD-58 — The Kafka consume loop lives in user-service-rs's probe — 2026-11-17
 - TD-60 — `verify-port --only contract` can run without the files the contract needs — 2026-11-19
 - TD-61 — `sandbox-setup --check` reports the Rust dependencies OK without checking — 2026-11-19
+- TD-64 — kafka-client review findings (High first) — 2026-11-19
