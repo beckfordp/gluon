@@ -18,30 +18,43 @@ GLUON = Path(__file__).resolve().parent.parent.parent
 PORTS = (
     (Path("services") / "user-service", Path("services") / "user-service-rs"),
     (Path("services") / "notification-service", Path("services") / "notification-service-rs"),
+    (Path("services") / "cart-service", Path("services") / "cart-service-rs"),
+    (Path("services") / "catalog-service", Path("services") / "catalog-service-rs"),
+    (Path("services") / "inventory-service", Path("services") / "inventory-service-rs"),
+    (Path("services") / "fulfilment-service", Path("services") / "fulfilment-service-rs"),
+    (Path("services") / "payment-service", Path("services") / "payment-service-rs"),
+    (Path("services") / "order-service", Path("services") / "order-service-rs"),
 )
 """Scala service → its Rust port, each started or done in the sandbox; add a line per new port.
-bin/sandbox-export exports both sides (the Rust one once it exists on the laptop)."""
+bin/sandbox-export exports both sides (the Rust one once it exists on the laptop); a Rust
+side first created in the sandbox is saved once it is a git repo."""
 
 SHARED_REPOS = (
     Path("tests") / "contract",
     Path("lib") / "purerest",
     Path("lib") / "gluon-rs",
     Path("tools") / "gluon-kube",
+    Path("tests") / "acceptance",
+    Path("frontends") / "gshop",
 )
 """Repos every port needs: the contract harness, purerest/purekafka as the reference
-for the shared Rust layer, gluon-rs, that layer (TD-43), and gluon-kube, the simulated
-gluon-local the ports run in (ADR 0030)."""
+for the shared Rust layer, gluon-rs, that layer (TD-43), gluon-kube, the simulated
+gluon-local the ports run in (ADR 0030), and the Playwright acceptance suite with the
+gshop frontend it drives (bin/run-acceptance)."""
 
 SANDBOX_REPOS = (
     Path("tests") / "contract",
     *(rust for _, rust in PORTS),
     Path("lib") / "gluon-rs",
     Path("tools") / "gluon-kube",
+    Path("tests") / "acceptance",
+    Path("frontends") / "gshop",
 )
 """Git repos the sandbox commits to, relative to gluon's root: the harness, the Rust ports,
-gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it), and gluon-kube (created in
+gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it), gluon-kube (created in
 the sandbox, ADR 0030; its first order is the contract harness and the first port, so
-bin/sandbox-review's aliases keep their indices)."""
+bin/sandbox-review's aliases keep their indices), and the acceptance suite and gshop,
+run in the sandbox on gluon-kube."""
 
 NESTED_REPO_DIRS = ("services", "frontends", "tools", "lib", "tests")
 """gluon's gitignored directories of independent repos; only their README.md is gluon's."""

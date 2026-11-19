@@ -57,6 +57,10 @@ LOGS_ROOT = Path("/tmp")
 
 STEP_ORDER = ["harness-ci", "rust-ci", "build", "contract", "cluster", "tracks"]
 
+CLUSTER_RUNS_HERE = sys.platform == "linux"
+"""gluon-kube needs Linux (network namespaces, bwrap); the laptop runs the real cluster."""
+CLUSTER_ELSEWHERE = "sandbox only (gluon-kube needs Linux); its criterion is not run"
+
 
 @dataclass(frozen=True)
 class Service:
@@ -166,6 +170,9 @@ def steps_for(
             wanted.add("build")
         if quick:
             wanted.discard("tracks")
+        if "cluster" in wanted and not CLUSTER_RUNS_HERE:
+            wanted.discard("cluster")
+            print(f"skip cluster: {CLUSTER_ELSEWHERE}\n", flush=True)
     return [s for s in STEP_ORDER if s in wanted]
 
 
@@ -387,6 +394,9 @@ def main() -> int:
     unknown = [s for s in args.only or [] if s not in service.steps]
     if unknown:
         print(f"verify-port: {service.name} has no step {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    if "cluster" in (args.only or []) and not CLUSTER_RUNS_HERE:
+        print(f"verify-port: {CLUSTER_ELSEWHERE}", file=sys.stderr)
         return 2
     as_owner(service)
     os.environ["PATH"] = f"{OWNER_BIN}:{Path.home() / '.cargo/bin'}:{os.environ.get('PATH', '')}"

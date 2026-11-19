@@ -35,14 +35,18 @@ Binary files outside ALLOWED_BINARIES stop the export.
 
 No plan travels but EXPORTED_PLANS: PLAN.md, the rest of plans/, TECHNICAL_DEBT.md,
 CHANGELOG.md, this script and its tests (bin/verify-sandbox-tools) stay on the laptop, read-only repos lose conductor/, and working repos (SANDBOX_REPOS) lose
-conductor/archive/ and their tracks.md backlog. The sandbox session's
+conductor/archive/ and their tracks.md backlog items. The sandbox session's
 instructions are written by hand; what it finds comes back in its notes, not
 as TECHNICAL_DEBT.md edits.
 
---no-plans exports no plan at all, for a session run beside one that owns them (the
-gluon-kube spike): no EXPORTED_PLANS, no live Conductor track in any repo, and
-PLANLESS_READ_ONLY repos lose conductor/ as read-only repos do, so only the other
-session commits there. Conductor's product, workflow and style guides stay.
+--no-plans exports no plan at all, for a session that plans for itself: no
+EXPORTED_PLANS, no live Conductor track in any repo, and PLANLESS_READ_ONLY repos (none
+today) lose conductor/ as read-only repos do, for a session run beside one that owns
+them. Conductor's product, workflow and style guides stay.
+
+tracks.md loses only its list items (each with its continuation lines and the blank
+line after it), never its headings, separators or intro, so the sandbox's track
+commits apply to the laptop's file unchanged.
 
 --prefix NAME names the archive NAME-OUT.tar.gz (the archive's root stays OUT's
 name), to tell two exports apart in the sandbox's uploads.
@@ -96,6 +100,8 @@ NOT_EXPORTED = frozenset(
         Path("CHANGELOG.md"),
         Path("bin") / "sandbox-export",
         Path("bin") / "verify-sandbox-tools",
+        Path("bin") / "sandbox-bed",
+        Path("bin") / "lib" / "sandbox-bed" / "Dockerfile",
     }
 )
 """gluon files that stay on the laptop: plans the sandbox session would act on,
@@ -108,9 +114,10 @@ EXPORTED_PLANS = frozenset({Path("plans") / "gluon-kube" / "plan.md"})
 """Plans under NOT_EXPORTED_DIRS that travel: ones drafted and kept up to date in the
 sandbox, which each session reads and amends; the laptop merges them back."""
 
-PLANLESS_READ_ONLY = frozenset({Path("tools") / "gluon-kube"})
-"""SANDBOX_REPOS a --no-plans export treats as read-only: the spike's, whose session
-runs beside the planless one and is the only one to commit there."""
+PLANLESS_READ_ONLY: frozenset[Path] = frozenset()
+"""SANDBOX_REPOS a --no-plans export treats as read-only: those of a session run beside
+the planless one, the only one to commit there. None since the gluon-kube spike
+(GK-3 to GK-7) ended: the all-Rust session changes gluon-kube too."""
 
 PREFIX = re.compile(r"^[a-z][a-z0-9-]*$")
 """A --prefix: one lower-case word, safe in a file name."""
@@ -223,19 +230,23 @@ LEFT_OUT = (
     ("Build output: `target/`, `.bsp/`, `node_modules/`, `.venv/`, `__pycache__/`", "Transient, and `.bsp/sbt.json` holds laptop paths."),
     ("Untracked files", "Not reviewed work: local capture scripts (`contract*.sh`), stray specs."),
     ("`.claude/`, `.idea/`, `.obsidian/`, `.DS_Store`, `structure101-settings.java.hsw`", "Editor, IDE and tool state; `.idea` holds laptop paths."),
-    ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: the other services, `frontends/`, `tools/` bar gluon-kube, the other test suites."),
+    ("Repos not in `PORTS` or `SHARED_REPOS` (`bin/lib/sandbox.py`)", "Not part of a port: `tools/` bar gluon-kube, the other frontends and test suites."),
     ("`PLAN.md`, `TECHNICAL_DEBT.md`, `plans/` bar `plans/gluon-kube/plan.md`", "Plans the sandbox session would act on. The gluon-kube plan travels: drafted and kept up to date in the sandbox."),
     ("`CHANGELOG.md`", "History: for the laptop, not the sandbox session."),
     ("`bin/sandbox-export`, `bin/verify-sandbox-tools`", "Laptop-only: the export and its tests."),
+    ("`bin/sandbox-bed`, `bin/lib/sandbox-bed/`", "Laptop-only: the sandbox's dry run in Docker."),
     ("`lib/gluon-rs`'s `scripts/on-linux.sh`, `scripts/verify-linux-bed.sh`, `scripts/linux-bed/Dockerfile`", "The Docker Linux test bed: laptop-only, the sandbox is Linux without Docker."),
     ("`conductor/` in read-only repos", "Their tracks, backlogs and archived plans; nothing is built there."),
-    ("`conductor/archive/` and the `tracks.md` backlog in working repos", "Past and future work the sandbox session would pick up; active tracks and `workflow.md` stay."),
+    ("`conductor/archive/` and the `tracks.md` backlog items in working repos", "Past and future work the sandbox session would pick up; active tracks, `tracks.md`'s layout and `workflow.md` stay."),
 )
 """What the export leaves out and why; reproduced in EXPORT-REVIEW.md."""
 
 PLANLESS_LEFT_OUT = (
-    ("`plans/gluon-kube/plan.md`, every live Conductor track (`conductor/tracks/`, `tracks.md`'s list)", "A planless export (`--no-plans`): this session works from its own prompt, beside the gluon-kube spike's session, which owns the plans."),
-    ("`conductor/` in `tools/gluon-kube`", "The spike's repo, read-only here: only the spike's session commits to it."),
+    ("`plans/gluon-kube/plan.md`, every live Conductor track (`conductor/tracks/`, `tracks.md`'s list)", "A planless export (`--no-plans`): this session works from its own prompt and plans for itself."),
+    *(
+        (f"`conductor/` in `{repo.as_posix()}`", "Read-only here: a session beside this one commits to it.")
+        for repo in sorted(PLANLESS_READ_ONLY)
+    ),
 )
 """What a --no-plans export also leaves out; added to LEFT_OUT in EXPORT-REVIEW.md."""
 
@@ -289,19 +300,32 @@ def conductor_files(repo: Path, files: list[Path], plans: bool = True) -> list[P
     ]
 
 
-def strip_section(text: str, heading: str) -> str:
-    """tracks.md without the items and intro under `## heading`; the heading stays as patch context."""
-    start = text.find(f"\n## {heading}\n")
-    if start < 0:
-        return text
-    following = text.find("\n## ", start + 1)
-    end = following if following >= 0 else len(text)
-    return text[:start] + f"\n## {heading}\n" + text[end:]
+def strip_items(text: str, heading: str) -> str:
+    """tracks.md without the list items under `## heading`: each `- ` line, its continuation
+    lines (indented, or `*Link: …*`) and the blank line after it. Headings, separators and
+    intro stay, so the sandbox's track commits have the laptop's file as their context."""
+    kept: list[str] = []
+    inside = dropping = False
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            inside, dropping = line.rstrip("\n") == f"## {heading}", False
+        elif inside and line.startswith("- "):
+            dropping = True
+            continue
+        elif dropping and line.strip() and line.startswith((" ", "\t", "*Link")):
+            continue
+        elif dropping and not line.strip():
+            dropping = False
+            continue
+        else:
+            dropping = False
+        kept.append(line)
+    return "".join(kept)
 
 
 def strip_backlog(text: str) -> str:
-    """tracks.md without its Backlog items and intro."""
-    return strip_section(text, "Backlog")
+    """tracks.md without its Backlog items."""
+    return strip_items(text, "Backlog")
 
 
 def dirty(repo: Path) -> list[str]:
@@ -569,7 +593,7 @@ def export(out: Path, captures: Sequence[str], clean: bool, plans: bool = True) 
             tracks = staging / relative / CONDUCTOR / "tracks.md"
             if repo != GLUON and tracks.is_file():
                 stripped = strip_backlog(tracks.read_text())
-                tracks.write_text(stripped if plans else strip_section(stripped, "Tracks"))
+                tracks.write_text(stripped if plans else strip_items(stripped, "Tracks"))
             head = git(repo, "rev-parse", "HEAD").strip()
             entries.append({"path": relative.as_posix(), "head": head, "files": len(files)})
             print(f"copied    {relative} @ {head[:7]} ({len(files)} files)")
@@ -631,7 +655,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--no-auto-captures", action="store_true", help="skip ~/*-contracts-YYYYMMDD")
     parser.add_argument("--no-archive", action="store_true", help="don't write OUT.tar.gz")
     parser.add_argument("--yes", action="store_true", help="remove untracked files unasked (build output always is)")
-    parser.add_argument("--no-plans", action="store_true", help="no plan, no live track; gluon-kube read-only")
+    parser.add_argument("--no-plans", action="store_true", help="no plan, no live track")
     parser.add_argument("--prefix", metavar="NAME", help="archive as NAME-OUT.tar.gz")
     args = parser.parse_args(argv)
     if args.prefix is not None and not PREFIX.match(args.prefix):

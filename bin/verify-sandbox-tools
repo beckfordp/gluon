@@ -8,10 +8,11 @@
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
 #   4. the touched Python scripts compile
-#   5. a default export carries the gluon-kube spike's plan and live track
-#   6. a --no-plans export carries no plan, no live track, no gluon-kube
-#      conductor/, and keeps Conductor's workflow
-#   7. --prefix names the archive; tracks.md loses a section's items, not its heading
+#   5. a default export carries the gluon-kube plan
+#   6. a --no-plans export carries no plan and no live track, and keeps Conductor's
+#      workflow, gluon-kube's included (no repo is read-only for it now)
+#   7. --prefix names the archive; tracks.md loses a section's items, not its
+#      headings, separators or intro (the laptop's layout, for clean imports)
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
 #   bin/verify-sandbox-tools
 set -uo pipefail
@@ -55,21 +56,21 @@ check "export carries the ports and shared repos, no other" export.log '
 with tempfile.TemporaryDirectory() as out:
     manifest = export.export(Path(out) / "gluon", [], False)
 got = {repo["path"] for repo in manifest["repos"]}
-want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "services/user-service",
-        "services/user-service-rs", "services/notification-service", "tools/gluon-kube"}
-want |= {"services/notification-service-rs"} if Path("services/notification-service-rs").is_dir() else set()
+scala = ["user", "notification", "cart", "catalog", "inventory", "fulfilment", "payment", "order"]
+want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "tools/gluon-kube",
+        "tests/acceptance", "frontends/gshop", *(f"services/{s}-service" for s in scala)}
+want |= {f"services/{s}-service-rs" for s in scala if Path(f"services/{s}-service-rs").is_dir()}
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
 sys.exit(0 if got == want else f"want {sorted(want)}, got {sorted(got)}")'
 
-check "default export carries the spike's plan and live track" plans.log '
+check "default export carries the gluon-kube plan" plans.log '
 with tempfile.TemporaryDirectory() as out:
     root = Path(out) / "gluon"
     manifest = export.export(root, [], False)
     plan = (root / "plans" / "gluon-kube" / "plan.md").is_file()
-    tracks = sorted(p.name for p in (root / "tools" / "gluon-kube" / "conductor" / "tracks").iterdir())
-print("plan:", plan, "gluon-kube tracks:", tracks, "plans:", manifest["plans"])
-sys.exit(0 if plan and tracks and manifest["plans"] else "spike plan or track missing")'
+print("plan:", plan, "plans:", manifest["plans"])
+sys.exit(0 if plan and manifest["plans"] else "gluon-kube plan missing")'
 
 check "--no-plans export carries no plan and no live track" noplans.log '
 with tempfile.TemporaryDirectory() as out:
@@ -77,38 +78,45 @@ with tempfile.TemporaryDirectory() as out:
     manifest = export.export(root, [], False, plans=False)
     plans = sorted(str(p.relative_to(root)) for p in (root / "plans").rglob("*")) if (root / "plans").exists() else []
     live = sorted(str(p.relative_to(root)) for p in root.rglob("conductor/tracks/*"))
-    kube = (root / "tools" / "gluon-kube" / "conductor").exists()
+    kube = (root / "tools" / "gluon-kube" / "conductor" / "workflow.md").is_file()
     workflow = (root / "tests" / "contract" / "conductor" / "workflow.md").is_file()
     listed = [line for p in root.rglob("conductor/tracks.md")
               for line in p.read_text().split("## Tracks", 1)[-1].split("## Backlog", 1)[0].splitlines()
               if line.startswith("- [")]
     review = (root / "EXPORT-REVIEW.md").read_text()
 print("plans:", plans, "live:", live, "gluon-kube conductor:", kube, "workflow:", workflow, "listed:", listed)
-sys.exit(0 if not plans and not live and not kube and workflow and not listed
+sys.exit(0 if not plans and not live and kube and workflow and not listed
          and not manifest["plans"] and "--no-plans" in review else "plan material exported")'
 
-check "--prefix names the archive; a stripped section keeps its heading" prefix.log '
+check "--prefix names the archive; tracks.md keeps its layout, loses its items" prefix.log '
 names = (export.archive_name(Path("w/gluon"), "spike"), export.archive_name(Path("w/gluon"), None))
-text = "# T\n\n## Tracks\n\n- [~] **Track: x**\n\n---\n\n## Backlog\n- y\n"
-stripped = export.strip_section(export.strip_backlog(text), "Tracks")
-print(names, repr(stripped))
+cases = [
+    ("# T\n\n## Tracks\n\n- [~] **Track: x**\n  *Link: [./tracks/x/](./tracks/x/)*\n\n---\n\n## Backlog\n- y\n",
+     "# T\n\n## Tracks\n\n---\n\n## Backlog\n"),
+    ("## Tracks\n\n---\n\n- [~] **Track: x**\n*Link: [./tracks/x/](./tracks/x/)*\n\n---\n\n## Backlog\n"
+     "\nIntro, kept.\n\n- a\n- b\n",
+     "## Tracks\n\n---\n\n---\n\n## Backlog\n\nIntro, kept.\n\n"),
+    ("## Tracks\n\n\n---\n\n## Backlog\n", "## Tracks\n\n\n---\n\n## Backlog\n"),
+]
+got = [export.strip_items(export.strip_backlog(text), "Tracks") for text, _ in cases]
+print(names, [repr(g) for g in got])
 sys.exit(0 if names == ("spike-gluon.tar.gz", "gluon.tar.gz")
-         and stripped == "# T\n\n## Tracks\n\n## Backlog\n" else "unexpected")'
+         and got == [want for _, want in cases] else "unexpected")'
 
 check "reference check warns only for a repo not exported" refs.log '
 with tempfile.TemporaryDirectory() as scratch:
     staging = Path(scratch)
     for name, text in {
-        "bin/run-thing": "cd services/payment-service\n",
+        "bin/run-thing": "cd tools/pure-service-generator\n",
         "bin/uses-exported": "cd services/user-service\n",
         "bin/run-perf": "cd tests/performance\n",
-        "docs/note.md": "see services/payment-service\n",
+        "docs/note.md": "see tools/pure-service-generator\n",
     }.items():
         (staging / name).parent.mkdir(parents=True, exist_ok=True)
         (staging / name).write_text(text)
     found, allowed = export.unexported_refs(staging, sandbox.export_repos())
 print("found:", found, "allowed:", dict(allowed))
-sys.exit(0 if found == ["bin/run-thing:1: services/payment-service"] and sum(allowed.values()) == 1
+sys.exit(0 if found == ["bin/run-thing:1: tools/pure-service-generator"] and sum(allowed.values()) == 1
          else "unexpected warnings")'
 
 check "sandbox-save warns only for unlisted git repos" save.log '

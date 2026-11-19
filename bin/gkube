@@ -16,7 +16,7 @@ SELF="$(realpath "${BASH_SOURCE[0]}")"
 GLUON="$(dirname "$(dirname "$SELF")")"
 KUBE="$GLUON/tools/gluon-kube"
 
-owner="$(stat -c %U "$KUBE")"
+owner="$(stat -c %U "$KUBE" 2> /dev/null || stat -f %Su "$KUBE")"
 if [ "$(id -un)" != "$owner" ]; then
   if [ "$(id -u)" = 0 ] && command -v runuser > /dev/null; then
     exec runuser -u "$owner" -- env HOME="$(getent passwd "$owner" | cut -d: -f6)" \
