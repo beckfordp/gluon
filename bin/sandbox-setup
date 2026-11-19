@@ -207,7 +207,10 @@ def step_network(_install: bool) -> list[Result]:
     results = []
     for name, url in PACKAGE_SOURCES.items():
         try:
-            request = urllib.request.Request(url, method="HEAD")
+            # The Ubuntu archive answers 403 to urllib's default User-Agent.
+            request = urllib.request.Request(
+                url, method="HEAD", headers={"User-Agent": "gluon-sandbox-setup"}
+            )
             with urllib.request.urlopen(request, timeout=15) as response:
                 status = response.status
         except OSError as error:
