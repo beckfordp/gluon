@@ -5,6 +5,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/infra/k8s/observability/dashboards/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/tests/contract/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/tools/gluon-kube/.venv" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
