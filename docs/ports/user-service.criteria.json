@@ -10,6 +10,8 @@
      "description": "(contract part) the metric families, labels and buckets dashboards query"},
     {"id": "C3", "needs": ["harness-ci"],
      "description": "(contract part) cluster mode, against a started service"},
+    {"id": "cluster", "needs": ["cluster"],
+     "description": "cluster mode green inside gluon-kube, the simulated gluon-local (ADR 0030)"},
     {"id": "ci", "needs": ["rust-ci"],
      "description": "Rust CI: fmt, clippy, tests, coverage; payload schema = registry"},
     {"id": "tracks", "needs": ["tracks"],

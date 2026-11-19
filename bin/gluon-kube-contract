@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# The contract harness's cluster mode against a Rust port in gluon-kube, the simulated
+# gluon-local (ADR 0030; plans/gluon-kube/plan.md GK-7.1). In a cluster of its own:
+#   1. `gluon-kube up SERVICE` (bin/k8s-local-up's sequence, USER_SERVICE_IMPL=rust)
+#   2. the user outbox connector restarted if its task FAILED: in a fresh cluster it
+#      can start before the service has created outbox_events (the race found in GK-6)
+#   3. tests/contract `pytest checks --service SERVICE` inside the cluster, in a
+#      `gluon-kube run` pod, with CONTRACT_BASE_URL=http://SERVICE:8080 and the real
+#      topic read with `gluon-kube exec deploy/kafka -- kafka-console-consumer.sh`
+#   4. the cluster stopped (--keep leaves it running, its state directory printed)
+# Exits with the harness's exit code (1 if a step before it failed). Only user-service
+# has a cluster mode (RUST-5.4).
+#   bin/gluon-kube-contract [SERVICE] [--keep]
+set -uo pipefail
+SELF="$(realpath "${BASH_SOURCE[0]}")"
+GLUON="$(dirname "$(dirname "$SELF")")"
+KUBE="$GLUON/tools/gluon-kube"
+GK="$KUBE/.venv/bin/gluon-kube"
+SERVICE=user-service
+KEEP=0
+for arg in "$@"; do
+  case "$arg" in
+    --keep) KEEP=1 ;;
+    -*) echo "usage: bin/gluon-kube-contract [SERVICE] [--keep]" >&2; exit 2 ;;
+    *) SERVICE="$arg" ;;
+  esac
+done
+# cargo, uv and node24 (the build, the harness) are the sandbox user's.
+PATH="/home/claude/.local/bin:$HOME/.cargo/bin:$PATH"
+export PATH
+MADE=""
+if [ -z "${GLUON_KUBE_STATE:-}" ]; then
+  MADE="$(mktemp -d /tmp/gluon-kube-contract.XXXXXX)"
+  GLUON_KUBE_STATE="$MADE/state"
+fi
+export GLUON_KUBE_STATE
+stop() {
+  if [ "$KEEP" = 1 ]; then
+    echo "cluster kept: GLUON_KUBE_STATE=$GLUON_KUBE_STATE"
+  else
+    "$GK" cluster stop > /dev/null 2>&1
+    [ -n "$MADE" ] && rm -rf "$MADE"
+  fi
+}
+trap stop EXIT
+
+echo "== gluon-kube cluster (state $GLUON_KUBE_STATE) =="
+"$GK" cluster start || exit 1
+USER_SERVICE_IMPL=rust "$GK" up "$SERVICE" || { echo "FAIL: gluon-kube up $SERVICE"; exit 1; }
+
+echo "== The user outbox connector =="
+status() {
+  "$GK" run -- curl -s "http://kafka-connect:8083/connectors/user-outbox-connector/status" \
+    | python3 -c 'import json,sys; t=json.load(sys.stdin).get("tasks") or [{}]; print(t[0].get("state","NONE"))'
+}
+# Restarted (if FAILED) until its task runs, the restart re-sent every 20 s for up to
+# 3 minutes: Connect carries a restart out only when its worker is in good standing with
+# its group, and on a starved machine its heartbeats time out and it rebalances.
+state="$(status)"
+[ "$state" = FAILED ] && echo "its task FAILED (started before outbox_events existed): restarting it"
+deadline=$((SECONDS + 180))
+last=$((SECONDS - 20))
+while [ "$state" != RUNNING ] && [ "$SECONDS" -lt "$deadline" ]; do
+  if [ "$state" = FAILED ] && [ $((SECONDS - last)) -ge 20 ]; then
+    "$GK" exec deploy/kafka-connect -- curl -sf -o /dev/null -X POST \
+      "http://localhost:8083/connectors/user-outbox-connector/restart?includeTasks=true" \
+      || echo "Connect refused the restart (rebalancing): trying again"
+    last=$SECONDS
+  fi
+  sleep 1
+  state="$(status)"
+done
+echo "user-outbox-connector task: $state"
+[ "$state" = RUNNING ] || { echo "FAIL: the connector isn't RUNNING"; exit 1; }
+
+echo "== tests/contract cluster mode, inside the cluster =="
+consumer="$GK exec deploy/kafka -- /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092"
+"$GK" run --env "CONTRACT_BASE_URL=http://$SERVICE:8080" \
+  --env "CONTRACT_KAFKA_CONSOLE_CONSUMER=$consumer" -- \
+  bash -c "cd '$GLUON/tests/contract' && uv run --no-sync pytest checks --service '$SERVICE' -p no:cacheprovider -q -rA"

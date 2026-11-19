@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# gkube: gluon-kube, the simulated gluon-local (ADR 0030), from gluon's bin/.
+# Every argument goes to the `gluon-kube` command (tools/gluon-kube); see its README,
+# "Use". It runs as the repos' owner (re-running itself from the sandbox's root
+# desktop terminal: PostgreSQL refuses root, and root-owned build output would break
+# the owner's builds), with the sandbox's cargo, uv and node24 on the PATH, and makes
+# gluon-kube's environment first if it isn't there (uv sync --locked).
+#   bin/gkube cluster start
+#   bin/gkube up user-service
+#   bin/gkube port-forward svc/user-service 8080:8080
+#   bin/gkube get pods
+#   bin/gkube cluster stop
+set -uo pipefail
+SELF="$(realpath "${BASH_SOURCE[0]}")"
+GLUON="$(dirname "$(dirname "$SELF")")"
+KUBE="$GLUON/tools/gluon-kube"
+
+owner="$(stat -c %U "$KUBE")"
+if [ "$(id -un)" != "$owner" ]; then
+  if [ "$(id -u)" = 0 ] && command -v runuser > /dev/null; then
+    exec runuser -u "$owner" -- env HOME="$(getent passwd "$owner" | cut -d: -f6)" \
+      PATH="$PATH" DISPLAY="${DISPLAY:-}" LANG=C.UTF-8 \
+      ${GLUON_KUBE_STATE:+GLUON_KUBE_STATE="$GLUON_KUBE_STATE"} \
+      ${USER_SERVICE_IMPL:+USER_SERVICE_IMPL="$USER_SERVICE_IMPL"} "$SELF" "$@"
+  fi
+  echo "gkube: run as $owner, who owns $KUBE" >&2
+  exit 1
+fi
+PATH="/home/claude/.local/bin:$HOME/.cargo/bin:$PATH"
+export PATH
+if [ ! -x "$KUBE/.venv/bin/gluon-kube" ]; then
+  (cd "$KUBE" && uv sync --locked --quiet) || { echo "gkube: uv sync failed in $KUBE" >&2; exit 1; }
+fi
+exec "$KUBE/.venv/bin/gluon-kube" "$@"

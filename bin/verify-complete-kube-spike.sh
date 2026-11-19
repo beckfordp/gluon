@@ -15,7 +15,7 @@
 #            run once; "not written" is PENDING)
 #   GK-1.10  the probe's FINDINGS.md and ADR 0030 decision 3 revised from it
 #   GK-2     the package: pyproject.toml, and scripts/ci.sh green
-#   GK-3–GK-7  PENDING until built; each increment adds its features here in
+#   GK-3–GK-7  each increment's features, exercised (PENDING until built); added in
 #            the same change, exercised as the plan's "Done when" says
 # Writes report.md to a run directory (printed at the start). Exits 1 if any
 # feature FAILs; PENDING never fails the run. Not a session's done script
@@ -134,11 +134,38 @@ else
 fi
 
 echo "== GK-3 to GK-7: the simulator"
-record GK-3 PENDING "manifests read, unsupported fields reported, chart rendered as helm does" "not built"
-record GK-4 PENDING "runtime: Services, pods, probes, restarts; Postgres recipe" "not built"
-record GK-5 PENDING "Kafka, Connect, init containers, the registration Job" "not built"
-record GK-6 PENDING "user-service-rs from its chart and values file; gluon-kube up" "not built"
-record GK-7 PENDING "contract harness cluster mode green in the sandbox" "not built"
+# GK-3: local-infra read with nothing unsupported, and every values file rendered as the
+# laptop's helm template captures (tests/integration/test_helm_captures.py).
+exercise GK-3 "manifests read, unsupported fields reported, chart rendered as helm does" \
+  manifests.log bash -c "cd '$KUBE' && out=\$(uv run --quiet gluon-kube apply --dry-run \
+    -f '$GLUON/infra/k8s/local-infra') && tail -n 1 <<< \"\$out\" | grep -q '^36 objects' \
+    && uv run --quiet pytest -q -p no:cacheprovider tests/integration/test_helm_captures.py \
+    | tail -n 1 | grep -q ' passed' && echo '36 objects read; 10 helm template captures matched'"
+# GK-4: a cluster of its own: user-postgres from its manifest, Ready, reached by name.
+exercise GK-4 "runtime: Services, pods, probes, restarts; Postgres recipe" runtime.log \
+  env GLUON_KUBE_STATE="$LOGS/cluster" bash -c "gk='$KUBE/.venv/bin/gluon-kube'
+    trap '\$gk cluster stop > /dev/null 2>&1' EXIT
+    \$gk cluster start && \$gk apply -f '$GLUON/infra/k8s/local-infra/postgres-user.yaml' \
+    && \$gk wait --for=condition=Ready pod --all --timeout=60s \
+    && out=\$(\$gk run --env PGPASSWORD=user -- psql -h user-postgres -U user user -tAc 'select 42') \
+    && [ \"\$out\" = 42 ] && echo 'user-postgres Ready; psql by Service name from a pod'"
+# GK-5 and GK-6: local-infra in a cluster of its own, an outbox row through Debezium to
+# its topic; user-service-rs from its chart, a sign-up published (tests/integration/test_cdc.py).
+exercise GK-5 "Kafka, Connect, init containers, the registration Job" cdc.log bash -c \
+  "cd '$KUBE' && uv run --quiet pytest -v -p no:cacheprovider --no-cov tests/integration/test_cdc.py \
+    | tee '$LOGS/cdc-tests.log' | tail -n 1 | grep ' passed' | grep -vq 'failed' \
+    && echo 'local-infra up; an outbox row on user-events through Debezium'"
+exercise GK-6 "user-service-rs from its chart and values file; gluon-kube up" port.log bash -c \
+  "grep -q 'test_user_service_rs_from_its_chart_publishes_a_signup PASSED' '$LOGS/cdc-tests.log' \
+    && echo 'user-service-rs from its chart; a sign-up published through Debezium' \
+    || { echo 'the GK-6 test did not pass (not built? gluon-kube build user-service-rs)'; exit 1; }"
+# GK-7: the harness's cluster mode inside a cluster of its own (bin/gluon-kube-contract).
+exercise GK-7 "contract harness cluster mode green in the sandbox" cluster-mode.log bash -c \
+  "'$GLUON/bin/gluon-kube-contract' user-service > '$LOGS/cluster-mode-run.log' 2>&1 \
+    && grep -q '^PASSED checks/test_user_cdc.py::test_a_signup_reaches_user_events_in_its_trace' \
+      '$LOGS/cluster-mode-run.log' \
+    && echo \"cluster mode green inside gluon-kube: \$(grep -E '[0-9]+ passed' '$LOGS/cluster-mode-run.log' | tail -n 1)\" \
+    || { tail -n 5 '$LOGS/cluster-mode-run.log'; exit 1; }"
 
 TOTAL=$((PASSED + PENDING + FAILED))
 {

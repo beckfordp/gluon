@@ -22,7 +22,7 @@ resilience, etc.
 ```
 gluon/
 ├── docs/            cross-repo vision, user stories, system design, ADRs
-├── bin/             platform tooling entry points (generate-service, codegen)
+├── bin/             platform tooling entry points (generate-service, codegen, gkube)
 ├── services/        each generated service — its own git repo, gitignored here
 ├── frontends/       each frontend app — its own git repo, gitignored here
 ├── tools/           platform tooling repos (pure-service-generator) — own git repo, gitignored here
@@ -44,6 +44,61 @@ catalog-service · cart-service · user-service
 `user-service-rs` is an alternative Rust implementation of user-service, a
 spike per [ADR 0028](./docs/adr/0028-rust-port-spike-user-service.md)
 ([`plans/rust-port/user-service/plan.md`](./plans/rust-port/user-service/plan.md)); the Scala service stays the default.
+
+## Running gluon-local in the sandbox: `gkube`
+
+**Sandbox only.** Every other environment runs the real thing: on the laptop gluon-local
+is OrbStack's Kubernetes, deployed by `bin/k8s-local-up` (ADR 0002), and the
+environments beyond it are real clusters too. The sandbox, where the Rust ports are
+developed, has no Docker and no Kubernetes, so there gluon-local runs in **gluon-kube**,
+a simulator that reads the same manifests, chart and values files and runs each
+workload as a local process in unprivileged namespaces
+([ADR 0030](./docs/adr/0030-gluon-kube-sandbox-kubernetes-runtime.md),
+[`tools/gluon-kube/`](./tools/gluon-kube), findings in
+[`docs/gluon-kube-findings.md`](./docs/gluon-kube-findings.md)). It runs what can run in
+the sandbox: the shared infra and the services that can be built there (the Rust
+ports); the Scala services can't be built there, so their pods show
+`ImageUnavailable`. The laptop pass on OrbStack stays the authority for the cluster.
+
+`bin/gkube` runs it (`gkube` on the PATH after `bin/sandbox-setup`; it works from the
+root desktop terminal too).
+
+Start the cluster and deploy user-service-rs with the shared infra (Postgres per
+service, Kafka, Kafka Connect with Debezium), as `bin/k8s-local-up` does on the laptop:
+
+```
+gkube cluster start
+gkube up user-service        # ~3 min (~6 min after bin/sandbox-save removed the Rust build)
+gkube get pods               # what has a recipe Running; Redis and Apicurio ImageUnavailable
+```
+
+Reach the services by their cluster names from the sandbox (an HTTP proxy on
+127.0.0.1:3128), and open the docs in the browser: the REST API (Swagger UI) and the
+Kafka events (AsyncAPI):
+
+```
+gkube proxy &
+taiga-browser --proxy-server=http://127.0.0.1:3128 --new-window \
+  http://user-service:8080/docs/ http://user-service:8080/docs/asyncapi/
+```
+
+From a terminal:
+
+```
+export http_proxy=http://127.0.0.1:3128
+curl -i http://user-service:8080/health          # liveness: 200 while the process is up
+curl -i http://user-service:8080/health/ready    # readiness: 200 when Postgres answers, else 503
+curl -s -X POST http://user-service:8080/auth/signup -H 'Content-Type: application/json' \
+  -d '{"email": "me@example.com", "password": "correct-horse-battery-1"}'
+gkube exec deploy/kafka -- /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic user-events --from-beginning --timeout-ms 10000
+```
+
+Stop: `kill %1` (the proxy), then `gkube cluster stop`. Every command, the connector
+restart if a sign-up doesn't reach `user-events`, and how names work inside and outside
+the cluster: [`tools/gluon-kube/README.md`](./tools/gluon-kube/README.md). To review what
+is built: `bin/verify-complete-kube-spike.sh` (every feature exercised, ~15 min, no side
+effects).
 
 ## Demo data (local only)
 

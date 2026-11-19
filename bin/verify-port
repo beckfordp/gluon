@@ -19,6 +19,8 @@ Steps (those a service has):
   rust-ci     the Rust port's scripts/ci.sh (fmt, clippy, tests, coverage)
   build       the Rust service (and user-service's probe and AsyncAPI HTML)
   contract    every contract group against the Rust build, in one session
+  cluster     the harness's cluster mode inside gluon-kube, the simulated gluon-local
+              (bin/gluon-kube-contract; ADR 0030, plans/gluon-kube/plan.md GK-7.4)
   tracks      the track scripts CI can't replace (--skip-ci: CI ran above)
 
 Exit: 0 when every criterion that ran is MET and every step passed; 1 on any
@@ -53,7 +55,7 @@ CRITERIA_DIR = GLUON / "docs" / "ports"
 OWNER_BIN = Path("/home/claude/.local/bin")
 LOGS_ROOT = Path("/tmp")
 
-STEP_ORDER = ["harness-ci", "rust-ci", "build", "contract", "tracks"]
+STEP_ORDER = ["harness-ci", "rust-ci", "build", "contract", "cluster", "tracks"]
 
 
 @dataclass(frozen=True)
@@ -67,13 +69,19 @@ class Service:
     """Its contract run passes the events probe (`--probe-cmd`)."""
     asyncapi_html: bool = False
     """Its build renders the AsyncAPI HTML (`scripts/asyncapi-html.sh`)."""
+    cluster: bool = False
+    """It has a cluster mode, run in gluon-kube (bin/gluon-kube-contract)."""
     track_scripts: list[tuple[Path, str]] = field(default_factory=list)
     """The track scripts CI can't replace; the rest were retired into CI and the
     harness (TECHNICAL_DEBT.md TD-46, plans/private/sandbox.md "Track scripts")."""
 
     @property
     def steps(self) -> list[str]:
-        return [s for s in STEP_ORDER if s != "tracks" or self.track_scripts]
+        return [
+            s
+            for s in STEP_ORDER
+            if (s != "tracks" or self.track_scripts) and (s != "cluster" or self.cluster)
+        ]
 
 
 USER_RS = GLUON / "services" / "user-service-rs"
@@ -84,6 +92,7 @@ SERVICES = {
         ["user-service", "events-probe"],
         probe=True,
         asyncapi_html=True,
+        cluster=True,
         track_scripts=[(USER_RS, "verify-rust-ci"), (CONTRACT, "verify-cluster-mode")],
     ),
     "notification-service": Service(
@@ -323,6 +332,25 @@ def step_contract(logs: Path, service: Service) -> Step:
     return Step("contract", ok, summary, failed, by_group)
 
 
+def step_cluster(logs: Path, service: Service) -> Step:
+    """The harness's cluster mode against the port deployed by gluon-kube (`up`, its
+    chart and values file), run inside the simulated cluster: green, with the topic check
+    among the passes."""
+    code, text = run(
+        logs / "cluster.log", [str(GLUON / "bin" / "gluon-kube-contract"), service.name], GLUON
+    )
+    failed = re.findall(r"^(?:FAILED|ERROR) (checks/\S+)", text, re.MULTILINE)
+    summary_line = next(
+        (line for line in reversed(text.splitlines()) if re.search(r"\d+ passed", line)), ""
+    )
+    topic = "PASSED checks/test_user_cdc.py::test_a_signup_reaches_user_events_in_its_trace"
+    ok = code == 0 and not failed and topic in text
+    summary = summary_line.strip() or last_line(text)
+    if code == 0 and topic not in text:
+        summary += "; the topic check didn't pass"
+    return Step("cluster", ok, summary, failed or ([] if ok else text.splitlines()[-10:]))
+
+
 def step_tracks(logs: Path, service: Service) -> Step:
     failed, passed = [], 0
     for repo, script in service.track_scripts:
@@ -372,6 +400,7 @@ def main() -> int:
         "rust-ci": lambda: step_ci(logs, "rust-ci", service.rust),
         "build": lambda: step_build(logs, service),
         "contract": lambda: step_contract(logs, service),
+        "cluster": lambda: step_cluster(logs, service),
         "tracks": lambda: step_tracks(logs, service),
     }
     steps: dict[str, Step] = {}

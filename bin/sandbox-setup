@@ -148,6 +148,10 @@ SR = """#!/usr/bin/env bash
 # sr (bin/sandbox-setup): bin/sandbox-review, short to type.
 exec /workspace/gluon/bin/sandbox-review "$@"
 """
+GKUBE = """#!/usr/bin/env bash
+# gkube (bin/sandbox-setup): bin/gkube, gluon-kube the simulated gluon-local, on the PATH.
+exec /workspace/gluon/bin/gkube "$@"
+"""
 
 GIT_IDENTITY = {"user.name": "gluon sandbox", "user.email": "sandbox@gluon.local"}
 EXPORT_MANIFEST = "EXPORT-MANIFEST.json"
@@ -523,7 +527,8 @@ def step_shellcheck(install: bool) -> list[Result]:
 
 
 def step_shell(install: bool) -> list[Result]:
-    """`sr` and `cdw` on the PATH: root's shell files can't be written, so commands, not aliases."""
+    """`sr`, `cdw` and `gkube` on the PATH: root's shell files can't be written, so
+    commands, not aliases."""
     target = bin_dir()
     aliases, rc = target / "sandbox-aliases", target / "sandbox-shellrc"
     wanted = {
@@ -531,6 +536,7 @@ def step_shell(install: bool) -> list[Result]:
         rc: SHELL_RC.format(aliases=aliases),
         target / "cdw": CDW.format(rc=rc),
         target / "sr": SR,
+        target / "gkube": GKUBE,
     }
     stale = [
         path for path, text in wanted.items() if not path.is_file() or path.read_text() != text
@@ -541,7 +547,9 @@ def step_shell(install: bool) -> list[Result]:
     for path, text in wanted.items():
         write_executable(path, text)
     status = "INSTALLED" if stale else "OK"
-    return [Result("shell", status, f"sr, cdw in {target} (cdw opens a shell with the aliases)")]
+    return [
+        Result("shell", status, f"sr, cdw, gkube in {target} (cdw opens a shell with the aliases)")
+    ]
 
 
 def export_manifest() -> dict:
