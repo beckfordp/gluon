@@ -13,6 +13,8 @@
 #      workflow, gluon-kube's included (no repo is read-only for it now)
 #   7. --prefix names the archive; tracks.md loses a section's items, not its
 #      headings, separators or intro (the laptop's layout, for clean imports)
+#   8. bin/check-locks names a locked crate too young for the sandbox's mirror,
+#      with the version to go back to, and passes locks old enough (TD-53.1)
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
 #   bin/verify-sandbox-tools
 set -uo pipefail
@@ -129,10 +131,45 @@ with tempfile.TemporaryDirectory() as scratch:
 print("unsaved:", missing)
 sys.exit(0 if missing == [Path("services/foo-rs")] else "unexpected unsaved list")'
 
+check "check-locks names a crate too young for the mirror" locks.log '
+import contextlib, io, json, os
+locks = load("check_locks", "bin/check-locks")
+with tempfile.TemporaryDirectory() as scratch:
+    root = Path(scratch)
+    lock = root / "Cargo.lock"
+    lock.write_text("""version = 4
+[[package]]
+name = "ureq"
+version = "3.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+[[package]]
+name = "cc"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+[[package]]
+name = "local"
+version = "0.1.0"
+""")
+    dates = root / "dates.json"
+    dates.write_text(json.dumps({
+        "ureq": {"3.5.0": ["2026-10-01T00:00:00Z", False], "3.5.1": ["2026-10-20T00:00:00Z", True],
+                 "3.5.2": ["2026-11-12T11:20:05Z", False]},
+        "cc": {"1.11.0": ["2026-10-02T00:00:00Z", False]},
+    }))
+    os.environ["CHECK_LOCKS_DATES"] = str(dates)
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        young = locks.main(["--today", "2026-11-19", str(lock)])
+        old = locks.main(["--today", "2026-11-30", "--days", "14", str(lock)])
+print(out.getvalue())
+want = "ureq 3.5.2 published 2026-11-12 — cargo update -p ureq@3.5.2 --precise 3.5.0"
+sys.exit(0 if young == 1 and old == 0 and want in out.getvalue() and "cc " not in out.getvalue().split("FAIL")[0]
+         else f"young={young} old={old}")'
+
 echo "     python scripts compile"
 if python3 - > "$LOGS/compile.log" 2>&1 <<'EOF'
 import sys
-for path in ("bin/sandbox-export", "bin/sandbox-save", "bin/lib/sandbox.py"):
+for path in ("bin/sandbox-export", "bin/sandbox-save", "bin/lib/sandbox.py", "bin/check-locks"):
     compile(open(path).read(), path, "exec")
 EOF
 then

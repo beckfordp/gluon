@@ -659,6 +659,16 @@ def anonymous(info: tarfile.TarInfo) -> tarfile.TarInfo:
     return info
 
 
+def check_locks() -> None:
+    """Refuses to export a Rust lock the sandbox's crates.io mirror may not serve
+    (TD-53.1): bin/check-locks names each crate too young, and the fix."""
+    if subprocess.run([GLUON / "bin" / "check-locks"], check=False).returncode != 0:
+        raise SystemExit(
+            "refusing to export: bin/check-locks failed (above); fix the locks, "
+            "or pass --no-lock-check to export anyway"
+        )
+
+
 def main(argv: Sequence[str]) -> int:
     """Parses arguments and exports."""
     parser = argparse.ArgumentParser(
@@ -672,6 +682,9 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--yes", action="store_true", help="remove untracked files unasked (build output always is)")
     parser.add_argument("--no-plans", action="store_true", help="no plan, no live track")
     parser.add_argument("--prefix", metavar="NAME", help="archive as NAME-OUT.tar.gz")
+    parser.add_argument(
+        "--no-lock-check", action="store_true", help="skip bin/check-locks (crates the mirror may lack)"
+    )
     args = parser.parse_args(argv)
     if args.prefix is not None and not PREFIX.match(args.prefix):
         raise SystemExit(f"--prefix must match {PREFIX.pattern}")
@@ -683,6 +696,8 @@ def main(argv: Sequence[str]) -> int:
         captures += [spec for spec in found_captures() if spec not in captures]
     if out.exists() and any(out.iterdir()) and not args.clean and not (out / MANIFEST).is_file():
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
+    if not args.no_lock_check:
+        check_locks()
     clean([GLUON, *(GLUON / r for r in export_repos())], args.yes)
     export(out, captures, args.clean, plans=not args.no_plans)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
