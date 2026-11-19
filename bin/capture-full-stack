@@ -1,0 +1,300 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Capture the all-Scala full stack for the all-Rust port (all-Rust prep P4).
+#
+# Runs bin/run-acceptance against gluon-local on OrbStack — the bar the Rust
+# ports must meet — then records what the cluster holds: each service's served
+# OpenAPI and AsyncAPI, health and metrics before and after, its logs; each
+# Postgres schema and rows; each Redis cache's keys, types, TTLs and values;
+# every Kafka topic (key, headers, value) and every consumer group; the
+# Debezium connectors' configs and status; and the acceptance report. Laptop
+# only: needs OrbStack, Docker, the Scala images and the Playwright suite.
+#
+# Writes tests/contract/contracts/full-stack/<date>/ (this script as
+# CAPTURE.sh, plus PROVENANCE.md), then redacts home paths and private
+# addresses in place. The acceptance run resets and reseeds every database,
+# so the captured rows are throwaway example data.
+#
+# Usage:
+#   bin/capture-full-stack [--force]
+#     --force   replace today's capture if it exists
+# Preconditions: bin/k8s-local-up deployed all eight Scala services (no -rs),
+# and bin/run-acceptance's own preflights hold.
+set -euo pipefail
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+GLUON_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
+NAMESPACE="${NAMESPACE:-gluon-local}"
+SUITE="$GLUON_DIR/tests/acceptance"
+CONTRACT="$GLUON_DIR/tests/contract"
+OUT="$CONTRACT/contracts/full-stack/$(date +%Y%m%d)"
+SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service user-service fulfilment-service)
+APP=18080
+METRICS=19090
+# shellcheck source=bin/lib/connectors.sh
+. "$GLUON_DIR/bin/lib/connectors.sh"
+
+FORCE=0
+for arg in "$@"; do
+  case "$arg" in
+    --force) FORCE=1 ;;
+    -h | --help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "FAIL: unknown argument $arg" >&2; exit 2 ;;
+  esac
+done
+
+deploy_image() { kubectl -n "$NAMESPACE" get "deploy/$1" -o jsonpath='{.spec.template.spec.containers[0].image}' 2> /dev/null || true; }
+deployments_named() { kubectl -n "$NAMESPACE" get deploy -o name | sed 's|^deployment.apps/||' | grep -E -- "$1\$" || true; }
+
+# --- preflight ---------------------------------------------------------------
+if [ "$(kubectl config current-context 2> /dev/null)" != orbstack ]; then
+  echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
+  exit 1
+fi
+if ! kubectl get namespace "$NAMESPACE" > /dev/null 2>&1; then
+  echo "FAIL: namespace $NAMESPACE missing — run bin/k8s-local-up first" >&2
+  exit 1
+fi
+for svc in "${SERVICES[@]}"; do
+  image="$(deploy_image "$svc")"
+  if [ "$image" != "$svc:latest" ]; then
+    echo "FAIL: $svc runs '$image', not the Scala image — this capture is the Scala bar." >&2
+    echo "      Switch with: USER_SERVICE_IMPL=scala bin/k8s-local-up $svc" >&2
+    exit 1
+  fi
+  if [ "$(kubectl -n "$NAMESPACE" get "deploy/$svc" -o jsonpath='{.status.readyReplicas}')" != 1 ]; then
+    echo "FAIL: $svc not ready — run bin/k8s-local-up $svc" >&2
+    exit 1
+  fi
+done
+if ! connectors_check; then
+  echo "FAIL: outbox connectors not RUNNING — run bin/k8s-local-up" >&2
+  exit 1
+fi
+if [ ! -d "$SUITE/node_modules" ]; then
+  echo "FAIL: $SUITE/node_modules missing — run 'npm ci' there" >&2
+  exit 1
+fi
+if [ -e "$OUT" ] && [ "$FORCE" != 1 ]; then
+  echo "FAIL: $OUT exists — rerun with --force to replace it" >&2
+  exit 1
+fi
+[ "$FORCE" = 1 ] && rm -rf "$OUT" || true
+
+mkdir -p "$OUT"/{acceptance,cluster,docs,http/before,http/after,metrics/before,metrics/after,logs,db,redis,kafka/topics,connectors}
+cp "$SELF" "$OUT/CAPTURE.sh"
+START_RFC3339="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+PF_PID=""
+stop_forward() {
+  [ -n "$PF_PID" ] && kill "$PF_PID" 2> /dev/null || true
+  [ -n "$PF_PID" ] && wait "$PF_PID" 2> /dev/null || true
+  PF_PID=""
+}
+trap stop_forward EXIT
+
+forward() { # SERVICE LOCAL_APP LOCAL_METRICS
+  stop_forward
+  kubectl -n "$NAMESPACE" port-forward "svc/$1" "$2:8080" "$3:9090" \
+    > "$OUT/cluster/port-forward-$1.log" 2>&1 &
+  PF_PID=$!
+}
+wait_http() { # URL
+  for _ in $(seq 1 60); do
+    curl -sf -m 2 -o /dev/null "$1" && return 0
+    sleep 0.5
+  done
+  return 1
+}
+health() { # SERVICE HTTP_DIR METRICS_DIR [DOCS_DIR]: one forward per service
+  local svc=$1 hdir=$2 mdir=$3 ddir=${4:-}
+  forward "$svc" "$APP" "$METRICS"
+  if ! wait_http "http://localhost:$APP/health"; then
+    echo "WARN: $svc did not answer /health on :$APP" >&2
+  fi
+  curl -si -m 10 "http://localhost:$APP/health" > "$hdir/$svc-health.txt" || true
+  curl -si -m 10 "http://localhost:$APP/health/ready" > "$hdir/$svc-health-ready.txt" || true
+  curl -s -m 20 "http://localhost:$METRICS/metrics" > "$mdir/$svc.txt" || true
+  if [ -n "$ddir" ]; then
+    mkdir -p "$ddir"
+    local openapi asyncapi
+    openapi="$(curl -s -m 20 -o "$ddir/openapi.yaml" -w '%{http_code}' "http://localhost:$APP/docs/docs.yaml" || echo 000)"
+    asyncapi="$(curl -s -m 20 -o "$ddir/asyncapi.json" -w '%{http_code}' "http://localhost:$APP/docs/asyncapi.json" || echo 000)"
+    printf 'openapi.yaml: HTTP %s\nasyncapi.json: HTTP %s\n' "$openapi" "$asyncapi" > "$ddir/status.txt"
+    [ "$openapi" = 200 ] || rm -f "$ddir/openapi.yaml"
+    [ "$asyncapi" = 200 ] || rm -f "$ddir/asyncapi.json"
+  fi
+  stop_forward
+}
+
+# --- before: health and metrics ---------------------------------------------
+echo "== Before: health and metrics"
+for svc in "${SERVICES[@]}"; do
+  health "$svc" "$OUT/http/before" "$OUT/metrics/before"
+done
+
+# --- acceptance: the bar -----------------------------------------------------
+echo "== Acceptance (all Scala)"
+set +e
+"$GLUON_DIR/bin/run-acceptance" --no-open 2>&1 | tee "$OUT/acceptance.log"
+ACCEPTANCE_STATUS="${PIPESTATUS[0]}"
+set -e
+echo "Acceptance exit: $ACCEPTANCE_STATUS"
+
+# --- after: the cluster's behaviour and state -------------------------------
+echo "== Cluster snapshot"
+kubectl -n "$NAMESPACE" get deploy -o wide > "$OUT/cluster/deployments.txt"
+kubectl -n "$NAMESPACE" get pods -o wide > "$OUT/cluster/pods.txt"
+{
+  for svc in "${SERVICES[@]}"; do
+    echo "$svc: $(deploy_image "$svc")"
+  done
+} > "$OUT/cluster/images.txt"
+
+echo "== After: served docs, health and metrics"
+for svc in "${SERVICES[@]}"; do
+  health "$svc" "$OUT/http/after" "$OUT/metrics/after" "$OUT/docs/$svc"
+done
+
+echo "== Logs (since the acceptance run started)"
+for svc in "${SERVICES[@]}"; do
+  kubectl -n "$NAMESPACE" logs "deploy/$svc" --all-containers --since-time "$START_RFC3339" \
+    > "$OUT/logs/$svc.log" 2>&1 || true
+done
+
+echo "== Postgres schemas and rows"
+# shellcheck disable=SC2016  # expanded in the pod, not here
+for db in $(deployments_named postgres); do
+  mkdir -p "$OUT/db/$db"
+  kubectl -n "$NAMESPACE" exec -i "deploy/$db" -- \
+    sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --schema-only' \
+    > "$OUT/db/$db/schema.sql" || true
+  kubectl -n "$NAMESPACE" exec -i "deploy/$db" -- \
+    sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --data-only --inserts' \
+    > "$OUT/db/$db/rows.sql" || true
+  kubectl -n "$NAMESPACE" exec -i "deploy/$db" -- \
+    sh -c 'psql -At -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL' > "$OUT/db/$db/tables.txt" 2>&1 || true
+SELECT schemaname || '.' || relname || '|' || n_live_tup
+FROM pg_stat_user_tables ORDER BY 1;
+SQL
+done
+
+echo "== Redis keys, types, TTLs and values"
+# shellcheck disable=SC2016  # expanded in the pod, not here
+for cache in $(deployments_named redis); do
+  kubectl -n "$NAMESPACE" exec "deploy/$cache" -- sh -c '
+    for k in $(redis-cli --scan | sort); do
+      t=$(redis-cli TYPE "$k")
+      echo "key: $k"
+      echo "type: $t"
+      echo "ttl: $(redis-cli TTL "$k")"
+      case $t in
+        string) redis-cli --raw GET "$k" ;;
+        hash) redis-cli --raw HGETALL "$k" ;;
+        list) redis-cli --raw LRANGE "$k" 0 -1 ;;
+        set) redis-cli --raw SMEMBERS "$k" | sort ;;
+        zset) redis-cli --raw ZRANGE "$k" 0 -1 WITHSCORES ;;
+        stream) redis-cli --raw XRANGE "$k" - + ;;
+        *) echo "(not dumped: $t)" ;;
+      esac
+      echo
+    done' > "$OUT/redis/$cache.txt" 2>&1 || true
+done
+
+echo "== Kafka topics, records and consumer groups"
+kbin() { local tool=$1; shift; kubectl -n "$NAMESPACE" exec -i deploy/kafka -- "/opt/kafka/bin/$tool" --bootstrap-server localhost:9092 "$@"; }
+kbin kafka-topics.sh --list | sort > "$OUT/kafka/topics-list.txt" || true
+kbin kafka-topics.sh --describe > "$OUT/kafka/topics.txt" 2>&1 || true
+kbin kafka-consumer-groups.sh --describe --all-groups > "$OUT/kafka/consumer-groups.txt" 2>&1 || true
+while IFS= read -r topic; do
+  kbin kafka-console-consumer.sh --topic "$topic" --from-beginning --timeout-ms 5000 \
+    --property print.key=true --property print.headers=true --property print.timestamp=true \
+    > "$OUT/kafka/topics/$topic.txt" 2> /dev/null < /dev/null || true
+done < <(grep -v -e '^__' -e '^connect-' "$OUT/kafka/topics-list.txt" | sort)
+
+echo "== Debezium connectors"
+connect_api GET /connectors | sed '$d' > "$OUT/connectors/names.json" 2> /dev/null || true
+for name in $(connector_names); do
+  connect_api GET "/connectors/$name/config" | sed '$d' > "$OUT/connectors/$name-config.json" 2> /dev/null || true
+  connect_api GET "/connectors/$name/status" | sed '$d' > "$OUT/connectors/$name-status.json" 2> /dev/null || true
+done
+
+echo "== Acceptance report"
+cp -R "$SUITE/playwright-report" "$OUT/acceptance/" 2> /dev/null || true
+cp "$SUITE/target/coverage-matrix.md" "$OUT/acceptance/" 2> /dev/null || true
+
+# --- provenance --------------------------------------------------------------
+repo_state() { # DIR LABEL
+  local head dirty
+  if [ -d "$1/.git" ]; then
+    head="$(git -C "$1" rev-parse HEAD 2> /dev/null || echo unknown)"
+    dirty="$(git -C "$1" status --porcelain 2> /dev/null | wc -l | tr -d ' ')"
+    echo "$2 commit: $head (dirty $dirty files)"
+  else
+    echo "$2 commit: not a git checkout"
+  fi
+}
+passed="$(grep -E '[0-9]+ passed' "$OUT/acceptance.log" | tail -1 || true)"
+{
+  echo "# Provenance — full-stack capture $(basename "$OUT")"
+  echo
+  echo "Produced on the laptop by \`CAPTURE.sh\` (this directory; all-Rust prep P4):"
+  echo "\`bin/run-acceptance\` drove gshop in Chromium against \`gluon-local\` with all"
+  echo "eight services running their Scala images, and every artifact here was read"
+  echo "from that cluster afterwards."
+  echo
+  echo '```'
+  repo_state "$GLUON_DIR" gluon
+  for svc in "${SERVICES[@]}"; do repo_state "$GLUON_DIR/services/$svc" "$svc"; done
+  echo "captured: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "acceptance exit: $ACCEPTANCE_STATUS${passed:+ — $passed}"
+  echo "kubectl: $(kubectl version --client 2> /dev/null | head -1)"
+  echo "java: $(java -version 2>&1 | head -1)"
+  echo "node: $(node --version 2> /dev/null || echo missing)"
+  echo "images:"
+  sed 's/^/  /' "$OUT/cluster/images.txt"
+  echo '```'
+  echo
+  echo "## Contents"
+  echo
+  echo "- \`docs/<service>/\` — \`openapi.yaml\` and \`asyncapi.json\` as the service served"
+  echo "  them, \`status.txt\` with each response's HTTP status (404: no AsyncAPI, as cart"
+  echo "  and catalog publish nothing)"
+  echo "- \`http/before/\`, \`metrics/before/\` — health and \`/metrics\` before the run"
+  echo "- \`http/after/\`, \`metrics/after/\` — the same after it"
+  echo "- \`logs/<service>.log\` — JSON logs since the run started"
+  echo "- \`db/<service>-postgres/\` — \`schema.sql\`, \`rows.sql\` (data-only inserts), \`tables.txt\`"
+  echo "- \`redis/<service>-redis.txt\` — per key: type, TTL, value"
+  echo "- \`kafka/topics-list.txt\`, \`topics.txt\`, \`consumer-groups.txt\`, \`topics/<topic>.txt\`"
+  echo "  (key, headers, value; internal \`__*\` and \`connect-*\` topics are listed, not dumped)"
+  echo "- \`connectors/<name>-config.json\`, \`connectors/<name>-status.json\`"
+  echo "- \`acceptance.log\`, \`acceptance/playwright-report/\`, \`acceptance/coverage-matrix.md\`"
+  echo
+  echo "## Notes"
+  echo
+  echo "- The acceptance run resets every database and cache and reseeds through the"
+  echo "  services' APIs (\`bin/reset-data\`), so every row, key and record here is"
+  echo "  throwaway demo data: \`example.com\` addresses, the published test passwords,"
+  echo "  fixed or random UUIDs."
+  echo "- The acceptance result is the bar the Rust ports must meet; scenarios not in"
+  echo "  the suite are out of scope for this capture."
+  echo "- Redacted: the home directory, the gluon path and private IPv4 addresses."
+} > "$OUT/PROVENANCE.md"
+
+# --- redaction ---------------------------------------------------------------
+echo "== Redacting"
+while IFS= read -r -d '' file; do
+  grep -Iq . "$file" || continue
+  sed -E -e "s|$GLUON_DIR|/Users/<user>/<path-to>/gluon|g" \
+    -e "s|$HOME|/Users/<user>|g" \
+    -e 's#(^|[^0-9.])((10|172|192)\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*)#\1<redacted-ip>#g' \
+    -e 's#<redacted-ip>#192.0.2.1#g' \
+    "$file" > "$file.redacted"
+  mv "$file.redacted" "$file"
+done < <(find "$OUT" -type f ! -name '*.woff2' ! -name '*.woff' ! -name '*.ttf' ! -name '*.png' ! -name '*.jpg' ! -name '*.ico' ! -name '*.zip' -print0)
+chmod +x "$OUT/CAPTURE.sh"
+
+echo "Capture: $OUT ($(find "$OUT" -type f | wc -l | tr -d ' ') files)"
+if [ "$ACCEPTANCE_STATUS" != 0 ]; then
+  echo "FAIL: acceptance exited $ACCEPTANCE_STATUS — see $OUT/acceptance.log" >&2
+  exit 1
+fi

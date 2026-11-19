@@ -100,12 +100,14 @@ NOT_EXPORTED = frozenset(
         Path("CHANGELOG.md"),
         Path("bin") / "sandbox-export",
         Path("bin") / "verify-sandbox-tools",
+        Path("bin") / "capture-full-stack",
         Path("bin") / "sandbox-bed",
         Path("bin") / "lib" / "sandbox-bed" / "Dockerfile",
     }
 )
 """gluon files that stay on the laptop: plans the sandbox session would act on,
-history it doesn't need, and this script and its tests (laptop-only)."""
+history it doesn't need, and the laptop-only scripts — this one, its tests, and
+bin/capture-full-stack, which runs against OrbStack's gluon-local."""
 
 NOT_EXPORTED_DIRS = frozenset({"plans"})
 """gluon directories that stay on the laptop: every plan, retro and work sequence."""
