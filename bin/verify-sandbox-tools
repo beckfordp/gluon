@@ -60,7 +60,8 @@ with tempfile.TemporaryDirectory() as out:
 got = {repo["path"] for repo in manifest["repos"]}
 scala = ["user", "notification", "cart", "catalog", "inventory", "fulfilment", "payment", "order"]
 want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "tools/gluon-kube",
-        "tests/acceptance", "frontends/gshop", *(f"services/{s}-service" for s in scala)}
+        "tools/rust-service-template", "tests/acceptance", "frontends/gshop",
+        *(f"services/{s}-service" for s in scala)}
 want |= {f"services/{s}-service-rs" for s in scala if Path(f"services/{s}-service-rs").is_dir()}
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
