@@ -154,6 +154,14 @@ def load_criteria(path: Path, service: Service) -> Criteria:
     return Criteria(service.name, criteria, data.get("guide", ""))
 
 
+def is_built(service: Service) -> bool:
+    """Everything the build step makes is there: the binaries, and the AsyncAPI HTML the
+    docs group serves (TD-60: binaries alone let `--only contract` fail docs falsely)."""
+    binaries = all((service.rust / "target/debug" / p).exists() for p in service.packages)
+    html = service.rust / "target/asyncapi-docs/index.html"
+    return binaries and (not service.asyncapi_html or html.is_file())
+
+
 def steps_for(
     criteria: Criteria, only: list[str] | None, quick: bool, built: bool
 ) -> list[str]:
@@ -403,8 +411,7 @@ def main() -> int:
     stamp = time.strftime("%Y%m%d-%H%M%S")
     logs = Path(tempfile.mkdtemp(prefix=f"verify-port-{service.name}-{stamp}-", dir=LOGS_ROOT))
     print(f"{service.name} port verification — logs in {logs}\n", flush=True)
-    built = all((service.rust / "target/debug" / p).exists() for p in service.packages)
-    wanted = steps_for(criteria, args.only, args.quick, built)
+    wanted = steps_for(criteria, args.only, args.quick, is_built(service))
     actions: dict[str, Callable[[], Step]] = {
         "harness-ci": lambda: step_ci(logs, "harness-ci", CONTRACT),
         "rust-ci": lambda: step_ci(logs, "rust-ci", service.rust),
