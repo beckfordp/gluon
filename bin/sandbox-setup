@@ -115,7 +115,8 @@ CDC_SETS: dict[str, tuple[tuple[tuple[str, str, str], ...], bool]] = {
     ),
 }
 
-VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2")
+VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2", "libsodium23", "libpython3.12t64")
+"""vim and the libraries it links that a minimal image lacks (the sandbox bed's did)."""
 VIM_ROOT = HOME / ".local" / "vim-root"
 SHELLCHECK_ROOT = HOME / ".local" / "shellcheck-root"
 """shellcheck (RPN-10), unpacked from Ubuntu's .deb as vim is."""
@@ -495,6 +496,8 @@ def step_vim(install: bool) -> list[Result]:
         if current != VIMRC and (not current or MANAGED_MARK in current.split("\n", 1)[0]):
             return [Result("vim", "MISSING", f"{vimrc} missing or out of date")]
         version = first_line([str(target / "vim"), "--version"])
+        if not version:
+            return [Result("vim", "MISSING", f"{target / 'vim'} doesn't run (a library missing?)")]
         return [Result("vim", "OK", f"{version}; vim, view in {target}; read-only: vim -M <file>")]
     target.mkdir(parents=True, exist_ok=True)
     write_executable(
