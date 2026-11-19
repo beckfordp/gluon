@@ -57,7 +57,7 @@ RUSTUP_INIT_URL = "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux
 RUST_TOOLCHAIN = "1.99.1"
 """Matches services/user-service-rs/rust-toolchain.toml (RUST-2.2)."""
 RUST_COMPONENTS = ("rustfmt", "clippy", "llvm-tools-preview")
-CARGO_TOOLS = {"cargo-llvm-cov": "0.9.1"}
+CARGO_TOOLS = {"cargo-llvm-cov": "0.9.1", "cargo-generate": "0.26.0"}
 """Cargo subcommands built from crates.io, pinned. Not cargo-audit: its advisory
 database is on GitHub, unreachable from the sandbox (plans/private/sandbox.md)."""
 CARGO_HOME = HOME / ".cargo"

@@ -34,13 +34,15 @@ SHARED_REPOS = (
     Path("lib") / "purerest",
     Path("lib") / "gluon-rs",
     Path("tools") / "gluon-kube",
+    Path("tools") / "rust-service-template",
     Path("tests") / "acceptance",
     Path("frontends") / "gshop",
 )
 """Repos every port needs: the contract harness, purerest/purekafka as the reference
 for the shared Rust layer, gluon-rs, that layer (TD-43), gluon-kube, the simulated
-gluon-local the ports run in (ADR 0030), and the Playwright acceptance suite with the
-gshop frontend it drives (bin/run-acceptance)."""
+gluon-local the ports run in (ADR 0030), the cargo-generate service template each port
+starts from (all-Rust prep P3), and the Playwright acceptance suite with the gshop
+frontend it drives (bin/run-acceptance)."""
 
 SANDBOX_REPOS = (
     Path("tests") / "contract",
