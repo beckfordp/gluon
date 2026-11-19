@@ -413,6 +413,12 @@ topics' rows come with their groups. Also: rust.md cleanup, gluon-rs supervised
 consumer and OTEL reader, envelope parity (`bin/verify-complete-RPN-11.sh`). Debt
 found: TD-65–67.*
 
+*2026-11-19 (all-Rust prep P5): behaviours now catalogued by layer, then topic, in
+tests/contract `docs/behaviours.md`; checks cite their ids and `verify-port` counts
+behaviours met. RPN-12–15's functional rows are NOTIF-F16–F34, filed under the topic
+that reaches them (order-, payment-, fulfilment-events); "mark unresolved" is F21, F28,
+F34. Plan these by topic, citing the ids.*
+
 ### RPN-12 — Recipient resolution
 
 **Repos:** `tests/contract`, `services/notification-service-rs`.

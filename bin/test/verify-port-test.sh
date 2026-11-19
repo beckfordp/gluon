@@ -86,7 +86,8 @@ rejected("no criteria", US, [], "no criteria")
 # The steps each run takes.
 if real.keys() == {"user-service", "notification-service"}:
     cases = [
-        ("user-service: every step", real["user-service"], None, False, True, vp.STEP_ORDER),
+        ("user-service: every step", real["user-service"], None, False, True,
+         [s for s in vp.STEP_ORDER if s != "cluster" or vp.CLUSTER_RUNS_HERE]),
         ("user-service, --quick: no tracks", real["user-service"], None, True, True,
          ["harness-ci", "rust-ci", "build", "contract"]),
         ("notification-service: no tracks", real["notification-service"], None, False, True,

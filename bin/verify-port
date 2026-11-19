@@ -344,7 +344,22 @@ def step_contract(logs: Path, service: Service) -> Step:
     ok = code == 0 and total > 0 and not failed
     by_group = {group_name(g): green[g] == n for g, n in per_group.items()}
     summary = f"{sum(green.values())}/{total} green — {groups}"
+    behaviours = behaviour_tally(logs / "contract.log", service)
+    if behaviours:
+        summary += f"; behaviours: {behaviours}"
     return Step("contract", ok, summary, failed, by_group)
+
+
+def behaviour_tally(log: Path, service: Service) -> str:
+    """Behaviours met per layer (tests/contract docs/behaviours.md, all-Rust prep P5);
+    empty for a service the catalogue doesn't list."""
+    argv = ["uv", "run", "--no-sync", "python", "-m", "gluon_contract.behaviours", "tally"]
+    done = subprocess.run(
+        [*argv, service.name, str(log)], cwd=CONTRACT, capture_output=True, text=True
+    )
+    if done.returncode != 0:
+        return f"tally failed: {done.stderr.strip()[-200:]}"
+    return "; ".join(done.stdout.strip().splitlines())
 
 
 def step_cluster(logs: Path, service: Service) -> Step:
