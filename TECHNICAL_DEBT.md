@@ -513,6 +513,10 @@ green; only the REST group, which seeds rows, sees bodies.
       for events whose body doesn't vary by run, from the capture. Done when: decided,
       and (if contract) a wrong body turns a consumer check red.
 
+*2026-11-18 (sandbox, RPN-11): still open. The audited-send group
+(`checks/test_notification_user_events_audited.py`) doesn't compare `body` either,
+so only notification-service-rs's own `tests/domain.rs` pins the welcome body.*
+
 ---
 
 ## TD-59 — notification-service's recipient lookup lives in user-service-rs
@@ -621,6 +625,87 @@ spread to every port.
       `consume`'s ages): build once in `consume`.
 - [ ] TD-64.5: `ConsumerSettings`' broker, group and topic are plain strings:
       `GroupId`, `Topic` newtypes parsed where config is read.
+
+*2026-11-18 (sandbox, RPN-11): not fixed first. notification-service-rs adopted
+`kafka-client` through the new `kafka_client::supervised::run_supervised` (was S-1).
+It returns `KafkaError`, but runs `DeadLetter` and `supervise` with their
+`Result<_, String>` underneath; H1–H3 now reach both services and the probe. The session's export left out this file and `plans/`, so it couldn't see
+the warning.*
+
+---
+
+## TD-65 — notification-service-rs has no observability parity, and nothing checks it
+
+Found in RPN-11 (sandbox, 2026-11-18; were items 10–12: H6, P3 in full, P5, S-7).
+notification-service-rs has a tracer, a JSON logger and in-process metrics, but no
+`/metrics` endpoint on `NOTIFICATION_SERVICE_METRICS_PORT`, no HTTP server spans or
+metrics, no instrumented store, no `notifications_emails_total{event_type, outcome}`
+(Scala `EmailJourneyMetrics`) and no `WARN Call failed (attempt n), retrying` lines
+(purerest's `Retry`; the Scala service logs four per dead-lettered record, capture
+`stdout.log`; gluon-rs `telemetry::resilience::Retry` retries silently). The capture
+has what to check against (`metrics.txt`, `metrics-after-events.txt`, `otlp/`,
+`stdout.log`); no check group reads them for notification-service.
+
+Approach agreed in the session: A1, the harness proves wire parity (`rust.md` §8), as
+user-service's `test_user_logs.py`, `test_user_metrics.py`, `test_user_traces.py`.
+Rejected: Rust tests against the capture's values (re-implements harness checks).
+Sandbox estimate ~1–1½ h for the groups.
+
+### Tasks
+- [ ] TD-65.1: tests/contract — notification-service logs, metrics and traces check
+      groups from the capture, red against notification-service-rs. Done when: each
+      group collects and fails for the missing behaviour, not the harness.
+- [ ] TD-65.2: notification-service-rs — `/metrics` on its metrics port, HTTP server
+      spans and metrics, an instrumented store (user-service-rs's pattern), and
+      `notifications_emails_total` through a metered email client (`Metered<C>`). Done
+      when: TD-65.1's metrics and traces groups green.
+- [ ] TD-65.3: gluon-rs — `Retry` logs each retry as purerest does. Done when:
+      notification-service's logs group green; user-service's logs group unchanged
+      (128/128).
+
+---
+
+## TD-66 — user-service-rs lags notification-service-rs's Rust idioms
+
+Found in RPN-11 (sandbox, 2026-11-18; were U-1–U-6, item 16) comparing the two ports
+after notification-service-rs's `rust.md` cleanup. Single-repo, but written up here
+with its source, as TD-63. Sandbox estimate ~15 min each, plus user-service's full
+regression.
+
+### Tasks
+- [ ] TD-66.1 (U-1): `auth.rs`, `users.rs` map errors by hand at each call site
+      (`json_error`, `internal` in `match` blocks): one error enum per endpoint with
+      `IntoResponse` and `?`, as notification-service-rs's `EmailsError` (`rust.md` §2).
+- [ ] TD-66.2 (U-2): `Uuid::new_v4()` and `OffsetDateTime::now_utc()` inline in
+      `auth.rs` (register, login), `events.rs`, `store.rs`: ids and `now` injected, as
+      notification-service-rs's `IdGen` (`rust.md` §5).
+- [ ] TD-66.3 (U-3): `auth.rs` login matches `PasswordCheck` with a `_` arm that covers
+      `Mismatch`: exhaustive `match` (`rust.md` §4).
+- [ ] TD-66.4 (U-4): pure builders in `events.rs`, `tokens.rs` beside effectful code:
+      move to `domain`, as `domain::welcome_message` (`rust.md` §1).
+- [ ] TD-66.5 (U-5, low: the probe retires after RPN-13): events-probe's own
+      `shutdown_signal`: use `service_basics::shutdown::signal`.
+- [ ] TD-66.6 (U-6, low: as U-5): events-probe `handler.rs`, `lookup.rs`
+      `Result<_, String>`: a lookup error enum, as notification-service-rs's
+      `LookupError`/`SendError`.
+
+---
+
+## TD-67 — Two audited-send behaviours have no contract check yet
+
+Found in RPN-11 (sandbox, 2026-11-18; RPN-11-audited). Eight of the audited send's nine
+behaviours are checks (`checks/test_notification_user_events_audited.py`, 8/8). Behaviour
+8, an unresolvable recipient marked `unresolved`, can't occur on user-events
+(`UserRegistered` carries its address; notification-service-rs wires `NoLookup`).
+Behaviour 9's check drives a store outage; its lookup-failure form (capture event 050)
+has none. Both need a consumer that looks recipients up, and the user-service /
+order-service lookups ported (TD-59).
+
+### Tasks
+- [ ] TD-67.1: with the order-events group (RPN-12), checks for behaviour 8 (capture
+      events 019, 032, 043) and behaviour 9's lookup failure (event 050). Done when:
+      nine behaviours, nine checks, cited in `bin/verify-complete-RPN-11.sh`'s table's
+      successor.
 
 
 ---

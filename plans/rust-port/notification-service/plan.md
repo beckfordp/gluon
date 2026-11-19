@@ -371,7 +371,7 @@ contract` 128/128 and `bin/verify-port notification-service --only contract`
 
 **Repos:** `tests/contract`, `services/notification-service-rs`.
 
-- [ ] RPN-10 — checks (welcome email, duplicate eventId, unrelated type,
+- [x] RPN-10 — checks (welcome email, duplicate eventId, unrelated type,
       undecodable envelope and payload → DLQ, null value skipped) red; then
       the consumer on `kafka-event-consumer` and the logging transport
 
@@ -389,15 +389,29 @@ The consume loop moved from the probe to gluon-rs `kafka-client` (TD-58), which
 the green phase builds on; fix TD-64.1–64.3 first. Debt found: TD-54–57,
 TD-59–63.*
 
+*2026-11-18 (sandbox, with RPN-11): green. notification-service-rs consumes
+`user-events` on gluon-rs `kafka_client::supervised`; user_events 6/6. TD-64.1–64.3
+weren't fixed first (TD-64 note).*
+
 ### RPN-11 — Audited send
 
 **Repos:** `tests/contract`, `services/notification-service-rs`.
 
-- [ ] RPN-11 — claim, then mark sent / failed / unresolved; a duplicate of a
+- [x] RPN-11 — claim, then mark sent / failed / unresolved; a duplicate of a
       sent or unresolved row isn't sent again, pending/failed rows are retried
 
 **Done when:** audit-state checks green; `sent_email` rows equal the
 capture's (ids and times aside).
+
+*2026-11-18 (sandbox; laptop 2026-11-19): done. The audited send in
+notification-service-rs, nine Rust tests (`tests/audited_send.rs`); eight are
+contract checks, tests/contract `checks/test_notification_user_events_audited.py`
+8/8 (38/38 in all). "Mark unresolved" can't occur on user-events (`UserRegistered`
+carries its address); its check moves to RPN-12 with order-events (TD-67). Rows
+equal the capture's for the welcome email only (user_events group); the other
+topics' rows come with their groups. Also: rust.md cleanup, gluon-rs supervised
+consumer and OTEL reader, envelope parity (`bin/verify-complete-RPN-11.sh`). Debt
+found: TD-65–67.*
 
 ### RPN-12 — Recipient resolution
 
@@ -406,7 +420,8 @@ capture's (ids and times aside).
 - [ ] RPN-12 — customer, guest fallback, user 400 → guest, unknown customer,
       unknown order (ADR 0025, ADM-10); the order-service stub answers as the
       capture's stub log does (`services.py` `order_lookup`; today it finds
-      nothing), also used by RPN-14–15
+      nothing), also used by RPN-14–15; and RPN-11's "mark unresolved" and
+      lookup-failure checks (TD-67)
 
 **Done when:** resolution group green.
 
