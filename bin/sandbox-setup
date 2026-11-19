@@ -671,14 +671,26 @@ def step_projects(install: bool) -> list[Result]:
                     "projects", "MISSING", "tools/gluon-kube: no .venv (run without --check)"
                 )
             )
-    rust_repo = GLUON / "services" / "user-service-rs"
-    if (rust_repo / "Cargo.lock").is_file():
-        if install:
-            run([str(CARGO_HOME / "bin" / "cargo"), "fetch", "--locked"], cwd=rust_repo)
-        results.append(Result("projects", "OK", "services/user-service-rs: cargo fetch --locked"))
+    for relative in SANDBOX_REPOS:
+        if (GLUON / relative / "Cargo.lock").is_file():
+            results.append(rust_dependencies(relative, install))
     if not results:
         results.append(Result("projects", "INFO", "no sandbox project with a lock file yet"))
     return results
+
+
+def rust_dependencies(relative: Path, install: bool) -> Result:
+    """A Rust repo's locked crates: fetched when installing, and checked present offline
+    either way, so a lock the mirror can't serve is reported, not assumed (TD-61)."""
+    cargo = str(CARGO_HOME / "bin" / "cargo")
+    try:
+        if install:
+            run([cargo, "fetch", "--locked", "--quiet"], cwd=GLUON / relative)
+        run([cargo, "fetch", "--locked", "--offline", "--quiet"], cwd=GLUON / relative)
+    except (OSError, RuntimeError) as error:
+        why = str(error).strip().splitlines()[-1]
+        return Result("projects", "MISSING", f"{relative}: locked crates not all fetched: {why}")
+    return Result("projects", "OK", f"{relative}: locked crates fetched")
 
 
 # --- Helpers ----------------------------------------------------------------
