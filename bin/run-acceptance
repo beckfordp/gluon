@@ -25,6 +25,8 @@ GLUON_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SUITE_DIR="$GLUON_DIR/tests/acceptance"
 NAMESPACE="gluon-local"
 GSHOP_PORT=5173
+# shellcheck source=bin/lib/connectors.sh
+. "$SCRIPT_DIR/lib/connectors.sh"
 
 usage() { echo "usage: bin/run-acceptance [--no-open] [playwright args...]" >&2; exit 2; }
 
@@ -66,6 +68,12 @@ if [ "$(node_major node || echo 0)" -lt 24 ]; then
 fi
 if [ ! -d "$SUITE_DIR/node_modules" ]; then
   echo "FAIL: suite dependencies missing — run 'npm ci' in $SUITE_DIR" >&2
+  exit 1
+fi
+# Without its outbox connector a service's events never reach Kafka, and seeding
+# fails later without saying why (TD-49).
+if ! connectors_check; then
+  echo "FAIL: outbox connectors not RUNNING — run bin/k8s-local-up (it re-registers and restarts them)" >&2
   exit 1
 fi
 # Playwright would reuse a dev server already on the port, possibly one wired to mocks.
