@@ -14,7 +14,7 @@ ARG UV_VERSION=0.9.10
 # tools (bwrap, unshare, nsenter).
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates curl git gcc make xz-utils python3 \
+      ca-certificates curl git gcc libc6-dev make xz-utils python3 \
       postgresql-16 openjdk-21-jdk-headless bubblewrap util-linux \
  && rm -rf /var/lib/apt/lists/* \
  && ln -s /usr/lib/postgresql/16/bin/initdb /usr/lib/postgresql/16/bin/pg_ctl \
