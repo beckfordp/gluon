@@ -240,8 +240,8 @@ ALLOWED_BINARIES = (
 """The only binary files an export may hold; anything else stops it."""
 
 REF_ALLOWED = (
-    (re.compile(r"^bin/(?:codegen|generate-service|run-acceptance|run-perf|reset-data)$"),
-     "Laptop-only scripts: the service generator, the acceptance and perf runners, the full-stack reseed."),
+    (re.compile(r"^bin/(?:generate-service|run-perf)$"),
+     "Laptop-only scripts: the Scala service generator and the perf runner."),
     (re.compile(r"^(?:bin/lib/obs-budget\.sh|infra/k8s/.*\.ya?ml|lib/purerest/build\.sbt)$"),
      "Comments pointing at another service as an example."),
 )
