@@ -19,7 +19,7 @@
 #            the same change, exercised as the plan's "Done when" says
 # Writes report.md to a run directory (printed at the start). Exits 1 if any
 # feature FAILs; PENDING never fails the run. Not a session's done script
-# (those are bin/verify-complete-GK-<n>.sh): this one runs any time.
+# (those were bin/verify-complete-GK-<n>.sh, removed once imported): this one runs any time.
 #   bin/verify-complete-kube-spike.sh
 set -uo pipefail
 SELF="$(realpath "${BASH_SOURCE[0]}")"

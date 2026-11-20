@@ -319,13 +319,15 @@ shellcheck: the sandbox doesn't have it and no `ci.sh` calls it.
 
 ## TD-39 — Done scripts share their boilerplate by copy
 
-Each `bin/verify-complete-RPN-*.sh` defines `pass`, `fail`, `run`, the log
-directory and the `bin/sandbox-save` ending (RPN-2's also `canon_http`).
+Each `bin/verify-complete-RPN-*.sh` defined `pass`, `fail`, `run`, the log
+directory and the `bin/sandbox-save` ending (RPN-2's also `canon_http`). Those
+scripts were removed 2026-11-20, their sessions imported (git history keeps
+them); the debt now applies to the next done script written
+(`bin/verify-complete-ALL-RUST.sh`, the all-Rust session's).
 
 ### Tasks
-- [ ] TD-39.1: extract `bin/lib/verify-complete.sh`; each done script keeps
-      only its criteria. Done when: RPN-4's and later done scripts source it,
-      their output unchanged.
+- [ ] TD-39.1: extract `bin/lib/verify-complete.sh` when the next done script is
+      written; it keeps only its criteria. Done when: that script sources it.
 
 *2026-11-17 (RPN-6): decided, deferred to the next done script written:
 laptop runs write none, and RPN-9 is checked by hand (`bin/verify-port …
@@ -657,8 +659,8 @@ order-service lookups ported (TD-59).
 ### Tasks
 - [ ] TD-67.1: with the order-events group (RPN-12), checks for behaviour 8 (capture
       events 019, 032, 043) and behaviour 9's lookup failure (event 050). Done when:
-      nine behaviours, nine checks, cited in `bin/verify-complete-RPN-11.sh`'s table's
-      successor.
+      those checks cite their tests/contract `docs/behaviours.md` rows (unresolved:
+      NOTIF-F21, F28, F34; lookup failure: NOTIF-F25), and verify-port's tally meets them.
 
 
 ---

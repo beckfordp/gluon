@@ -40,10 +40,10 @@ way, for the laptop to confirm ("Findings for the laptop").
 ## ADR 0030's success criteria
 | Criterion | Met by | Evidence |
 |---|---|---|
-| `gluon-kube up user-service` brings up user-postgres, kafka, kafka-connect (connector registered) and user-service-rs from the unchanged manifests, chart and values file | GK-4 to GK-6 | `bin/verify-complete-GK-6.sh` 2 |
-| The harness's cluster mode green inside the simulated cluster, `CONTRACT_BASE_URL=http://user-service:8080`, the real `user-events` through `gluon-kube exec` into Kafka | GK-7.1, `bin/gluon-kube-contract` | 62 passed (66 isolated-only skipped), the topic check among them; `bin/verify-complete-GK-7.sh` 2 |
-| A sign-up produces `UserRegistered` on `user-events` through the real Debezium connector | GK-6 | `bin/verify-complete-GK-6.sh` 4; `tests/integration/test_cdc.py` |
-| Killing the service, or failing its liveness probe, restarts it; failing readiness takes it out of its Service | GK-4.5/4.6, GK-7.2 | `bin/verify-complete-GK-7.sh` 3 to 5 |
+| `gluon-kube up user-service` brings up user-postgres, kafka, kafka-connect (connector registered) and user-service-rs from the unchanged manifests, chart and values file | GK-4 to GK-6 | `bin/verify-complete-kube-spike.sh` GK-6 (GK-6's done script criterion 2; removed 2026-11-20, git history) |
+| The harness's cluster mode green inside the simulated cluster, `CONTRACT_BASE_URL=http://user-service:8080`, the real `user-events` through `gluon-kube exec` into Kafka | GK-7.1, `bin/gluon-kube-contract` | 62 passed (66 isolated-only skipped), the topic check among them; `bin/verify-complete-kube-spike.sh` GK-7 (GK-7's done script criterion 2; removed 2026-11-20, git history) |
+| A sign-up produces `UserRegistered` on `user-events` through the real Debezium connector | GK-6 | `bin/verify-complete-kube-spike.sh` GK-6 (GK-6's done script criterion 4; removed 2026-11-20, git history); `tests/integration/test_cdc.py` |
+| Killing the service, or failing its liveness probe, restarts it; failing readiness takes it out of its Service | GK-4.5/4.6, GK-7.2 | `bin/verify-complete-kube-spike.sh` GK-7 (GK-7's done script criteria 3 to 5; removed 2026-11-20, git history) |
 | Every object gluon-kube doesn't support listed by `apply`, none skipped silently | GK-3 | `apply --dry-run`: 36 objects, none unsupported; `apply` lists skips and refusals |
 | gluon-kube's CI green in the sandbox | all | `scripts/ci.sh`: 256 tests, 94% coverage (the node and its helpers measured too), ~5 minutes |
 
