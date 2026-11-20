@@ -133,11 +133,11 @@ def main_exit(argv, fakes):
 green = {
     "step_ci": lambda logs, name, repo: step(name, True),
     "step_build": lambda logs, service: step("build", True),
-    "step_contract": lambda logs, service: step("contract", True, {"rest": True}),
+    "step_contract": lambda logs, service, acceptance: step("contract", True, {"rest": True}),
 }
 code, out = main_exit(["notification-service"], green)
 check("all green: exit 0", code == 0 and "MET      C1" in out and "PASS:" in out, out)
-red = dict(green, step_contract=lambda logs, service: step("contract", False, {"rest": False}))
+red = dict(green, step_contract=lambda logs, service, acceptance: step("contract", False, {"rest": False}))
 code, out = main_exit(["notification-service"], red)
 check("contract red: exit 1", code == 1 and "NOT MET: C1" in out, out)
 broken = dict(green, step_build=lambda logs, service: step("build", False))
@@ -146,6 +146,15 @@ check("--only build, build red (no criterion names it): exit 1",
       code == 1 and "failed: build" in out, out)
 code, out = main_exit(["notification-service", "--only", "tracks"], green)
 check("--only a step the service lacks: exit 2", code == 2, out)
+code, out = main_exit(["notification-service", "--acceptance", str(work / "absent.json")], green)
+check("--acceptance without its report: exit 2", code == 2 and "no acceptance report" in out, out)
+report = work / "acceptance-results.json"
+report.write_text("{}")
+seen = []
+spy = dict(green, step_contract=lambda logs, service, acceptance: (
+    seen.append(acceptance), step("contract", True, {"rest": True}))[1])
+code, out = main_exit(["notification-service", "--acceptance", str(report)], spy)
+check("--acceptance reaches the contract step, resolved", code == 0 and seen == [report.resolve()], out)
 
 sys.exit(failures)
 EOF

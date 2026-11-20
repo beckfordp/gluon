@@ -31,6 +31,13 @@ Usage:
   bin/verify-port user-service --quick           without the track scripts
   bin/verify-port user-service --only contract tracks
   bin/verify-port notification-service
+  bin/verify-port cart-service --only build contract \
+      --acceptance tests/acceptance/target/acceptance-results.json
+
+--acceptance: the Playwright JSON report of an acceptance run against this port
+(bin/run-acceptance writes it); its scenarios' `@<SVC>-F<n>` tags count towards the
+behaviour tally beside the checks. Only a run against the port: one against Scala
+would meet the port's rows for it.
 
 Run from the sandbox desktop's root terminal too: it re-runs itself as the
 repos' owner, as every verify script does.
@@ -301,7 +308,7 @@ def group_name(module: str) -> str:
     return module.removeprefix("test_").removeprefix("user_").removeprefix("notification_")
 
 
-def step_contract(logs: Path, service: Service) -> Step:
+def step_contract(logs: Path, service: Service, acceptance: Path | None) -> Step:
     argv = [
         "uv",
         "run",
@@ -344,22 +351,33 @@ def step_contract(logs: Path, service: Service) -> Step:
     ok = code == 0 and total > 0 and not failed
     by_group = {group_name(g): green[g] == n for g, n in per_group.items()}
     summary = f"{sum(green.values())}/{total} green — {groups}"
-    behaviours = behaviour_tally(logs / "contract.log", service)
+    behaviours = behaviour_tally(logs / "contract.log", service, acceptance)
     if behaviours:
         summary += f"; behaviours: {behaviours}"
     return Step("contract", ok, summary, failed, by_group)
 
 
-def behaviour_tally(log: Path, service: Service) -> str:
-    """Behaviours met per layer (tests/contract docs/behaviours.md, all-Rust prep P5);
-    empty for a service the catalogue doesn't list."""
+def behaviour_tally(log: Path, service: Service, acceptance: Path | None) -> str:
+    """Behaviours met per layer (tests/contract docs/behaviours.md, all-Rust prep P5),
+    counting the acceptance run's scenarios when given its report (P5b); empty for a
+    service the catalogue doesn't list."""
     argv = ["uv", "run", "--no-sync", "python", "-m", "gluon_contract.behaviours", "tally"]
-    done = subprocess.run(
-        [*argv, service.name, str(log)], cwd=CONTRACT, capture_output=True, text=True
-    )
+    argv += [service.name, str(log), *([str(acceptance)] if acceptance else [])]
+    done = subprocess.run(argv, cwd=CONTRACT, capture_output=True, text=True, check=False)
     if done.returncode != 0:
         return f"tally failed: {done.stderr.strip()[-200:]}"
-    return "; ".join(done.stdout.strip().splitlines())
+    lines = done.stdout.strip().splitlines()
+    if lines and acceptance:
+        lines.insert(1, f"acceptance counted: {acceptance} (run {acceptance_started(acceptance)})")
+    return "; ".join(lines)
+
+
+def acceptance_started(report: Path) -> str:
+    """When the reported acceptance run started, for the reviewer to judge it current."""
+    try:
+        return json.loads(report.read_text(encoding="utf-8"))["stats"]["startTime"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return "start unknown"
 
 
 def step_cluster(logs: Path, service: Service) -> Step:
@@ -407,8 +425,18 @@ def main() -> int:
     parser.add_argument("service", choices=sorted(SERVICES))
     parser.add_argument("--quick", action="store_true", help="skip the track scripts")
     parser.add_argument("--only", nargs="+", choices=STEP_ORDER)
+    parser.add_argument(
+        "--acceptance",
+        type=Path,
+        metavar="REPORT",
+        help="an acceptance run's Playwright JSON report: count its scenarios' behaviour tags",
+    )
     args = parser.parse_args()
     service = SERVICES[args.service]
+    acceptance = args.acceptance.resolve() if args.acceptance else None
+    if acceptance and not acceptance.is_file():
+        print(f"verify-port: no acceptance report {acceptance}", file=sys.stderr)
+        return 2
     try:
         criteria = load_criteria(CRITERIA_DIR / f"{service.name}.criteria.json", service)
     except CriteriaError as error:
@@ -431,7 +459,7 @@ def main() -> int:
         "harness-ci": lambda: step_ci(logs, "harness-ci", CONTRACT),
         "rust-ci": lambda: step_ci(logs, "rust-ci", service.rust),
         "build": lambda: step_build(logs, service),
-        "contract": lambda: step_contract(logs, service),
+        "contract": lambda: step_contract(logs, service, acceptance),
         "cluster": lambda: step_cluster(logs, service),
         "tracks": lambda: step_tracks(logs, service),
     }
