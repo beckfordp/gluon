@@ -1,0 +1,31 @@
+catalog-service port verification — logs in /tmp/verify-port-catalog-service-20261122-214902-_shi_1az
+
+== 1. build ==
+     (8 s, log /tmp/verify-port-catalog-service-20261122-214902-_shi_1az/build.log)
+ok   build: catalog-service
+== 2. contract ==
+     (3 s, log /tmp/verify-port-catalog-service-20261122-214902-_shi_1az/contract.log)
+FAIL contract: 0/18 checks green — functional 0/18
+       test_catalog_functional::test_creating_answers_the_entry_and_a_used_sku_is_a_new_one
+       test_catalog_functional::test_an_invalid_entry_is_refused_with_its_reason[name-blank]
+       test_catalog_functional::test_an_invalid_entry_is_refused_with_its_reason[price]
+       test_catalog_functional::test_an_invalid_entry_is_refused_with_its_reason[sku-blank]
+       test_catalog_functional::test_an_undecodable_body_is_400
+       test_catalog_functional::test_an_entry_reads_back_and_a_missing_one_is_404
+       test_catalog_functional::test_an_update_sets_the_details_and_keeps_the_sku[PATCH]
+       test_catalog_functional::test_an_update_sets_the_details_and_keeps_the_sku[PUT]
+       test_catalog_functional::test_deleting_is_204_then_the_entry_is_gone
+       test_catalog_functional::test_the_list_pages_newest_first_with_the_true_total
+       test_catalog_functional::test_a_page_outside_the_limits_is_400[?limit=0]
+       test_catalog_functional::test_a_page_outside_the_limits_is_400[?limit=101]
+       test_catalog_functional::test_a_page_outside_the_limits_is_400[?offset=-1]
+       test_catalog_functional::test_a_non_numeric_limit_is_400
+       test_catalog_functional::test_a_page_is_cached_until_its_entry_goes
+       test_catalog_functional::test_a_page_the_scala_service_cached_is_served_as_cached
+       test_catalog_functional::test_readiness_follows_postgres_and_redis_down_falls_back
+       test_catalog_functional::test_gshops_origin_may_call_it_from_the_browser
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (18 checks; logs in /tmp/verify-port-catalog-service-20261122-214902-_shi_1az)

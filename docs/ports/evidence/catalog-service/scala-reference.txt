@@ -1,0 +1,29 @@
+................F..F                                                     [100%]
+=================================== FAILURES ===================================
+E   TimeoutError: timed out
+/opt/anaconda3/lib/python3.13/socket.py:719: TimeoutError: timed out
+E   AssertionError: GET asyncapi.json: answered 404, expected 200; body b''
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/checks/support.py:73: AssertionError: GET asyncapi.json: answered 404, expected 200; body b''
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED checks/test_catalog_functional.py::test_creating_answers_the_entry_and_a_used_sku_is_a_new_one
+PASSED checks/test_catalog_functional.py::test_an_invalid_entry_is_refused_with_its_reason[name-blank]
+PASSED checks/test_catalog_functional.py::test_an_invalid_entry_is_refused_with_its_reason[price]
+PASSED checks/test_catalog_functional.py::test_an_invalid_entry_is_refused_with_its_reason[sku-blank]
+PASSED checks/test_catalog_functional.py::test_an_undecodable_body_is_400
+PASSED checks/test_catalog_functional.py::test_an_entry_reads_back_and_a_missing_one_is_404
+PASSED checks/test_catalog_functional.py::test_an_update_sets_the_details_and_keeps_the_sku[PATCH]
+PASSED checks/test_catalog_functional.py::test_an_update_sets_the_details_and_keeps_the_sku[PUT]
+PASSED checks/test_catalog_functional.py::test_deleting_is_204_then_the_entry_is_gone
+PASSED checks/test_catalog_functional.py::test_the_list_pages_newest_first_with_the_true_total
+PASSED checks/test_catalog_functional.py::test_a_page_outside_the_limits_is_400[?limit=0]
+PASSED checks/test_catalog_functional.py::test_a_page_outside_the_limits_is_400[?limit=101]
+PASSED checks/test_catalog_functional.py::test_a_page_outside_the_limits_is_400[?offset=-1]
+PASSED checks/test_catalog_functional.py::test_a_non_numeric_limit_is_400
+PASSED checks/test_catalog_functional.py::test_a_page_is_cached_until_its_entry_goes
+PASSED checks/test_catalog_functional.py::test_a_page_the_scala_service_cached_is_served_as_cached
+PASSED checks/test_catalog_functional.py::test_gshops_origin_may_call_it_from_the_browser
+PASSED checks/test_catalog_docs.py::test_swagger_ui_loads_the_document_of_the_routes_served
+FAILED checks/test_catalog_functional.py::test_readiness_follows_postgres_and_redis_down_falls_back
+FAILED checks/test_catalog_docs.py::test_the_asyncapi_document_and_its_page_say_it_publishes_nothing
+2 failed, 18 passed in 39.51s

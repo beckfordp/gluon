@@ -1,0 +1,15 @@
+catalog-service port verification — logs in /tmp/verify-port-catalog-service-20261122-214913-9on4q1l7
+
+== 1. build ==
+     (0 s, log /tmp/verify-port-catalog-service-20261122-214913-9on4q1l7/build.log)
+ok   build: catalog-service
+== 2. contract ==
+     (3 s, log /tmp/verify-port-catalog-service-20261122-214913-9on4q1l7/contract.log)
+FAIL contract: 0/2 checks green — docs 0/2
+       test_catalog_docs::test_swagger_ui_loads_the_document_of_the_routes_served
+       test_catalog_docs::test_the_asyncapi_document_and_its_page_say_it_publishes_nothing
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (2 checks; logs in /tmp/verify-port-catalog-service-20261122-214913-9on4q1l7)
