@@ -1,0 +1,23 @@
+== Staged: cart (ACCEPTANCE_SERVICES; unset for the full run) ==
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+== Purging event topics
+== Flushing caches
+== Seeding catalogue and stock: skipped (needs catalog and inventory in ACCEPTANCE_SERVICES)
+== Seeding demo customers and orders
+Skipped: demo customers and orders need user catalog inventory payment order fulfilment in ACCEPTANCE_SERVICES
+Done.
+== Acceptance suite ==
+
+Running 4 tests using 1 worker
+
+  ✓  1 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:12:3 › Add to cart (US-2) › A new shopper's cart is empty @US-2.1 @CART-F1 @CART-F2 (738ms)
+  ✓  2 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:17:3 › Add to cart (US-2) › Adding a product puts it in my cart @US-2.1 @CART-F3 @CART-F2 (1.1s)
+  ✓  3 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:24:3 › Add to cart (US-2) › Adding one more increases the quantity and total @US-2.1 @CART-F3 (925ms)
+  ✓  4 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:31:3 › Add to cart (US-2) › Removing the product empties my cart @US-2.1 @CART-F5 (582ms)
+
+  4 passed (5.5s)
+== Stock ledger invariant: skipped (inventory not in ACCEPTANCE_SERVICES) ==
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

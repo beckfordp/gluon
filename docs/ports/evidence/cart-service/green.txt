@@ -1,0 +1,25 @@
+cart-service port verification — logs in /tmp/verify-port-cart-service-20261122-205622-tw1kes1q
+
+== 1. harness-ci ==
+     (166 s, log /tmp/verify-port-cart-service-20261122-205622-tw1kes1q/harness-ci.log)
+ok   harness-ci: 479 passed, coverage 95.30%
+== 2. rust-ci ==
+     (21 s, log /tmp/verify-port-cart-service-20261122-205622-tw1kes1q/rust-ci.log)
+ok   rust-ci: line coverage 96.03%
+== 3. build ==
+     (0 s, log /tmp/verify-port-cart-service-20261122-205622-tw1kes1q/build.log)
+ok   build: cart-service
+== 4. contract ==
+     (4 s, log /tmp/verify-port-cart-service-20261122-205622-tw1kes1q/contract.log)
+ok   contract: 18/18 checks green — docs 2/2, functional 16/16
+
+== cart-service contract criteria ==
+MET      F       [functional CART-F1–F10] what gshop, the suite and readiness rely on, against the Rust service
+MET      D       [docs CART-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/cart-service.cheatsheet.md))
+rows met: functional 10/10, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-cart-service-20261122-205622-tw1kes1q)

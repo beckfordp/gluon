@@ -46,7 +46,7 @@ Started 2026-11-22 19:05 GMT.
   tests/contract `7bbdadf` CDC rehearsal on the renamed file, 2 passed. Red not seen for
   the k8s-local-up test: the old script has no check-only mode, so running the test
   against it would deploy for real.
-- [~] P0.5 `ACCEPTANCE_SERVICES` staging; first red baseline. gluon `5f6cb11`
+- [x] P0.5 `ACCEPTANCE_SERVICES` staging; first red baseline. gluon `5f6cb11`
   (`bin/lib/acceptance-services.sh`, test PASS 13 cases red first): run-acceptance
   (connector precheck, ledger only with inventory), reset-data (listed DBs, caches,
   `<svc>-` topics; catalogue seed only with catalog+inventory), seed-demo-data (only with
@@ -57,6 +57,18 @@ Started 2026-11-22 19:05 GMT.
   `environments/local/notification-service-rs.values.yaml`); user OK.
 
 ## Ports (cart → catalog → inventory → user → payment → order → fulfilment → notification)
+
+- [x] cart — 20:29–21:23 (54 min). RED `cart-red_20261122` (tests/contract, 19 min):
+  capture `88d7924`, throwaway Redis + Postgres-less profiles `fa1c27c`, CART-F1–F10 and
+  D1–D2 `db92d68`/`398a342`; on Scala 17 green, D2 red by design (A6); skeleton
+  `services/cart-service-rs` `71a7840` → every check red for "answered 404" (16 F, 2 D).
+  GREEN `port_20261122` (cart-service-rs, 9 min): `2b11b4b`, contract 18/18 first run,
+  CI 96.03% lines; gluon-rs `Cache::query` `e46e911`. `bin/verify-port cart-service` all
+  MET. Deployed `CART_SERVICE_IMPL=rust`; staged acceptance `--grep @CART-F` 4 passed
+  (tests/acceptance `7b2a9ad`); full unstaged run 53/53, ledger OK (an earlier run
+  52/53: US-9.5 "Cancelling while Packed" stock not back in 5 s, passed alone 3/3 and in
+  the next full run — a flake outside cart, kept as `acceptance-full-flake.txt`). No cache to prove (Redis is the store). Cheat sheet
+  `docs/ports/cart-service.cheatsheet.md`; evidence `docs/ports/evidence/cart-service/`.
 
 ## Finish
 
@@ -73,6 +85,18 @@ Started 2026-11-22 19:05 GMT.
   mirror's 14 days. Take it from 2026-12-04.
 - A5 (P0.5) cart-service has no Postgres (Redis only): its port will need the template's
   store swapped for Redis; the template stays Postgres-first.
+- A6 (cart) The Rust cart serves an AsyncAPI document with no channels and its page
+  ("publishes and consumes nothing"); Scala answers 404. Reason: D2 holds for every
+  service, and an empty document says so rather than leaving it unknown.
+- A7 (cart) With Redis refusing connections, Scala doesn't answer readiness or reads at
+  all (hangs); Rust answers 503 / 500 within the 500 ms Redis timeout. CART-F9 asks "not
+  200 within the probe's 1 s, never a 404" so both pass. Reason: fail fast is what the
+  readiness probe needs; no caller relies on the hang.
+- A8 (cart) The preflight's Allow-Methods is service-basics' `PATCH, PUT, GET, POST,
+  DELETE`, not Scala's `GET, POST, DELETE`. Reason: one CORS policy for every port; a
+  browser only needs the method it asks for listed (CART-F8 green). Wire row, out of the bar.
+- A9 (cart) Stage A's ≥90% line coverage is read from CI's TOTAL line; gluon-rs's shared
+  gate stays 80% (the other ports run on it).
 - A2 (P0.2) user-service keeps topic modules (criteria need `contract:probe`,
   `contract:metrics`); its wire rows are one per topic. `test_user_docs` →
   `test_user_documentation` (a docs-named module would have to be docs only).
