@@ -11,8 +11,15 @@
 #   USER_SERVICE_IMPL=rust bin/k8s-local-up user-service
 #       deploys the Rust user-service (services/user-service-rs, ADR 0028
 #       decision 7) under the same release name; scala (the default) switches
-#       back. A switch resets the user database's public schema and restarts
-#       the user outbox connector so its publication covers the new table.
+#       back. Every service has its <SERVICE>_IMPL (CART_SERVICE_IMPL, ...).
+#   ALL_RUST=1 bin/k8s-local-up
+#       every service's default is rust (all-Rust Stage A P0.4); a
+#       <SERVICE>_IMPL still wins. Every chosen port is checked before anything
+#       is built.
+#   A switch resets the service database's public schema and Debezium slot
+#   (infra/k8s/local-infra/switch-reset.sql) and restarts its outbox connector.
+#   The connectors are registered again once every service has run its
+#   migrations, so each outbox table exists when its connector starts.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,18 +28,43 @@ NAMESPACE="gluon-local"
 # shellcheck source=bin/lib/connectors.sh
 . "$SCRIPT_DIR/lib/connectors.sh"
 
-USER_SERVICE_IMPL="${USER_SERVICE_IMPL:-scala}"
-case "$USER_SERVICE_IMPL" in
-  scala | rust) ;;
-  *) echo "FAIL: USER_SERVICE_IMPL must be scala or rust, got '$USER_SERVICE_IMPL'" >&2; exit 1 ;;
-esac
-
 ALL_SERVICES=(catalog-service cart-service order-service inventory-service payment-service notification-service user-service fulfilment-service)
 if [ "$#" -gt 0 ]; then
   SERVICES=("$@")
 else
   SERVICES=("${ALL_SERVICES[@]}")
 fi
+
+# impl_variable SERVICE: user-service -> USER_SERVICE_IMPL.
+impl_variable() {
+  local name="${1//-/_}_IMPL"
+  echo "$name" | tr '[:lower:]' '[:upper:]'
+}
+
+# impl_of SERVICE: scala or rust, from <SERVICE>_IMPL, else ALL_RUST.
+impl_of() {
+  local variable default=scala
+  variable="$(impl_variable "$1")"
+  [ "${ALL_RUST:-0}" = 1 ] && default=rust
+  echo "${!variable:-$default}"
+}
+
+# Every choice checked, and every chosen port present, before anything is built.
+for svc in "${SERVICES[@]}"; do
+  impl="$(impl_of "$svc")"
+  case "$impl" in
+    scala) dir="$GLUON_DIR/services/$svc" values="$GLUON_DIR/environments/local/$svc.values.yaml" ;;
+    rust) dir="$GLUON_DIR/services/$svc-rs" values="$GLUON_DIR/environments/local/$svc-rs.values.yaml" ;;
+    *) echo "FAIL: $(impl_variable "$svc") must be scala or rust, got '$impl'" >&2; exit 1 ;;
+  esac
+  for needed in "$dir" "$values"; do
+    if [ ! -e "$needed" ]; then
+      echo "FAIL: $svc ($impl): $needed doesn't exist" >&2
+      exit 1
+    fi
+  done
+done
+[ "${K8S_LOCAL_UP_CHECK_ONLY:-0}" = 1 ] && { echo "OK: ${SERVICES[*]}"; exit 0; }
 
 if ! docker info >/dev/null 2>&1; then
   echo "FAIL: docker isn't reachable — is OrbStack running?" >&2
@@ -92,27 +124,20 @@ deployed_image() {
 }
 
 for svc in "${SERVICES[@]}"; do
+  short="${svc%-service}"
   SERVICE_DIR="$GLUON_DIR/services/$svc"
   VALUES_FILE="$GLUON_DIR/environments/local/$svc.values.yaml"
   IMAGE="$svc"
-  if [ "$svc" = user-service ] && [ "$USER_SERVICE_IMPL" = rust ]; then
-    SERVICE_DIR="$GLUON_DIR/services/user-service-rs"
-    VALUES_FILE="$GLUON_DIR/environments/local/user-service-rs.values.yaml"
-    IMAGE="user-service-rs"
-  fi
-  if [ ! -d "$SERVICE_DIR" ]; then
-    echo "FAIL: $SERVICE_DIR doesn't exist" >&2
-    exit 1
-  fi
-  if [ ! -f "$VALUES_FILE" ]; then
-    echo "FAIL: $VALUES_FILE doesn't exist" >&2
-    exit 1
+  if [ "$(impl_of "$svc")" = rust ]; then
+    SERVICE_DIR="$GLUON_DIR/services/$svc-rs"
+    VALUES_FILE="$GLUON_DIR/environments/local/$svc-rs.values.yaml"
+    IMAGE="$svc-rs"
   fi
 
-  if [ "$IMAGE" = user-service-rs ]; then
-    echo "== Building $svc image from services/user-service-rs (docker build) =="
+  if [ "$IMAGE" = "$svc-rs" ]; then
+    echo "== Building $svc image from services/$svc-rs (docker build) =="
     # The shared crates are a path dependency on lib/gluon-rs (TD-43): a named context.
-    docker build -t user-service-rs:latest --build-context gluon-rs="$GLUON_DIR/lib/gluon-rs" "$SERVICE_DIR"
+    docker build -t "$svc-rs:latest" --build-context gluon-rs="$GLUON_DIR/lib/gluon-rs" "$SERVICE_DIR"
   else
     echo "== Building $svc image (sbt Docker/publishLocal) =="
     (cd "$SERVICE_DIR" && sbt "Docker/publishLocal")
@@ -122,11 +147,13 @@ for svc in "${SERVICES[@]}"; do
   # (ADR 0028 decision 5; what and why: infra/k8s/local-infra/user-switch-reset.sql).
   SWITCHED=0
   current="$(deployed_image "$svc")"
-  if [ "$svc" = user-service ] && [ -n "$current" ] && [ "${current%%:*}" != "$IMAGE" ]; then
-    echo "== Switching user-service from ${current%%:*} to $IMAGE: resetting the user database =="
-    kubectl exec -i -n "$NAMESPACE" deploy/user-postgres -- \
-      psql -v ON_ERROR_STOP=1 -q -U user -d user -f - \
-      < "$GLUON_DIR/infra/k8s/local-infra/user-switch-reset.sql"
+  if [ -n "$current" ] && [ "${current%%:*}" != "$IMAGE" ]; then
+    if kubectl get "deployment/$short-postgres" -n "$NAMESPACE" >/dev/null 2>&1; then
+      echo "== Switching $svc from ${current%%:*} to $IMAGE: resetting the $short database =="
+      kubectl exec -i -n "$NAMESPACE" "deploy/$short-postgres" -- \
+        psql -v ON_ERROR_STOP=1 -q -U "$short" -d "$short" -f - \
+        < "$GLUON_DIR/infra/k8s/local-infra/switch-reset.sql"
+    fi
     SWITCHED=1
   fi
 
@@ -145,14 +172,23 @@ for svc in "${SERVICES[@]}"; do
   kubectl rollout restart "deployment/$svc" -n "$NAMESPACE"
   kubectl rollout status "deployment/$svc" -n "$NAMESPACE" --timeout=120s
 
-  if [ "$SWITCHED" = 1 ]; then
+  if [ "$SWITCHED" = 1 ] && connector_names | grep -qx "$short-outbox-connector"; then
     # The new service has created outbox_events again; Debezium recreates its
     # publication and slot for it on restart (rehearsed on the sandbox CDC stack:
     # tests/contract tests/integration/test_cdc_stack.py).
-    echo "== Restarting the user outbox connector =="
-    connector_restart user-outbox-connector all || true
+    echo "== Restarting the $short outbox connector =="
+    connector_restart "$short-outbox-connector" all || true
   fi
 done
+
+# Every deployed service has migrated: register the connectors again, so none
+# starts before its outbox table exists (all-Rust Stage A P0.4).
+echo "== Registering Debezium outbox connectors after the migrations (up to 2m) =="
+kubectl delete job debezium-connector-register -n "$NAMESPACE" --ignore-not-found
+kubectl apply -f "$GLUON_DIR/infra/k8s/local-infra/debezium-connectors-register.yaml"
+kubectl wait --for=condition=complete job/debezium-connector-register -n "$NAMESPACE" --timeout=120s || {
+  echo "WARN: connector registration didn't complete in time — check 'kubectl logs job/debezium-connector-register -n $NAMESPACE'" >&2
+}
 
 # The register Job can run before a service has created outbox_events (a fresh or
 # wiped database): that connector's task stays FAILED until restarted (TD-30.3).
