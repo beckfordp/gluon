@@ -14,6 +14,10 @@
 #     --no-open        don't serve the HTML report afterwards
 #     playwright args  passed through, e.g. --grep @US-17 or --headed
 #
+# Staged (all-Rust Stage A P0.5): ACCEPTANCE_SERVICES=cart,catalog limits the
+# connector precheck, reset, seeding, the suite's precheck and the ledger check to
+# those services (bin/lib/acceptance-services.sh); unset, the original run.
+#
 # Exits with Playwright's status, or 1 if a preflight check or the coverage
 # matrix fails. A changed inventory is a warning, not a failure: a scenario
 # that failed mid-way may legitimately leave it changed.
@@ -27,6 +31,8 @@ NAMESPACE="gluon-local"
 GSHOP_PORT=5173
 # shellcheck source=bin/lib/connectors.sh
 . "$SCRIPT_DIR/lib/connectors.sh"
+# shellcheck source=bin/lib/acceptance-services.sh
+. "$SCRIPT_DIR/lib/acceptance-services.sh"
 
 usage() { echo "usage: bin/run-acceptance [--no-open] [playwright args...]" >&2; exit 2; }
 
@@ -43,6 +49,10 @@ done
 node_major() { "$1" -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/'; }
 
 # --- preflight ---------------------------------------------------------------
+acceptance_validate || exit 2
+if acceptance_staged; then
+  echo "== Staged: $(acceptance_list | paste -sd, -) (ACCEPTANCE_SERVICES; unset for the full run) =="
+fi
 if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
   echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
   exit 1
@@ -76,7 +86,18 @@ if [ ! -d "$SUITE_DIR/node_modules" ]; then
 fi
 # Without its outbox connector a service's events never reach Kafka, and seeding
 # fails later without saying why (TD-49).
-if ! connectors_check; then
+staged_connectors_check() {
+  local name state bad=0
+  for name in $(connector_names | acceptance_connectors); do
+    state="$(connector_state "$name")"
+    if [ "$state" != RUNNING ]; then
+      echo "connector $name: $state" >&2
+      bad=1
+    fi
+  done
+  return "$bad"
+}
+if ! staged_connectors_check; then
   echo "FAIL: outbox connectors not RUNNING — run bin/k8s-local-up (it re-registers and restarts them)" >&2
   exit 1
 fi
@@ -106,8 +127,12 @@ npx bddgen < /dev/null
 status=0
 npx playwright test "${args[@]+"${args[@]}"}" < /dev/null || status=$?
 
-echo "== Stock ledger invariant =="
-"$GLUON_DIR/bin/check-stock-ledger" || status=1
+if acceptance_covers inventory; then
+  echo "== Stock ledger invariant =="
+  "$GLUON_DIR/bin/check-stock-ledger" || status=1
+else
+  echo "== Stock ledger invariant: skipped (inventory not in ACCEPTANCE_SERVICES) =="
+fi
 
 # --- report ------------------------------------------------------------------
 # show-report serves until Ctrl+C, so only when someone is there to close it.

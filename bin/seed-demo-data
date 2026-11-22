@@ -16,9 +16,20 @@
 # State is kept in .seed-demo-data.state.json at the repo root (gitignored)
 # because order-service's history list is Redis-cached and cannot be used for
 # existence checks immediately after seeding.
+#
+# Staged (ACCEPTANCE_SERVICES, bin/lib/acceptance-services.sh): seeds only when the
+# run covers every service the orders go through; otherwise says so and exits 0.
 set -euo pipefail
 
 GLUON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=bin/lib/acceptance-services.sh
+. "$GLUON_DIR/bin/lib/acceptance-services.sh"
+acceptance_validate || exit 2
+SEED_NEEDS=(user catalog inventory payment order fulfilment)
+if ! acceptance_covers_all "${SEED_NEEDS[@]}"; then
+  echo "Skipped: demo customers and orders need ${SEED_NEEDS[*]} in ACCEPTANCE_SERVICES"
+  exit 0
+fi
 STATE_FILE="$GLUON_DIR/.seed-demo-data.state.json"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
