@@ -33,6 +33,11 @@ Usage:
   bin/verify-port notification-service
   bin/verify-port cart-service --only build contract \
       --acceptance tests/acceptance/target/acceptance-results.json
+  bin/verify-port cart-service --only build contract --group docs --expect-red "answered 404"
+
+--group: the contract step runs one group's checks (`checks/test_<short>_<group>.py`).
+--expect-red: the RED half of a port (Stage A): PASS only when the skeleton builds and
+every check run is red, each for a reason the regex finds in pytest's summary.
 
 --acceptance: the Playwright JSON report of an acceptance run against this port
 (bin/run-acceptance writes it); its scenarios' `@<SVC>-F<n>` tags count towards the
@@ -112,6 +117,16 @@ SERVICES = {
         ["notification-service"],
     ),
 }
+# The all-Rust ports (Stage A), generated from tools/rust-service-template; their docs are
+# built into the binary, so the build is its binary alone.
+for _name in ("cart", "catalog", "inventory", "payment", "order", "fulfilment"):
+    _service = f"{_name}-service"
+    SERVICES[_service] = Service(_service, GLUON / "services" / f"{_service}-rs", [_service])
+
+KINDS = ("functional", "docs", "wire")
+"""A behaviour's kinds (tests/contract docs/behaviours.md, "Kinds of behaviour")."""
+KINDS_FOOTER = 'kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour"'
+
 
 
 class CriteriaError(Exception):
@@ -123,6 +138,10 @@ class Criterion:
     id: str
     description: str
     needs: list[str]
+    kind: str = ""
+    """The kind of behaviour it judges (KINDS), if one."""
+    rows: str = ""
+    """The catalogue rows it covers, e.g. `CART-F1–F12`."""
 
 
 @dataclass(frozen=True)
@@ -143,9 +162,17 @@ def load_criteria(path: Path, service: Service) -> Criteria:
     criteria, seen = [], set()
     for raw in data.get("criteria", []):
         try:
-            criterion = Criterion(raw["id"], raw["description"], list(raw["needs"]))
+            criterion = Criterion(
+                raw["id"],
+                raw["description"],
+                list(raw["needs"]),
+                raw.get("kind", ""),
+                raw.get("rows", ""),
+            )
         except (KeyError, TypeError) as error:
             raise CriteriaError(f"{path}: a criterion lacks {error}") from error
+        if criterion.kind and criterion.kind not in KINDS:
+            raise CriteriaError(f"{path}: {criterion.id}: unknown kind {criterion.kind!r}")
         if not criterion.needs:
             raise CriteriaError(f"{path}: {criterion.id}: needs no step")
         for need in criterion.needs:
@@ -206,6 +233,17 @@ def evaluate(criteria: Criteria, steps: dict[str, "Step"]) -> list[tuple[Criteri
     return states
 
 
+@dataclass(frozen=True)
+class Outcome:
+    """One check's result in a contract run, with pytest's reason for a red one."""
+
+    module: str
+    test: str
+    result: str
+    """PASSED, FAILED or ERROR."""
+    reason: str = ""
+
+
 @dataclass
 class Step:
     """One step's outcome."""
@@ -216,6 +254,8 @@ class Step:
     detail: list[str] = field(default_factory=list)
     groups: dict[str, bool] = field(default_factory=dict)
     """For the contract step: each group's outcome (all its checks green)."""
+    checks: list[Outcome] = field(default_factory=list)
+    """For the contract step: every check's outcome (`--expect-red` judges them)."""
 
 
 def as_owner(service: Service) -> None:
@@ -303,18 +343,70 @@ def step_build(logs: Path, service: Service) -> Step:
     )
 
 
-def group_name(module: str) -> str:
-    """`test_user_rest` → `rest`: the group, without the service its module is named for."""
-    return module.removeprefix("test_").removeprefix("user_").removeprefix("notification_")
+def group_name(module: str, service: Service) -> str:
+    """`test_cart_functional` → `functional`: the group, without the service its module is
+    named for (`test_probe`, named for none, is `probe`)."""
+    short = service.name.removesuffix("-service")
+    return module.removeprefix("test_").removeprefix(f"{short}_")
 
 
-def step_contract(logs: Path, service: Service, acceptance: Path | None) -> Step:
+def group_modules(service: Service, group: str, modules: list[str]) -> list[str]:
+    """The modules among `modules` (names, `test_…`) whose group is `group`."""
+    return [m for m in modules if group_name(m, service) == group]
+
+
+def parse_outcomes(text: str) -> list[Outcome]:
+    """Every check's outcome in pytest `-rA` output; a red one's reason is its short-summary
+    message (`FAILED checks/… - <reason>`)."""
+    found = re.findall(
+        r"^(PASSED|FAILED|ERROR) checks/(test_\w+)\.py::(\S+)(?: - (.*))?$", text, re.MULTILINE
+    )
+    return [Outcome(module, test, result, reason) for result, module, test, reason in found]
+
+
+def contract_summary(outcomes: list[Outcome], service: Service) -> str:
+    """`N/M checks green — <group> x/y, …`, groups in name order."""
+    per_group: Counter[str] = Counter()
+    green: Counter[str] = Counter()
+    for outcome in outcomes:
+        group = group_name(outcome.module, service)
+        per_group[group] += 1
+        green[group] += outcome.result == "PASSED"
+    groups = ", ".join(f"{g} {green[g]}/{n}" for g, n in sorted(per_group.items()))
+    return f"{sum(green.values())}/{len(outcomes)} checks green — {groups}"
+
+
+def expect_red(outcomes: list[Outcome], pattern: str) -> tuple[bool, list[str]]:
+    """Whether every check is red for the reason `pattern` (a regex) finds, and a line for
+    each that isn't: a check written before the code it judges fails for the reason it
+    should, not for a broken harness (Stage A, ATDD)."""
+    if not outcomes:
+        return False, ["no checks ran"]
+    found = re.compile(pattern)
+    lines = []
+    for o in outcomes:
+        if o.result == "PASSED":
+            lines.append(f"{o.module}::{o.test} is green")
+        elif not found.search(o.reason):
+            lines.append(f"{o.module}::{o.test} red for another reason: {o.reason or '(none)'}")
+    return not lines, lines
+
+
+def step_contract(
+    logs: Path, service: Service, acceptance: Path | None, group: str | None = None
+) -> Step:
+    paths = ["checks"]
+    if group:
+        names = sorted(p.stem for p in (CONTRACT / "checks").glob("test_*.py"))
+        paths = [f"checks/{m}.py" for m in group_modules(service, group, names)]
+        if not paths:
+            return Step("contract", False, f"no checks in group {group!r}")
     argv = [
         "uv",
         "run",
         "--no-sync",
         "pytest",
-        "checks",
+        *paths,
         "--service",
         service.name,
         "-p",
@@ -332,29 +424,18 @@ def step_contract(logs: Path, service: Service, acceptance: Path | None) -> Step
     if service.probe:
         argv += ["--probe-cmd", str(service.rust / "target/debug/events-probe")]
     code, text = run(logs / "contract.log", argv, CONTRACT)
-    outcomes = re.findall(
-        r"^(PASSED|FAILED|ERROR) checks/(test_\w+)\.py::(\S+)", text, re.MULTILINE
-    )
-    per_group: Counter[str] = Counter()
-    green: Counter[str] = Counter()
-    failed = []
-    for outcome, group, test in outcomes:
-        per_group[group] += 1
-        if outcome == "PASSED":
-            green[group] += 1
-        else:
-            failed.append(f"{group}::{test}")
-    groups = ", ".join(
-        f"{group_name(g)} {green[g]}/{n}" for g, n in sorted(per_group.items())
-    )
-    total = sum(per_group.values())
-    ok = code == 0 and total > 0 and not failed
-    by_group = {group_name(g): green[g] == n for g, n in per_group.items()}
-    summary = f"{sum(green.values())}/{total} green — {groups}"
+    outcomes = parse_outcomes(text)
+    failed = [f"{o.module}::{o.test}" for o in outcomes if o.result != "PASSED"]
+    ok = code == 0 and bool(outcomes) and not failed
+    by_group: dict[str, bool] = {}
+    for o in outcomes:
+        name = group_name(o.module, service)
+        by_group[name] = by_group.get(name, True) and o.result == "PASSED"
+    summary = contract_summary(outcomes, service)
     behaviours = behaviour_tally(logs / "contract.log", service, acceptance)
     if behaviours:
         summary += f"; behaviours: {behaviours}"
-    return Step("contract", ok, summary, failed, by_group)
+    return Step("contract", ok, summary, failed, by_group, outcomes)
 
 
 def behaviour_tally(log: Path, service: Service, acceptance: Path | None) -> str:
@@ -418,6 +499,25 @@ def step_tracks(logs: Path, service: Service) -> Step:
     )
 
 
+def report_expect_red(steps: dict[str, Step], pattern: str, logs: Path) -> int:
+    """`--expect-red`'s verdict: every step before the contract passed (the skeleton
+    builds), and every check is red for `pattern`."""
+    broken = [s.name for s in steps.values() if s.name != "contract" and not s.ok]
+    ok, lines = expect_red(steps["contract"].checks, pattern)
+    print(f"\n== expect red: {pattern!r} ==")
+    for line in lines[:40]:
+        print(f"  {line}")
+    print(f"({KINDS_FOOTER})\n")
+    if broken or not ok:
+        reasons = [f"failed: {', '.join(broken)}"] if broken else []
+        reasons += [f"expected red, {len(lines)} not"] if not ok else []
+        print(f"FAIL: {'; '.join(reasons)} (logs in {logs})")
+        return 1
+    count = len(steps["contract"].checks)
+    print(f"PASS: every check red for {pattern!r} ({count} checks; logs in {logs})")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -425,6 +525,15 @@ def main() -> int:
     parser.add_argument("service", choices=sorted(SERVICES))
     parser.add_argument("--quick", action="store_true", help="skip the track scripts")
     parser.add_argument("--only", nargs="+", choices=STEP_ORDER)
+    parser.add_argument(
+        "--group", metavar="NAME", help="the contract step runs only this group's checks"
+    )
+    parser.add_argument(
+        "--expect-red",
+        metavar="PATTERN",
+        help="with --only … contract: PASS only when every check run is red, each for a "
+        "reason this regex finds (a check seen red before the port)",
+    )
     parser.add_argument(
         "--acceptance",
         type=Path,
@@ -441,6 +550,16 @@ def main() -> int:
         criteria = load_criteria(CRITERIA_DIR / f"{service.name}.criteria.json", service)
     except CriteriaError as error:
         print(f"verify-port: {error}", file=sys.stderr)
+        return 2
+    if args.expect_red is not None and "contract" not in (args.only or []):
+        print("verify-port: --expect-red needs --only … contract", file=sys.stderr)
+        return 2
+    if not service.rust.is_dir():
+        print(
+            f"verify-port: no Rust port at {service.rust} yet (generate it from "
+            "tools/rust-service-template)",
+            file=sys.stderr,
+        )
         return 2
     unknown = [s for s in args.only or [] if s not in service.steps]
     if unknown:
@@ -459,7 +578,7 @@ def main() -> int:
         "harness-ci": lambda: step_ci(logs, "harness-ci", CONTRACT),
         "rust-ci": lambda: step_ci(logs, "rust-ci", service.rust),
         "build": lambda: step_build(logs, service),
-        "contract": lambda: step_contract(logs, service, acceptance),
+        "contract": lambda: step_contract(logs, service, acceptance, args.group),
         "cluster": lambda: step_cluster(logs, service),
         "tracks": lambda: step_tracks(logs, service),
     }
@@ -471,13 +590,17 @@ def main() -> int:
         print(f"{'ok  ' if step.ok else 'FAIL'} {name}: {step.summary}", flush=True)
         for line in step.detail[:20]:
             print(f"       {line}", flush=True)
+    if args.expect_red is not None:
+        return report_expect_red(steps, args.expect_red, logs)
     print(f"\n== {service.name} contract criteria ==")
     states = evaluate(criteria, steps)
     width = max(len(c.id) for c in criteria.criteria)
     for criterion, state in states:
-        print(f"{state:<8} {criterion.id:<{width}} {criterion.description}")
+        scope = f"[{criterion.kind} {criterion.rows}] " if criterion.kind else ""
+        print(f"{state:<8} {criterion.id:<{width}} {scope}{criterion.description}")
     if criteria.guide:
         print(f"({criteria.guide})")
+    print(f"({KINDS_FOOTER})")
     unmet = [c.id for c, state in states if state == "NOT MET"]
     failed = [s.name for s in steps.values() if not s.ok]
     print()
