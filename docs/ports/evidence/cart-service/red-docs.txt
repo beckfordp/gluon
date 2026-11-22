@@ -1,0 +1,15 @@
+cart-service port verification — logs in /tmp/verify-port-cart-service-20261122-204544-3_kf3m8c
+
+== 1. build ==
+     (0 s, log /tmp/verify-port-cart-service-20261122-204544-3_kf3m8c/build.log)
+ok   build: cart-service
+== 2. contract ==
+     (3 s, log /tmp/verify-port-cart-service-20261122-204544-3_kf3m8c/contract.log)
+FAIL contract: 0/2 checks green — docs 0/2
+       test_cart_docs::test_swagger_ui_loads_the_document_of_the_routes_served
+       test_cart_docs::test_the_asyncapi_document_and_its_page_say_it_publishes_nothing
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (2 checks; logs in /tmp/verify-port-cart-service-20261122-204544-3_kf3m8c)

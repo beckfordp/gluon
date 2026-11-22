@@ -1,0 +1,29 @@
+cart-service port verification — logs in /tmp/verify-port-cart-service-20261122-204602-mi33yadb
+
+== 1. build ==
+     (1 s, log /tmp/verify-port-cart-service-20261122-204602-mi33yadb/build.log)
+ok   build: cart-service
+== 2. contract ==
+     (3 s, log /tmp/verify-port-cart-service-20261122-204602-mi33yadb/contract.log)
+FAIL contract: 0/16 checks green — functional 0/16
+       test_cart_functional::test_creating_a_cart_answers_a_new_empty_one
+       test_cart_functional::test_a_cart_reads_back_and_a_missing_one_is_404
+       test_cart_functional::test_adding_puts_a_line_in_the_cart_and_adding_again_increments_it
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-over-limit]
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-quantity-zero]
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-quantity-1000]
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-sku-blank]
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-sku-reserved]
+       test_cart_functional::test_an_add_outside_the_limits_is_refused_and_changes_nothing[add-400-sku-long]
+       test_cart_functional::test_the_body_is_judged_before_the_cart_is_looked_up
+       test_cart_functional::test_removing_drops_the_line_whatever_its_quantity
+       test_cart_functional::test_deleting_a_cart_is_204_then_it_is_gone
+       test_cart_functional::test_a_cart_expires_a_day_after_its_last_write
+       test_cart_functional::test_gshops_origin_may_call_it_from_the_browser
+       test_cart_functional::test_readiness_follows_redis_and_a_cart_is_never_read_as_missing
+       test_cart_functional::test_a_cart_the_scala_service_stored_is_read_as_it_stored_it
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (16 checks; logs in /tmp/verify-port-cart-service-20261122-204602-mi33yadb)

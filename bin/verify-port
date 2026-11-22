@@ -410,7 +410,11 @@ def step_contract(
         paths = [f"checks/{m}.py" for m in group_modules(service, group, names)]
         if not paths:
             return Step("contract", False, f"no checks in group {group!r}")
+    # pytest drops a short-summary reason that doesn't fit the terminal; a long check name
+    # leaves no room in 80 columns, and --expect-red reads the reason (all-Rust A, cart).
     argv = [
+        "env",
+        "COLUMNS=10000",
         "uv",
         "run",
         "--no-sync",
