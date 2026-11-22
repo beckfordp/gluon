@@ -99,6 +99,10 @@ want = ["functional", "docs", "rest", "user_events_audited", "probe"]
 check("group names", named == want, named)
 modules = vp.group_modules(CART, "docs", ["test_cart_docs", "test_cart_functional", "test_probe"])
 check("a group's modules", modules == ["test_cart_docs"], modules)
+modules = vp.group_modules(NS, "functional", ["test_notification_rest_functional",
+          "test_notification_rest_wire", "test_notification_user_events_functional"])
+check("a kind's modules, one per topic", modules == ["test_notification_rest_functional",
+      "test_notification_user_events_functional"], modules)
 
 # Outcomes, with the reason pytest's short summary gives a red one.
 pytest_out = """
@@ -235,6 +239,13 @@ spy_group = dict(green, step_contract=lambda logs, service, acceptance, group: (
 code, out = main_exit(["cart-service", "--only", "contract", "--group", "functional"], spy_group)
 check("--group reaches the contract step", seen_group == ["functional"], (seen_group, out))
 check("the footer points to the kinds", "Kinds of behaviour" in out, out)
+tallied = dict(green, step_contract=lambda logs, service, acceptance, group: vp.Step(
+    "contract", True, "1/1 checks green — functional 1/1", [], {"functional": True}, [],
+    "functional 1/1, docs 0/2"))
+code, out = main_exit(["cart-service", "--only", "contract"], tallied)
+check("rows met print apart from the check counts",
+      "rows met: functional 1/1, docs 0/2" in out and "checks green — functional 1/1\n" in out,
+      out)
 vp.SERVICES["cart-service"] = vp.Service("cart-service", work / "absent", ["cart-service"])
 code, out = main_exit(["cart-service"], green)
 check("no port yet: exit 2", code == 2 and "no Rust port" in out, out)

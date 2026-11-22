@@ -35,7 +35,7 @@ Usage:
       --acceptance tests/acceptance/target/acceptance-results.json
   bin/verify-port cart-service --only build contract --group docs --expect-red "answered 404"
 
---group: the contract step runs one group's checks (`checks/test_<short>_<group>.py`).
+--group: the contract step runs one group's checks (`checks/test_<short>_[<topic>_]<group>.py`).
 --expect-red: the RED half of a port (Stage A): PASS only when the skeleton builds and
 every check run is red, each for a reason the regex finds in pytest's summary.
 
@@ -256,6 +256,9 @@ class Step:
     """For the contract step: each group's outcome (all its checks green)."""
     checks: list[Outcome] = field(default_factory=list)
     """For the contract step: every check's outcome (`--expect-red` judges them)."""
+    rows: str = ""
+    """For the contract step: catalogue rows met per kind, printed apart from the check
+    counts (a row is not a check: Stage A P0.1)."""
 
 
 def as_owner(service: Service) -> None:
@@ -351,8 +354,14 @@ def group_name(module: str, service: Service) -> str:
 
 
 def group_modules(service: Service, group: str, modules: list[str]) -> list[str]:
-    """The modules among `modules` (names, `test_…`) whose group is `group`."""
-    return [m for m in modules if group_name(m, service) == group]
+    """The modules among `modules` (names, `test_…`) whose group is `group`, or ends with
+    it: `--group functional` runs `test_notification_rest_functional` too (a module of
+    one kind per topic, tests/contract docs/behaviours.md "Kinds of behaviour")."""
+    return [
+        m
+        for m in modules
+        if (name := group_name(m, service)) == group or name.endswith(f"_{group}")
+    ]
 
 
 def parse_outcomes(text: str) -> list[Outcome]:
@@ -432,10 +441,8 @@ def step_contract(
         name = group_name(o.module, service)
         by_group[name] = by_group.get(name, True) and o.result == "PASSED"
     summary = contract_summary(outcomes, service)
-    behaviours = behaviour_tally(logs / "contract.log", service, acceptance)
-    if behaviours:
-        summary += f"; behaviours: {behaviours}"
-    return Step("contract", ok, summary, failed, by_group, outcomes)
+    rows = behaviour_tally(logs / "contract.log", service, acceptance)
+    return Step("contract", ok, summary, failed, by_group, outcomes, rows)
 
 
 def behaviour_tally(log: Path, service: Service, acceptance: Path | None) -> str:
@@ -600,6 +607,8 @@ def main() -> int:
         print(f"{state:<8} {criterion.id:<{width}} {scope}{criterion.description}")
     if criteria.guide:
         print(f"({criteria.guide})")
+    if "contract" in steps and steps["contract"].rows:
+        print(f"rows met: {steps['contract'].rows}")
     print(f"({KINDS_FOOTER})")
     unmet = [c.id for c, state in states if state == "NOT MET"]
     failed = [s.name for s in steps.values() if not s.ok]
