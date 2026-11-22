@@ -1,0 +1,33 @@
+inventory-service port verification — logs in /tmp/verify-port-inventory-service-20261122-235750-3frgwz5r
+
+== 1. build ==
+     (0 s, log /tmp/verify-port-inventory-service-20261122-235750-3frgwz5r/build.log)
+ok   build: inventory-service
+== 2. contract ==
+     (6 s, log /tmp/verify-port-inventory-service-20261122-235750-3frgwz5r/contract.log)
+FAIL contract: 0/31 checks green — events_functional 0/9, functional 0/22
+       test_inventory_events_functional::test_order_cancelled_releases_the_orders_stock
+       test_inventory_events_functional::test_order_cancelled_after_dispatch_flags_the_order
+       test_inventory_events_functional::test_dispatch_confirmed_ships_the_orders_stock
+       test_inventory_events_functional::test_dispatch_confirmed_after_release_flags_the_order
+       test_inventory_events_functional::test_a_bad_record_is_dead_lettered_as_it_came_and_the_consumer_moves_on[order-events]
+       test_inventory_events_functional::test_a_bad_record_is_dead_lettered_as_it_came_and_the_consumer_moves_on[fulfilment-events]
+       test_inventory_events_functional::test_reconciliations_list_open_flags_by_status_and_order
+       test_inventory_events_functional::test_resolving_needs_the_operator_token
+       test_inventory_events_functional::test_the_first_resolver_wins
+       test_inventory_functional::test_creating_answers_the_stock_and_a_used_sku_is_409
+       test_inventory_functional::test_invalid_stock_is_refused_with_its_reason[sku-blank]
+       test_inventory_functional::test_invalid_stock_is_refused_with_its_reason[negative]
+       test_inventory_functional::test_an_undecodable_stock_body_is_400
+       test_inventory_functional::test_reading_answers_the_stock_a_missing_one_404
+       test_inventory_functional::test_patch_and_put_set_the_available_quantity
+       test_inventory_functional::test_deleting_is_204_then_it_is_gone
+       test_inventory_functional::test_the_list_is_in_sku_order_and_filters_by_exact_sku
+       test_inventory_functional::test_a_reservation_moves_each_lines_quantity_to_reserved
+       test_inventory_functional::test_a_reservation_is_all_or_nothing_listing_every_failed_line
+       test_inventory_functional::test_a_repeat_answers_the_original_lines_and_a_released_order_is_409
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (31 checks; logs in /tmp/verify-port-inventory-service-20261122-235750-3frgwz5r)

@@ -1,0 +1,15 @@
+inventory-service port verification — logs in /tmp/verify-port-inventory-service-20261122-235733-9rbt6d5x
+
+== 1. build ==
+     (0 s, log /tmp/verify-port-inventory-service-20261122-235733-9rbt6d5x/build.log)
+ok   build: inventory-service
+== 2. contract ==
+     (6 s, log /tmp/verify-port-inventory-service-20261122-235733-9rbt6d5x/contract.log)
+FAIL contract: 0/2 checks green — docs 0/2
+       test_inventory_docs::test_swagger_ui_loads_the_document_of_the_routes_served
+       test_inventory_docs::test_the_asyncapi_document_and_its_page_describe_what_it_consumes
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (2 checks; logs in /tmp/verify-port-inventory-service-20261122-235733-9rbt6d5x)
