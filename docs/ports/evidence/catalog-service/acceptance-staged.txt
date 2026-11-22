@@ -1,0 +1,32 @@
+== Staged: catalog,inventory (ACCEPTANCE_SERVICES; unset for the full run) ==
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  inventory-postgres
+== Purging event topics
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Skipped: demo customers and orders need user catalog inventory payment order fulfilment in ACCEPTANCE_SERVICES
+Done.
+== Acceptance suite ==
+
+Running 7 tests using 2 workers
+
+  ✓  1 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:11:3 › Browse catalog (US-1) › The catalog shows products from the catalog service @US-1.1 @smoke @CATALOG-F6 (744ms)
+  ✓  2 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:12:3 › Add to cart (US-2) › A new shopper's cart is empty @US-2.1 @CART-F1 @CART-F2 (806ms)
+  ✓  3 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:15:3 › Browse catalog (US-1) › Each product shows its name, SKU and price @US-1.1 @CATALOG-F6 (351ms)
+  ✓  5 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:19:3 › Browse catalog (US-1) › Loading more shows the next page of the catalog @US-1.1 @CATALOG-F6 (364ms)
+  ✓  4 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:17:3 › Add to cart (US-2) › Adding a product puts it in my cart @US-2.1 @CART-F3 @CART-F2 (1.8s)
+  ✓  6 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:24:3 › Add to cart (US-2) › Adding one more increases the quantity and total @US-2.1 @CART-F3 (851ms)
+  ✓  7 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:31:3 › Add to cart (US-2) › Removing the product empties my cart @US-2.1 @CART-F5 (602ms)
+
+  7 passed (6.2s)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

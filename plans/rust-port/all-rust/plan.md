@@ -70,6 +70,19 @@ Started 2026-11-22 19:05 GMT.
   the next full run — a flake outside cart, kept as `acceptance-full-flake.txt`). No cache to prove (Redis is the store). Cheat sheet
   `docs/ports/cart-service.cheatsheet.md`; evidence `docs/ports/evidence/cart-service/`.
 
+- [x] catalog — 21:30–22:33 (63 min). RED `catalog-red_20261122` (tests/contract):
+  capture `6fbd68b` (Scala's list hangs with Redis down, no AsyncAPI), CATALOG-F1–F10 and
+  D1–D2 `33e172a` (`call`/`answered`/`probe` now shared in `checks/support.py`); on Scala
+  18/20, F9 and D2 red by design (A10, A6); skeleton `catalog-service-rs` `df94a6e` →
+  every check red for "answered 404" (18 F, 2 D). GREEN `port_20261122`: `8924fad`,
+  contract 20/20 first run, CI 96.89% lines; cache proof: `ListCache::get` never hitting →
+  both CATALOG-F8 checks red ("a cached page stands until it goes"), restored
+  (`cache-broken.txt`). `bin/verify-port catalog-service` all MET. Deployed
+  `CATALOG_SERVICE_IMPL=rust`; staged `ACCEPTANCE_SERVICES=catalog,inventory --grep
+  '@CATALOG-F|@CART-F'` 7 passed (tests/acceptance `ac4025f`); full run 53/53, ledger OK.
+  Cheat sheet `docs/ports/catalog-service.cheatsheet.md` (every command run from a login
+  shell, incl. the switch back to Scala and reseed).
+
 ## Finish
 
 ## Decisions
@@ -97,6 +110,11 @@ Started 2026-11-22 19:05 GMT.
   browser only needs the method it asks for listed (CART-F8 green). Wire row, out of the bar.
 - A9 (cart) Stage A's ≥90% line coverage is read from CI's TOTAL line; gluon-rs's shared
   gate stays 80% (the other ports run on it).
+- A10 (catalog) With Redis down, Scala's list doesn't answer (its Redis client hangs,
+  capture `http/list-200-redis-down.txt`) although its docs say it falls back to
+  Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
+  fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
+  keeps gshop browsing through a Redis outage.
 - A2 (P0.2) user-service keeps topic modules (criteria need `contract:probe`,
   `contract:metrics`); its wire rows are one per topic. `test_user_docs` →
   `test_user_documentation` (a docs-named module would have to be docs only).

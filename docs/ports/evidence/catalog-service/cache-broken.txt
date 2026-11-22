@@ -1,0 +1,21 @@
+catalog-service port verification — logs in /tmp/verify-port-catalog-service-20261122-220453-s6y80i09
+
+== 1. build ==
+     (4 s, log /tmp/verify-port-catalog-service-20261122-220453-s6y80i09/build.log)
+ok   build: catalog-service
+== 2. contract ==
+     (7 s, log /tmp/verify-port-catalog-service-20261122-220453-s6y80i09/contract.log)
+FAIL contract: 16/18 checks green — functional 16/18
+       test_catalog_functional::test_a_page_is_cached_until_its_entry_goes
+       test_catalog_functional::test_a_page_the_scala_service_cached_is_served_as_cached
+
+== catalog-service contract criteria ==
+NOT MET  F       [functional CATALOG-F1–F10] what gshop, the suite and readiness rely on, against the Rust service
+NOT MET  D       [docs CATALOG-D1–D2] Swagger UI and the AsyncAPI document and page
+not run  harness tests/contract CI: the harness and catalogue
+not run  ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/catalog-service.cheatsheet.md))
+rows met: functional 9/10, docs 0/2, wire 0/0 (out of the bar), not reachable yet 0; functional not met: CATALOG-F8
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+FAIL: NOT MET: F, D; failed: contract (logs in /tmp/verify-port-catalog-service-20261122-220453-s6y80i09)

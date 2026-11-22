@@ -1,0 +1,25 @@
+catalog-service port verification — logs in /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx
+
+== 1. harness-ci ==
+     (164 s, log /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx/harness-ci.log)
+ok   harness-ci: 480 passed, coverage 95.30%
+== 2. rust-ci ==
+     (29 s, log /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx/rust-ci.log)
+ok   rust-ci: line coverage 96.89%
+== 3. build ==
+     (4 s, log /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx/build.log)
+ok   build: catalog-service
+== 4. contract ==
+     (8 s, log /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx/contract.log)
+ok   contract: 20/20 checks green — docs 2/2, functional 18/18
+
+== catalog-service contract criteria ==
+MET      F       [functional CATALOG-F1–F10] what gshop, the suite and readiness rely on, against the Rust service
+MET      D       [docs CATALOG-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/catalog-service.cheatsheet.md))
+rows met: functional 10/10, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-catalog-service-20261122-220811-63y_dsyx)
