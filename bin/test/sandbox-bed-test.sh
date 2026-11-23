@@ -71,7 +71,7 @@ expect "an image tag per Dockerfile, both arches" 0 arm64 up -- \
 expect "up --all-rust: every port, acceptance, gshop and the report to the laptop" 0 arm64 \
   up --all-rust -- "service all (--all-rust)" \
   "publish 127.0.0.1:18081:18081 127.0.0.1:18082:18082" "127.0.0.1:18089:18089" \
-  "127.0.0.1:15173:5173" "127.0.0.1:19323:9323" \
+  "127.0.0.1:15173:5174" "127.0.0.1:19323:9323" \
   "target volume gluon-sandbox-bed-arm64-target"
 expect "up SERVICE publishes 8080 only, as before" 0 arm64 up cart-service -- \
   "publish 127.0.0.1:8080:8080" "service cart-service"

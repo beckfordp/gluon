@@ -4,8 +4,9 @@
 # suite (all-Rust Stage B, B6): leaves the bed serving the laptop, which bin/sandbox-bed
 # publishes on 127.0.0.1. Every Service forwarded on 0.0.0.0 (bin/lib/gkube-forwards.sh,
 # 18081-18089), the data reset and seeded with demo data (bin/reset-data through the
-# kubectl stand-in), gshop's dev server on 5173 pointed at the forwards, and the last
-# Playwright report on 9323. Stays up, holding the forwards, until the container stops.
+# kubectl stand-in), gshop's dev server on 5174 pointed at the forwards (5173 stays free
+# for bin/run-acceptance's own), and the last Playwright report on 9323. Stays up,
+# holding the forwards, until the container stops.
 set -euo pipefail
 cd /workspace/gluon
 # shellcheck source=bin/lib/gkube-forwards.sh
@@ -27,9 +28,9 @@ while IFS= read -r url; do
     *_URL=*) vite_env+=("VITE_${url%%_URL=*}_SERVICE_URL=${url#*=}") ;;
   esac
 done < <(gkube_urls)
-(cd frontends/gshop && env "${vite_env[@]}" npx vite --host 0.0.0.0 --port 5173 --strictPort \
+(cd frontends/gshop && env "${vite_env[@]}" npx vite --host 0.0.0.0 --port 5174 --strictPort \
   > "$logs/gshop.log" 2>&1 < /dev/null) &
 (cd tests/acceptance && npx playwright show-report --host 0.0.0.0 --port 9323 \
   > "$logs/report.log" 2>&1 < /dev/null) &
-echo "serving: forwards 18081-18089, gshop :5173, report :9323 (logs $logs)"
+echo "serving: forwards 18081-18089, gshop :5174, report :9323 (logs $logs)"
 wait

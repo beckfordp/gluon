@@ -37,7 +37,8 @@ BED="$GLUON/bin/lib/sandbox-bed"
 NAME=gluon-sandbox-bed
 MEMORY="${SANDBOX_BED_MEMORY:-14g}"
 JOBS="${CARGO_BUILD_JOBS:-6}"
-# The laptop's ports for the bed's gshop (5173 may be the laptop's own) and report.
+# The laptop's ports for the bed's gshop (5173 may be the laptop's own; in the bed it is
+# on 5174, so bin/run-acceptance's own gshop on 5173 can run beside it) and report.
 GSHOP_PORT=15173
 REPORT_PORT=19323
 
@@ -99,7 +100,7 @@ up_args() {
     while read -r _ port _remote; do
       PUBLISH+=("127.0.0.1:$port:$port")
     done < <(gkube_forwards)
-    PUBLISH+=("127.0.0.1:$GSHOP_PORT:5173" "127.0.0.1:$REPORT_PORT:9323")
+    PUBLISH+=("127.0.0.1:$GSHOP_PORT:5174" "127.0.0.1:$REPORT_PORT:9323")
   else
     PUBLISH=("127.0.0.1:8080:8080")
   fi
