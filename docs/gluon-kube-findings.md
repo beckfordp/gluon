@@ -107,7 +107,10 @@ Each is stated where it lives: a recipe's `differences`, a track's spec, or the 
 - `curlimages/curl`: the sandbox's curl with the node's egress proxy in its env.
 - `<port>-rs:latest`: built with cargo, not `docker build`; the Ubuntu root, not
   debian:bookworm-slim's (its /etc/passwd and /etc/group are the image's).
-- Redis, Apicurio and the Scala services: `ImageUnavailable` (Kubernetes would say
+- `redis:7-alpine` (all-Rust Stage B): the image's entrypoint on the sandbox's
+  `redis-server` (Ubuntu's 7.0, not 7.4), as redis (uid 999) rather than root dropping
+  with setpriv, and `--protected-mode no` added (the image's build compiles it off).
+- Apicurio and the Scala services: `ImageUnavailable` (Kubernetes would say
   `ErrImageNeverPull`).
 
 **Kubernetes behaviour**
@@ -125,9 +128,11 @@ Each is stated where it lives: a recipe's `differences`, a track's spec, or the 
   no NetworkPolicy; one namespace.
 - `exec`, `logs`, `port-forward` and `proxy` go through the node's socket, as kubectl's
   through the API server; there is no API server (`kubectl` and `helm` don't run).
-- `gluon-kube up`: `USER_SERVICE_IMPL` defaults to `rust` (Scala can't be built here);
-  `registry-reload --configmap-only` skipped; waits only for pods that can run; the
-  connector restart retried on 409 where the script would stop.
+- `gluon-kube up`: every `<SERVICE>_IMPL` defaults to `rust` (Scala can't be built here;
+  the script's default is scala unless `ALL_RUST=1`); `registry-reload --configmap-only`
+  skipped; waits for every infra Deployment that can run (one without a pod yet
+  included); then, as the script since all-Rust Stage A, the connectors registered again
+  after the services and every one RUNNING.
 
 ## Findings for the laptop (GK-8.2 to confirm)
 1. **The user outbox connector can be dead in a fresh gluon-local (a race).**
