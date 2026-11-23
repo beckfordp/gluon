@@ -1,24 +1,39 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# Playwright's linux-x64 Chromium for the sandbox (laptop only; all-Rust prep P6). The
+# Playwright's Linux Chromium for the sandbox (laptop only; all-Rust prep P6). The
 # sandbox can't reach Playwright's CDN, so the browsers the acceptance suite's Playwright
-# needs are installed here, in a linux/amd64 container, and archived for upload beside
-# gluon.tar.gz. bin/sandbox-setup's `browsers` step installs them into the Playwright
-# cache.
-#   bin/fetch-playwright-browsers [OUT_DIR]   (default ../sandbox/workspace)
-# Writes OUT_DIR/ms-playwright-<version>-linux-x64.tar.gz, unpacking to ms-playwright/.
+# needs are installed here, in a Linux container of the sandbox's architecture, and
+# archived for upload beside gluon.tar.gz. bin/sandbox-setup's `browsers` step installs
+# them into the Playwright cache.
+#   bin/fetch-playwright-browsers [--arch x64|arm64] [OUT_DIR]   (default ../sandbox/workspace)
+# --arch: x64 (the sandbox's, default; `amd64` too) or arm64 (the arm64 sandbox bed's,
+# all-Rust Stage B).
+# Writes OUT_DIR/ms-playwright-<version>-linux-<arch>.tar.gz, unpacking to ms-playwright/.
 set -euo pipefail
 GLUON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="${1:-$GLUON/../sandbox/workspace}"
+ARCH=x64
+OUT=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --arch) [ "$#" -ge 2 ] || { echo "--arch needs a value" >&2; exit 2; }; ARCH="$2"; shift 2 ;;
+    *) OUT="$1"; shift ;;
+  esac
+done
+case "$ARCH" in
+  x64 | amd64) ARCH=x64 PLATFORM=linux/amd64 ;;
+  arm64) PLATFORM=linux/arm64 ;;
+  *) echo "--arch must be x64 (amd64) or arm64, got '$ARCH'" >&2; exit 2 ;;
+esac
+OUT="${OUT:-$GLUON/../sandbox/workspace}"
 VERSION="$(sed -n 's/.*"@playwright\/test": "\([0-9.]*\)".*/\1/p' "$GLUON/tests/acceptance/package.json")"
 NODE_IMAGE="node:24.11.1-bookworm-slim"
 [ -n "$VERSION" ] || { echo "FAIL: no @playwright/test version in tests/acceptance/package.json" >&2; exit 1; }
 
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
-archive="ms-playwright-$VERSION-linux-x64.tar.gz"
-echo "== Playwright $VERSION: chromium, linux/amd64 ($NODE_IMAGE)"
-docker run --rm --platform linux/amd64 -v "$OUT:/out" "$NODE_IMAGE" bash -euc "
+archive="ms-playwright-$VERSION-linux-$ARCH.tar.gz"
+echo "== Playwright $VERSION: chromium, $PLATFORM ($NODE_IMAGE)"
+docker run --rm --platform "$PLATFORM" -v "$OUT:/out" "$NODE_IMAGE" bash -euc "
   export PLAYWRIGHT_BROWSERS_PATH=/tmp/ms-playwright npm_config_update_notifier=false
   npx -y playwright@$VERSION install chromium
   tar -czf /out/$archive -C /tmp ms-playwright
