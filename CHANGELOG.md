@@ -943,3 +943,10 @@ own line. See each repo's own `git log` for full detail either way.
   - the export ignores `.idea/`; Stage A's captures and evidence lost their laptop paths.
 
   How-to: `plans/private/ports/all-rust-bed-cheat-sheet.md`.
+
+- **Multi-app platform; gfood started** (2026-11-23). [ADR 0031](./docs/adr/0031-multi-app-platform.md)
+  (proposed): applications built on gluon are their own repos under `apps/<app>/`, run their
+  own instances of the platform services and keep their own stories and ADRs; gshop stays
+  the platform's exemplar. First application: gfood, food delivery (`apps/gfood`, its own
+  repo): primer, personas, story map, R0 user stories, its ADR 0001. Service repos deferred.
+  The sandbox export carries and saves `apps/gfood` (`bin/sandbox-export --no-plans --prefix gfood`).
