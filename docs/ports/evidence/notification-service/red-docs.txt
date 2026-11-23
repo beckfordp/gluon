@@ -1,0 +1,15 @@
+notification-service port verification — logs in /tmp/verify-port-notification-service-20261123-070421-vmcxyh2j
+
+== 1. build ==
+     (8 s, log /tmp/verify-port-notification-service-20261123-070421-vmcxyh2j/build.log)
+ok   build: notification-service
+== 2. contract ==
+     (7 s, log /tmp/verify-port-notification-service-20261123-070421-vmcxyh2j/contract.log)
+FAIL contract: 0/2 checks green — docs 0/2
+       test_notification_docs::test_swagger_ui_loads_the_document_of_the_routes_served
+       test_notification_docs::test_the_asyncapi_document_and_its_page_describe_what_it_receives
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (2 checks; logs in /tmp/verify-port-notification-service-20261123-070421-vmcxyh2j)

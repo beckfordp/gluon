@@ -1,0 +1,76 @@
+FFFFFFFFFFFFFFFFFFFFFFFF                                                 [100%]
+=================================== FAILURES ===================================
+E   AssertionError: fulfilment-events record 0 (dispatch confirmed (guest, via the order)): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: fulfilment-events record 0 (dispatch confirmed (guest, via the order)): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+E   AssertionError: fulfilment-events record 1 (dispatch failed): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: fulfilment-events record 1 (dispatch failed): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+E   AssertionError: fulfilment-events record 2 (no items: undecodable): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: fulfilment-events record 2 (no items: undecodable): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+E   AssertionError: fulfilment-events record 3 (unresolved): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: fulfilment-events record 3 (unresolved): not yet implemented: no consumer ever joined group notification-service-fulfilment-events within 30s
+E   AssertionError: order-events record 0 (order confirmed): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 0 (order confirmed): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 1 (order payment failed): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 1 (order payment failed): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 2 (cancel: customer): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 2 (cancel: customer): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 3 (cancel: auth_expired): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 3 (cancel: auth_expired): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 4 (cancel: stale): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 4 (cancel: stale): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 5 (cancel: operator): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 5 (cancel: operator): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 6 (legacy: no reason/actor): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 6 (legacy: no reason/actor): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 7 (unknown reason): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 7 (unknown reason): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 8 (guest fallback): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 8 (guest fallback): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 10 (user 400 -> guest): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 10 (user 400 -> guest): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 9 (unresolved): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 9 (unresolved): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 9 (unresolved): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 9 (unresolved): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 11 (unrelated type): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 11 (unrelated type): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 12 (undecodable payload): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 12 (undecodable payload): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: order-events record 14 (transient lookup failure: it opens user-client's breaker): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: order-events record 14 (transient lookup failure: it opens user-client's breaker): not yet implemented: no consumer ever joined group notification-service-order-events within 30s
+E   AssertionError: payment-events record 0 (payment captured): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: payment-events record 0 (payment captured): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+E   AssertionError: payment-events record 1 (payment failed): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: payment-events record 1 (payment failed): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+E   AssertionError: payment-events record 2 (unknown order): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: payment-events record 2 (unknown order): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+E   AssertionError: payment-events record 3 (guest via order): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: payment-events record 3 (guest via order): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+E   AssertionError: payment-events record 4 (unrelated type): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+/Users/p.beckford.ext/dev/personal/gluon/tests/contract/src/gluon_contract/consumption.py:101: AssertionError: payment-events record 4 (unrelated type): not yet implemented: no consumer ever joined group notification-service-payment-events within 30s
+=========================== short test summary info ============================
+FAILED checks/test_notification_fulfilment_events_functional.py::test_a_dispatch_confirmed_sends_the_shipped_email
+FAILED checks/test_notification_fulfilment_events_functional.py::test_a_dispatch_failed_sends_the_failed_dispatch_email
+FAILED checks/test_notification_fulfilment_events_functional.py::test_a_dispatch_without_items_is_dead_lettered
+FAILED checks/test_notification_fulfilment_events_functional.py::test_a_customer_nobody_knows_is_unresolved
+FAILED checks/test_notification_order_events_functional.py::test_an_order_confirmed_sends_the_confirmation
+FAILED checks/test_notification_order_events_functional.py::test_an_order_payment_failed_sends_the_payment_problem
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[customer]
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[auth_expired]
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[stale]
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[operator]
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[none]
+FAILED checks/test_notification_order_events_functional.py::test_an_order_cancelled_says_why[unknown]
+FAILED checks/test_notification_order_events_functional.py::test_a_customer_user_service_does_not_know_gets_the_guest_email
+FAILED checks/test_notification_order_events_functional.py::test_a_customer_id_user_service_rejects_gets_the_guest_email
+FAILED checks/test_notification_order_events_functional.py::test_no_recipient_at_all_is_unresolved
+FAILED checks/test_notification_order_events_functional.py::test_a_redelivered_unresolved_event_is_not_sent_again
+FAILED checks/test_notification_order_events_functional.py::test_an_unrelated_order_event_is_skipped
+FAILED checks/test_notification_order_events_functional.py::test_an_undecodable_order_event_is_dead_lettered
+FAILED checks/test_notification_order_events_functional.py::test_a_lookup_failing_transiently_fails_the_row_and_dead_letters
+FAILED checks/test_notification_payment_events_functional.py::test_a_payment_captured_sends_the_payment_received_email
+FAILED checks/test_notification_payment_events_functional.py::test_a_payment_failed_sends_the_payment_failed_email
+FAILED checks/test_notification_payment_events_functional.py::test_an_order_order_service_does_not_know_is_unresolved
+FAILED checks/test_notification_payment_events_functional.py::test_a_guests_order_is_emailed_to_the_guest_address
+FAILED checks/test_notification_payment_events_functional.py::test_an_unrelated_payment_event_is_skipped
+24 failed in 99.32s (0:01:39)

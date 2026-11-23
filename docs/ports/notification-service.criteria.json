@@ -1,10 +1,14 @@
 {
   "service": "notification-service",
-  "guide": "deployment criteria: on the laptop, RPN-L1",
+  "guide": "deployment criteria: on the laptop (all-Rust Stage A, docs/ports/notification-service.cheatsheet.md)",
   "criteria": [
+    {"id": "F", "needs": ["contract:functional"], "kind": "functional", "rows": "NOTIF-F1–F34",
+     "description": "what gshop's admin email history, the acceptance suite's us-27 and its four topics' producers rely on, against the Rust service"},
+    {"id": "D", "needs": ["contract:docs"], "kind": "docs", "rows": "NOTIF-D1–D2",
+     "description": "Swagger UI and the AsyncAPI document and page"},
     {"id": "C1", "needs": ["contract", "harness-ci"],
-     "description": "the harness green against the Rust service, isolated mode"},
+     "description": "the harness green against the Rust service, isolated mode (its wire checks included)"},
     {"id": "ci", "needs": ["rust-ci"],
-     "description": "Rust CI: fmt, clippy, tests, coverage"}
+     "description": "Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)"}
   ]
 }
