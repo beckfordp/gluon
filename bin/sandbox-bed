@@ -6,6 +6,14 @@
 # model user, and gluon-kube runs a service there, port-forwarded to the laptop:
 #   bin/sandbox-bed up [SERVICE]   export, set up, `gkube up SERVICE` (user-service),
 #                                  forward its port 8080 to http://localhost:8080
+#   bin/sandbox-bed up --all-rust  export, set up, `gkube up` (all eight Rust ports and
+#                                  the infra), then the original acceptance suite
+#                                  (`bin/run-acceptance --gkube`, headless); then the bed
+#                                  serves the laptop (bin/lib/sandbox-bed/serve): gshop
+#                                  with demo data on http://localhost:15173, the report
+#                                  on http://localhost:19323, every Service on
+#                                  127.0.0.1:18081-18089 (bin/lib/gkube-forwards.sh).
+#                                  The Rust build output is kept in a cache volume.
 #   bin/sandbox-bed shell          a shell as model in /workspace/gluon
 #   bin/sandbox-bed down [--purge] stop the cluster and the container; --purge also
 #                                  drops the cached installs (Rust, Node, CDC jars)
@@ -14,7 +22,9 @@
 #                                  emulated). amd64 is the sandbox's (x86_64): use it
 #                                  for fidelity. Each arch has its own image tag and
 #                                  cached installs (amd64's volumes keep their names).
-# SANDBOX_BED_CHECK_ONLY=1 prints the choices (arch, image, volumes) and stops.
+# SANDBOX_BED_MEMORY (default 14g) caps the container, and CARGO_BUILD_JOBS (default 6)
+# cargo, so a bed that runs out fails inside the container, not the Mac (Stage A's I2).
+# SANDBOX_BED_CHECK_ONLY=1 prints the choices (arch, image, volumes, ports) and stops.
 # What it doesn't prove: the bed has the laptop's network (the sandbox reaches only
 # the package sources in plans/private/sandbox.md) and OrbStack's kernel. It runs
 # privileged, for gluon-kube's nested user namespaces. The export removes build output
@@ -22,10 +32,17 @@
 set -euo pipefail
 GLUON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BED="$GLUON/bin/lib/sandbox-bed"
+# shellcheck source=bin/lib/gkube-forwards.sh
+. "$GLUON/bin/lib/gkube-forwards.sh"
 NAME=gluon-sandbox-bed
+MEMORY="${SANDBOX_BED_MEMORY:-14g}"
+JOBS="${CARGO_BUILD_JOBS:-6}"
+# The laptop's ports for the bed's gshop (5173 may be the laptop's own) and report.
+GSHOP_PORT=15173
+REPORT_PORT=19323
 
 usage() {
-  echo "usage: bin/sandbox-bed up [SERVICE] | shell | down [--purge]   [--arch amd64|arm64]" >&2
+  echo "usage: bin/sandbox-bed up [SERVICE | --all-rust] | shell | down [--purge]   [--arch amd64|arm64]" >&2
   exit 2
 }
 
@@ -55,8 +72,37 @@ choose() {
   PLATFORM="linux/$ARCH"
   MODEL_VOLUME="$VOLUME_PREFIX-model"
   BIN_VOLUME="$VOLUME_PREFIX-bin"
+  TARGET_VOLUME="$VOLUME_PREFIX-target"
   BROWSERS="ms-playwright-*-linux-$BROWSERS_ARCH.tar.gz"
   IMAGE="$NAME:$ARCH-$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)"
+}
+
+# up_args ARGS...: SERVICE and ALL_RUST from `up`'s arguments; the ports to publish.
+up_args() {
+  SERVICE=user-service ALL_RUST=false
+  local arg service=""
+  for arg in "$@"; do
+    case "$arg" in
+      --all-rust) ALL_RUST=true ;;
+      *) service="$arg" ;;
+    esac
+  done
+  if $ALL_RUST && [ -n "$service" ]; then
+    echo "--all-rust runs every service: no SERVICE with it" >&2
+    exit 2
+  fi
+  [ -n "$service" ] && SERVICE="$service"
+  PUBLISH=()
+  if $ALL_RUST; then
+    SERVICE=all
+    local _ port _remote
+    while read -r _ port _remote; do
+      PUBLISH+=("127.0.0.1:$port:$port")
+    done < <(gkube_forwards)
+    PUBLISH+=("127.0.0.1:$GSHOP_PORT:5173" "127.0.0.1:$REPORT_PORT:9323")
+  else
+    PUBLISH=("127.0.0.1:8080:8080")
+  fi
 }
 
 # check_only COMMAND ARGS...: under SANDBOX_BED_CHECK_ONLY=1, the choices, then exit.
@@ -66,8 +112,16 @@ check_only() {
   echo "platform $PLATFORM"
   echo "image $IMAGE"
   echo "volumes $MODEL_VOLUME $BIN_VOLUME"
+  echo "target volume $TARGET_VOLUME"
   echo "browsers $BROWSERS"
-  [ "$1" = up ] && echo "service ${2:-user-service}"
+  echo "memory $MEMORY"
+  echo "cargo jobs $JOBS"
+  if [ "$1" = up ]; then
+    shift
+    up_args "$@"
+    echo "service $SERVICE$($ALL_RUST && echo ' (--all-rust)')"
+    echo "publish ${PUBLISH[*]}"
+  fi
   exit 0
 }
 
@@ -76,8 +130,16 @@ as_model() {
   docker exec -u model -w /workspace/gluon "$NAME" bash -c "$1"
 }
 
+# phase NAME: a heading with the time since `up` started (Stage B's timings).
+phase() {
+  echo "== [$(date +%H:%M:%S), +${SECONDS}s] $1"
+}
+
 up() {
-  local service="${1:-user-service}" image="$IMAGE"
+  up_args "$@"
+  local service="$SERVICE" image="$IMAGE" publish=() port
+  for port in "${PUBLISH[@]}"; do publish+=(-p "$port"); done
+  SECONDS=0
   if ! docker image inspect "$image" > /dev/null 2>&1; then
     echo "== building $image (once per Dockerfile change and arch)"
     docker build --platform "$PLATFORM" -t "$image" "$BED"
@@ -86,14 +148,15 @@ up() {
   # Global, not local: the EXIT trap runs after up returns.
   scratch="$(mktemp -d)"
   trap 'rm -rf "$scratch"' EXIT
-  echo "== exporting (bin/sandbox-export --no-plans)"
+  phase "exporting (bin/sandbox-export --no-plans)"
   "$GLUON/bin/sandbox-export" --no-plans --out "$scratch/gluon"
 
-  echo "== starting $NAME ($PLATFORM)"
+  phase "starting $NAME ($PLATFORM, memory $MEMORY)"
   docker rm -f "$NAME" > /dev/null 2>&1 || true
-  docker run -d --name "$NAME" --platform "$PLATFORM" --privileged \
-    -p 127.0.0.1:8080:8080 \
+  docker run -d --name "$NAME" --platform "$PLATFORM" --privileged --memory "$MEMORY" \
+    "${publish[@]}" \
     -v "$MODEL_VOLUME:/home/model" -v "$BIN_VOLUME:/home/claude/.local/bin" \
+    -v "$TARGET_VOLUME:/var/cache/bed-target" \
     "$image" > /dev/null
   docker cp "$scratch/gluon.tar.gz" "$NAME:/tmp/gluon.tar.gz"
   # The other uploads, beside gluon as in the sandbox (bin/fetch-playwright-browsers).
@@ -101,16 +164,27 @@ up() {
   for upload in "$GLUON"/../sandbox/workspace/$BROWSERS; do
     [ -f "$upload" ] && docker cp "$upload" "$NAME:/workspace/"
   done
+  # Each port's target/ in the cache volume: the export carries no build output, and the
+  # next `up` then rebuilds only what changed.
   docker exec -u root "$NAME" bash -c \
-    'tar -xzf /tmp/gluon.tar.gz -C /workspace && chown -R model:model /workspace /home/model'
+    'tar -xzf /tmp/gluon.tar.gz -C /workspace
+     for port in /workspace/gluon/services/*-rs; do
+       mkdir -p "/var/cache/bed-target/${port##*/}"
+       ln -sfn "/var/cache/bed-target/${port##*/}" "$port/target"
+     done
+     chown -R model:model /workspace /home/model /var/cache/bed-target'
 
   # Playwright's CDN pointed nowhere: the sandbox can't reach it, so the upload is used.
-  echo "== bin/sandbox-setup (as model)"
+  phase "bin/sandbox-setup (as model)"
   as_model 'export PLAYWRIGHT_DOWNLOAD_HOST=http://127.0.0.1:9
     bin/sandbox-setup && bin/sandbox-setup --check'
 
-  echo "== gkube up $service"
-  as_model "gkube cluster start && gkube up $service && gkube get pods"
+  if $ALL_RUST; then
+    all_rust
+    return
+  fi
+  phase "gkube up $service"
+  as_model "gkube cluster start && CARGO_BUILD_JOBS=$JOBS gkube up $service && gkube get pods"
   docker exec -d -u model -w /workspace/gluon "$NAME" bash -c \
     "gkube port-forward --address 0.0.0.0 svc/$service 8080:8080 > /tmp/port-forward.log 2>&1"
 
@@ -130,6 +204,40 @@ up() {
   echo "Not proven here: the sandbox's network limits, its kernel. Stop: bin/sandbox-bed down"
 }
 
+# all_rust: every Rust port up, the original suite, then the bed serving the laptop.
+all_rust() {
+  phase "gkube up (all eight Rust ports, CARGO_BUILD_JOBS=$JOBS)"
+  as_model "gkube cluster start && CARGO_BUILD_JOBS=$JOBS gkube up && gkube get pods"
+  phase "bin/run-acceptance --gkube (the original suite, headless)"
+  local status=0
+  as_model 'GKUBE_FORWARD_ADDRESS=0.0.0.0 bin/run-acceptance --gkube --no-open' || status=$?
+  local evidence="$GLUON/target/sandbox-bed"
+  mkdir -p "$evidence"
+  docker cp "$NAME:/workspace/gluon/tests/acceptance/target/acceptance-results.json" \
+    "$evidence/" > /dev/null 2>&1 || true
+  phase "the suite exited $status; serving the laptop (bin/lib/sandbox-bed/serve)"
+  docker exec -d -u model -w /workspace/gluon "$NAME" bash -c \
+    'bin/lib/sandbox-bed/serve > /tmp/bed-serve.log 2>&1'
+  local tries=0
+  until curl -fsS -o /dev/null "http://localhost:$GSHOP_PORT/"; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 90 ]; then
+      echo "FAIL: gshop didn't answer on :$GSHOP_PORT; see bin/sandbox-bed shell, /tmp/bed-serve.log" >&2
+      exit 1
+    fi
+    sleep 2
+  done
+  phase "done"
+  echo
+  echo "All-Rust gluon in gluon-kube, in the sandbox bed ($PLATFORM):"
+  echo "  acceptance  exit $status; results $evidence/acceptance-results.json"
+  echo "  report      http://localhost:$REPORT_PORT/"
+  echo "  gshop       http://localhost:$GSHOP_PORT/ (demo data)"
+  echo "  services    http://127.0.0.1:18081-18089 (bin/lib/gkube-forwards.sh)"
+  echo "Stop: bin/sandbox-bed down"
+  return "$status"
+}
+
 down() {
   if docker container inspect "$NAME" > /dev/null 2>&1; then
     as_model 'gkube cluster stop' || true
@@ -137,7 +245,7 @@ down() {
     echo "removed $NAME"
   fi
   if [ "${1:-}" = --purge ]; then
-    docker volume rm "$MODEL_VOLUME" "$BIN_VOLUME" > /dev/null 2>&1 || true
+    docker volume rm "$MODEL_VOLUME" "$BIN_VOLUME" "$TARGET_VOLUME" > /dev/null 2>&1 || true
     echo "removed the cached installs"
   fi
 }

@@ -68,4 +68,18 @@ expect "an unknown host fails asking for --arch" 2 s390x up -- \
 expect "an image tag per Dockerfile, both arches" 0 arm64 up -- \
   "image gluon-sandbox-bed:arm64-$(cksum < "$SCRIPT_DIR/../lib/sandbox-bed/Dockerfile" | cut -d' ' -f1)"
 
+expect "up --all-rust: every port, acceptance, gshop and the report to the laptop" 0 arm64 \
+  up --all-rust -- "service all (--all-rust)" \
+  "publish 127.0.0.1:18081:18081 127.0.0.1:18082:18082" "127.0.0.1:18089:18089" \
+  "127.0.0.1:15173:5173" "127.0.0.1:19323:9323" \
+  "target volume gluon-sandbox-bed-arm64-target"
+expect "up SERVICE publishes 8080 only, as before" 0 arm64 up cart-service -- \
+  "publish 127.0.0.1:8080:8080" "service cart-service"
+expect "amd64's target cache is named as its others" 0 x86_64 up --all-rust -- \
+  "target volume gluon-sandbox-bed-target"
+expect "a memory cap and a cargo jobs cap, both overridable" 0 arm64 up --all-rust -- \
+  "memory 14g" "cargo jobs 6"
+expect "--all-rust with a service is refused" 2 arm64 up cart-service --all-rust -- \
+  "--all-rust runs every service: no SERVICE with it"
+
 if [ "$failures" = 0 ]; then echo "PASS"; else echo "FAIL: $failures"; exit 1; fi

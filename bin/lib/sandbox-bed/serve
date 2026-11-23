@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Runs in the sandbox bed, as model, once `bin/sandbox-bed up --all-rust` has run the
+# suite (all-Rust Stage B, B6): leaves the bed serving the laptop, which bin/sandbox-bed
+# publishes on 127.0.0.1. Every Service forwarded on 0.0.0.0 (bin/lib/gkube-forwards.sh,
+# 18081-18089), the data reset and seeded with demo data (bin/reset-data through the
+# kubectl stand-in), gshop's dev server on 5173 pointed at the forwards, and the last
+# Playwright report on 9323. Stays up, holding the forwards, until the container stops.
+set -euo pipefail
+cd /workspace/gluon
+# shellcheck source=bin/lib/gkube-forwards.sh
+. bin/lib/gkube-forwards.sh
+logs=/tmp/bed-serve
+mkdir -p "$logs"
+node24_dir="$(dirname "$(readlink -f "$(command -v node24)")")"
+export PATH="$node24_dir:$PWD/bin/lib/gkube-kubectl:$PATH" GLUON_KUBE=1
+
+gkube_forwards_start 0.0.0.0 "$logs"
+while IFS= read -r url; do export "${url?}"; done < <(gkube_urls)
+bin/reset-data --yes < /dev/null > "$logs/reset-data.log" 2>&1
+
+# gshop reads VITE_<NAME>_SERVICE_URL; mocks off, as the suite runs it.
+vite_env=(VITE_CHECKOUT_MOCK=false VITE_AUTH_MOCK=false)
+while IFS= read -r url; do
+  case "$url" in
+    KAFKA_CONNECT_URL=* | *_SERVICE_URL=*) ;;
+    *_URL=*) vite_env+=("VITE_${url%%_URL=*}_SERVICE_URL=${url#*=}") ;;
+  esac
+done < <(gkube_urls)
+(cd frontends/gshop && env "${vite_env[@]}" npx vite --host 0.0.0.0 --port 5173 --strictPort \
+  > "$logs/gshop.log" 2>&1 < /dev/null) &
+(cd tests/acceptance && npx playwright show-report --host 0.0.0.0 --port 9323 \
+  > "$logs/report.log" 2>&1 < /dev/null) &
+echo "serving: forwards 18081-18089, gshop :5173, report :9323 (logs $logs)"
+wait
