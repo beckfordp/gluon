@@ -351,8 +351,13 @@ def strip_backlog(text: str) -> str:
 
 
 def dirty(repo: Path) -> list[str]:
-    """Uncommitted changes to tracked files (untracked ones are `untracked`)."""
-    return git(repo, "status", "--porcelain", "--untracked-files=no").splitlines()
+    """Uncommitted changes to tracked files (untracked ones are `untracked`), bar files the
+    export never ships (EXPORT_EXCLUDES: the laptop's `.idea/vcs.xml` needn't be committed)."""
+    return [
+        line
+        for line in git(repo, "status", "--porcelain", "--untracked-files=no").splitlines()
+        if not EXPORT_EXCLUDES.intersection(Path(line[3:].split(" -> ")[-1]).parts)
+    ]
 
 
 def untracked(repo: Path) -> list[Path]:
