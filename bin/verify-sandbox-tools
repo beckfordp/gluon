@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: MIT
 # Verifies laptop session RPN-0.1 (PLAN.md, Rust Port — notification-service),
 # each check printed PASS or FAIL as it finishes:
-#   1. bin/sandbox-export exports gluon, SHARED_REPOS and the PORTS repos that
-#      exist, and no other nested repo (a real export, to a temp directory)
+#   1. bin/sandbox-export exports gluon, SHARED_REPOS (apps/gfood among them) and the
+#      PORTS repos that exist, and no other nested repo (a real export, to a temp directory)
 #   2. its reference check warns for a repo not exported, and not for an
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
+#      (apps/gfood is one: gluon ADR 0031); gluon itself keeps only apps/README.md
 #   4. the touched Python scripts compile
 #   5. a default export carries the gluon-kube plan
 #   6. a --no-plans export carries no plan and no live track, and keeps Conductor's
@@ -63,6 +64,7 @@ want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "tools/gluon-kube
         "tools/rust-service-template", "tests/acceptance", "frontends/gshop",
         *(f"services/{s}-service" for s in scala)}
 want |= {f"services/{s}-service-rs" for s in scala if Path(f"services/{s}-service-rs").is_dir()}
+want |= {"apps/gfood"} if Path("apps/gfood").is_dir() else set()
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
 sys.exit(0 if got == want else f"want {sorted(want)}, got {sorted(got)}")'
@@ -106,6 +108,11 @@ print(names, [repr(g) for g in got])
 sys.exit(0 if names == ("spike-gluon.tar.gz", "gluon.tar.gz")
          and got == [want for _, want in cases] else "unexpected")'
 
+check "gluon keeps only apps/README.md of apps/; gfood is its own repo" apps.log '
+files = [str(f) for f in sandbox.platform_files() if f.parts[0] == "apps"]
+print("gluon files in apps/:", files, "nested dirs:", sandbox.NESTED_REPO_DIRS)
+sys.exit(0 if files == ["apps/README.md"] else f"unexpected gluon files in apps/: {files}")'
+
 check "reference check warns only for a repo not exported" refs.log '
 with tempfile.TemporaryDirectory() as scratch:
     staging = Path(scratch)
@@ -125,12 +132,12 @@ sys.exit(0 if found == ["bin/run-thing:1: tools/pure-service-generator"] and sum
 check "sandbox-save warns only for unlisted git repos" save.log '
 with tempfile.TemporaryDirectory() as scratch:
     root = Path(scratch)
-    for repo in ("tests/contract", "services/user-service-rs", "services/foo-rs"):
+    for repo in ("tests/contract", "services/user-service-rs", "services/foo-rs", "apps/gfood", "apps/bar"):
         (root / repo / ".git").mkdir(parents=True)
     (root / "services" / "not-a-repo").mkdir()
     missing = save.unsaved(root)
 print("unsaved:", missing)
-sys.exit(0 if missing == [Path("services/foo-rs")] else "unexpected unsaved list")'
+sys.exit(0 if missing == [Path("apps/bar"), Path("services/foo-rs")] else "unexpected unsaved list")'
 
 check "check-locks names a crate too young for the mirror" locks.log '
 import contextlib, io, json, os

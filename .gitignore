@@ -2,6 +2,10 @@
 services/*
 !services/README.md
 
+# Applications built on the platform are their own independent git repos (ADR 0031).
+apps/*
+!apps/README.md
+
 # Frontend apps are their own independent git repos — not nested here.
 frontends/*
 !frontends/README.md
