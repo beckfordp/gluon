@@ -63,7 +63,7 @@ No blocker.
   `bin/test/run-acceptance-gkube-test.sh` 8 cases, red first (8), PASS. Also
   `k8s-local-up-test.sh`'s cases moved into a gluon tree of their own (4 failed since
   Stage A added every port to the checkout).
-- [~] B6 `bin/sandbox-bed up --all-rust` — from ~12:49. Every port up, the suite headless
+- [x] B6 `bin/sandbox-bed up --all-rust` — ~12:49–13:45 (~56 min). Every port up, the suite headless
   through `--gkube`, then `bin/lib/sandbox-bed/serve`: forwards on 0.0.0.0, data reset and
   seeded, gshop on 5174, the report on 9323; published to the laptop as 15173, 19323,
   18081–18089. Cargo `target/` per port in a cache volume (`<prefix>-target`); container
@@ -89,6 +89,33 @@ No blocker.
   `|| true`, test red then green. In the bed then `reset-data` had no
   `kafka-get-offsets.sh`/`kafka-delete-records.sh`: gluon-kube launchers added (its
   track, test red 2). With those patched into the bed: 53 passed (1.1 min), ledger OK.
+  Clean run (`down --purge` first, 13:23–13:43): export 10s, setup 7m51s, `gkube up` 9m11s,
+  suite 1m43s: **53 passed, 0 skipped, 0 flaky, ledger OK**
+  (`docs/ports/evidence/all-rust-bed/`); gshop, report and every service answer on the
+  laptop. gluon-kube track `allrust-parity_20261123` reviewed (CI 291 passed) and archived.
+- [x] B7 cheat sheet + amd64 smoke — ~13:47–14:25 (~38 min).
+  `plans/private/ports/all-rust-bed-cheat-sheet.md`; every command run from a fresh login
+  shell (`env -i … zsh -l`): up, shell, acceptance again (53 passed, 58s), reseed, logs,
+  the connector check, check-only, `down`. `down --purge` run at 13:22 from this session's
+  shell, not a fresh one (purging again would drop the caches the user keeps). amd64 smoke
+  `bin/sandbox-bed up --arch amd64 cart-service`: first failed, `gkube up` waiting for the
+  connectors of four services not deployed (their outbox tables don't exist; Stage A's
+  clusters always had every service); fixed in gluon-kube (track
+  `deployed-connectors_20261123`, reviewed, archived) and `bin/lib/connectors.sh`
+  (`bin/test/connectors-test.sh`, red 2); then 91s, Swagger UI 200. The warm arm64 run hit
+  2 timeouts: the Mac idle-slept 359s mid-suite (`pmset` log, 14:07:51); `up` now holds
+  `caffeinate -i` (test red 2). Laptop port 18089 once didn't publish (nothing listening,
+  bind refused); fine on the next `up`.
+
+## Timings (this Mac: Apple Silicon, 32 GiB; OrbStack VM 20 GiB)
+
+| | arm64 (native) | amd64 (emulated) |
+| --- | --- | --- |
+| bed image build | 206 s | 248 s |
+| `bin/sandbox-setup`, empty caches | 7m51s | not run cold (59 s on the x86 bed's old caches) |
+| one Rust build, clean (`cart-service-rs` release) | 29 s | 2m08s |
+| full run, clean: `up --all-rust` | 19m29s (suite 1m43s) | not run (cart smoke only) |
+| warm `gkube up` (all eight) / `up` cart only | 1m31s | 91 s (whole `up`) |
 
 ## Decisions
 

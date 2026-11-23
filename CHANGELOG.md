@@ -930,4 +930,16 @@ own line. See each repo's own `git log` for full detail either way.
   - gluon-rs Redis, outbox, resilient-client and docs builders.
 
   Deliberate differences: plan decisions A1–A15. How-to: `docs/all-rust.cheatsheet.md`.
+- **All-Rust gluon in the sandbox bed (Stage B).** `bin/sandbox-bed up --all-rust` exports
+  the checkout, sets up a sandbox-shaped container (arm64 by default on Apple Silicon,
+  `--arch amd64` for the sandbox's own), runs all eight Rust ports and the infra in
+  gluon-kube, then the original acceptance suite headless: 53/53 from a clean bed, ledger
+  OK (`docs/ports/evidence/all-rust-bed/`). gshop with demo data and the Playwright report
+  are then served to the laptop (`:15173`, `:19323`). Along the way:
+  - `bin/sandbox-setup` per architecture, and a `cxx` step (g++ for librdkafka's build);
+  - `bin/run-acceptance --gkube` (port-forwards, URL env, a kubectl stand-in);
+  - gluon-kube: Redis recipe, every `<SERVICE>_IMPL`, Kafka purge tools, `-o name`;
+  - `bin/k8s-local-up` and `gkube up` wait only for deployed services' connectors;
+  - the export ignores `.idea/`; Stage A's captures and evidence lost their laptop paths.
 
+  How-to: `plans/private/ports/all-rust-bed-cheat-sheet.md`.
