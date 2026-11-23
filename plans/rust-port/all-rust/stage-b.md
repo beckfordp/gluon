@@ -77,8 +77,29 @@ No blocker.
   `/home/runner` (skunk's trace). tests/contract track `capture-redaction_20261123`
   (scripts redact, captures redacted, test red then green, archived); gluon evidence
   redacted the same way; two allow rules.
+  Third run: setup 7m51s on clean arm64 caches, then `order-service-rs` failed: rdkafka-sys
+  builds librdkafka, whose configure needs `c++`; the sandbox's image has gcc and make
+  only (plans/private/sandbox.md), so the real sandbox would fail alike. New `cxx` step in
+  `bin/sandbox-setup`: the sandbox's own `c++` if one works, else `g++-<gcc major>` and its
+  missing dependencies unpacked from Ubuntu's .debs, the image's gcc lib/libexec entries
+  linked beside it (the relocated driver looks there), `c++`/`g++` linked onto the PATH;
+  `--check` compiles `<string>`. Tests red (3, then 1 for `gcc -dumpversion`'s newline),
+  OK. Fourth run (warm): all eight ports up in 7m21s; the suite stopped silently, exit 2:
+  `run-acceptance`'s nvm lookup failed under pipefail with no nvm (the sandbox's case);
+  `|| true`, test red then green. In the bed then `reset-data` had no
+  `kafka-get-offsets.sh`/`kafka-delete-records.sh`: gluon-kube launchers added (its
+  track, test red 2). With those patched into the bed: 53 passed (1.1 min), ledger OK.
 
 ## Decisions
+
+- D1 (B6) The bed's gshop on 5174, published as laptop 15173: the laptop's own gshop may
+  hold 5173, and `bin/run-acceptance` starts its own on 5173 in the bed.
+- D2 (B6) A C++ compiler is a sandbox setup step (Ubuntu .debs, as vim and shellcheck),
+  not a change to the ports' Cargo features (dynamic librdkafka would differ from the
+  images' static build).
+- D3 (B6) Laptop paths in committed evidence and captures are redacted
+  (`/Users/<user>/<path-to>/gluon`), as the older capture scripts do, rather than allowed
+  by an export rule.
 
 ## Incidents
 
