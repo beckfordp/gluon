@@ -46,6 +46,37 @@ No blocker.
   before), arm64 → `--platform linux/arm64`, `ms-playwright-<v>-linux-arm64.tar.gz`.
   `bin/test/fetch-playwright-browsers-test.sh` 5 cases (docker stand-in), red first (3),
   PASS.
+- [x] B4 gluon-kube parity (its own conductor track `allrust-parity_20261123`) — ~12:32–12:47.
+  `redis:7-alpine` recipe (the image's entrypoint on Ubuntu's `redis-server`, as uid 999,
+  `--protected-mode no`); `up` reads every `<SERVICE>_IMPL` (rust by default; `ALL_RUST`
+  accepted), checks every port before a build; waits for every infra Deployment that can
+  run (one with no pod yet too); `/app` WORKDIR as a tmpfs; the connectors registered again
+  after the services and every one RUNNING (restarting FAILED tasks); `get <kind> -o
+  name` as kubectl (`deployment.apps/x`). Tests red first; CI in a Linux arm64 container
+  from the bed image (privileged, as model): 281 passed, 5 skipped, 90.66 %.
+- [x] B5 `bin/run-acceptance --gkube` — ~12:47–12:49. `bin/lib/gkube-forwards.sh`: one fixed
+  local port per Service (18081–18088, Kafka Connect 18089), `<SERVICE>_URL`,
+  `KAFKA_CONNECT_URL`, `CATALOG_/INVENTORY_SERVICE_URL`; forwards stopped on exit.
+  `bin/lib/gkube-kubectl/kubectl`: kubectl's namespace flags dropped, `config
+  current-context` answered, the rest passed to gkube; first on the PATH for the run only.
+  `bin/reset-data` skips its OrbStack context check under `GLUON_KUBE=1`.
+  `bin/test/run-acceptance-gkube-test.sh` 8 cases, red first (8), PASS. Also
+  `k8s-local-up-test.sh`'s cases moved into a gluon tree of their own (4 failed since
+  Stage A added every port to the checkout).
+- [~] B6 `bin/sandbox-bed up --all-rust` — from ~12:49. Every port up, the suite headless
+  through `--gkube`, then `bin/lib/sandbox-bed/serve`: forwards on 0.0.0.0, data reset and
+  seeded, gshop on 5174, the report on 9323; published to the laptop as 15173, 19323,
+  18081–18089. Cargo `target/` per port in a cache volume (`<prefix>-target`); container
+  `--memory 14g`, `CARGO_BUILD_JOBS=6` (both overridable). Tests red first (5), PASS.
+  First run stopped at the export: `.idea/vcs.xml`, never exported, counted as an
+  uncommitted change; `dirty()` now ignores EXPORT_EXCLUDES
+  (`bin/test/sandbox-export-dirty-test.py`, red 2, OK).
+  Second run stopped at the export's private-data scan: 151 matches, the laptop's home
+  path in Stage A's six `capture.sh` captures (`stdout.log`, unredacted, unlike older
+  capture scripts) and in `docs/ports/evidence/`; plus `/home/redis` (B4's recipe) and
+  `/home/runner` (skunk's trace). tests/contract track `capture-redaction_20261123`
+  (scripts redact, captures redacted, test red then green, archived); gluon evidence
+  redacted the same way; two allow rules.
 
 ## Decisions
 
