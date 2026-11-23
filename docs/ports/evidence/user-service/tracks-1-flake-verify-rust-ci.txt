@@ -23,7 +23,7 @@ FAIL coverage under 80%: stopped at 'tests with coverage' but without 'below the
      test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.10s
      
      error: test failed, to rerun pass `-p user-service --test tracing`
-     error: process didn't exit successfully: `/Users/p.beckford.ext/.rustup/toolchains/1.99.1-aarch64-apple-darwin/bin/cargo test --tests --manifest-path /private/tmp/verify-rust-ci.dLYGVo/services/user-service-rs/Cargo.toml --target-dir /tmp/verify-rust-ci.dLYGVo/target/llvm-cov-target --workspace --locked` (exit status: 101)
+     error: process didn't exit successfully: `/Users/<user>/.rustup/toolchains/1.99.1-aarch64-apple-darwin/bin/cargo test --tests --manifest-path /private/tmp/verify-rust-ci.dLYGVo/services/user-service-rs/Cargo.toml --target-dir /tmp/verify-rust-ci.dLYGVo/target/llvm-cov-target --workspace --locked` (exit status: 101)
 == 3. cargo-audit ==
 ok   ran (advisory database reachable)
 

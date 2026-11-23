@@ -3,7 +3,7 @@
 E   TimeoutError: timed out
 /opt/anaconda3/lib/python3.13/socket.py:719: TimeoutError: timed out
 E   AssertionError: GET asyncapi.json: answered 404, expected 200; body b''
-/Users/p.beckford.ext/dev/personal/gluon/tests/contract/checks/support.py:73: AssertionError: GET asyncapi.json: answered 404, expected 200; body b''
+/Users/<user>/<path-to>/gluon/tests/contract/checks/support.py:73: AssertionError: GET asyncapi.json: answered 404, expected 200; body b''
 ==================================== PASSES ====================================
 =========================== short test summary info ============================
 PASSED checks/test_catalog_functional.py::test_creating_answers_the_entry_and_a_used_sku_is_a_new_one

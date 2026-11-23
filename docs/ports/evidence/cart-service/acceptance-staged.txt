@@ -20,4 +20,4 @@ Running 4 tests using 1 worker
 
   4 passed (5.5s)
 == Stock ledger invariant: skipped (inventory not in ACCEPTANCE_SERVICES) ==
-Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)
+Report: /Users/<user>/<path-to>/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

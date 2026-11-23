@@ -17,7 +17,7 @@ coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/
 Inventory summary: 100 created, 0 skipped, 0 failed.
 == Flushing caches
 == Seeding demo customers and orders
-Rerun skips orders recorded in /Users/p.beckford.ext/dev/personal/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Rerun skips orders recorded in /Users/<user>/<path-to>/gluon/.seed-demo-data.state.json; use --reset to recreate them.
 Done.
 == Acceptance suite ==
 
@@ -80,4 +80,4 @@ Running 53 tests using 2 workers
   53 passed (1.3m)
 == Stock ledger invariant ==
 OK: reserved stock matches the reservation ledger for every SKU
-Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)
+Report: /Users/<user>/<path-to>/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)
