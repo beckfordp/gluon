@@ -1,0 +1,2027 @@
+== [13:23:37, +0s] exporting (bin/sandbox-export --no-plans)
+OK: 289 crates in 9 lock(s) (user-service-rs, notification-service-rs, cart-service-rs, catalog-service-rs, inventory-service-rs, fulfilment-service-rs, payment-service-rs, order-service-rs, gluon-rs), all published by 2026-11-09
+clean     2 build-output dirs removed (0 MiB)
+clean     no untracked files
+copied    . @ 3358d5a (268 files)
+copied    frontends/gshop @ 11597f5 (143 files)
+copied    lib/gluon-rs @ 23332d7 (130 files)
+copied    lib/purerest @ 6722e1f (154 files)
+copied    services/cart-service @ 5423e96 (46 files)
+copied    services/cart-service-rs @ b229be0 (36 files)
+copied    services/catalog-service @ 2c21d92 (53 files)
+copied    services/catalog-service-rs @ 2ee6ce3 (39 files)
+copied    services/fulfilment-service @ 4bff559 (69 files)
+copied    services/fulfilment-service-rs @ 835f1b5 (49 files)
+copied    services/inventory-service @ b930b2c (81 files)
+copied    services/inventory-service-rs @ 765a0b0 (50 files)
+copied    services/notification-service @ b60d4d7 (79 files)
+copied    services/notification-service-rs @ fa5e5b5 (64 files)
+copied    services/order-service @ a664831 (120 files)
+copied    services/order-service-rs @ c117cf6 (62 files)
+copied    services/payment-service @ 8108158 (107 files)
+copied    services/payment-service-rs @ fa625b2 (55 files)
+copied    services/user-service @ c054427 (62 files)
+copied    services/user-service-rs @ 8719f21 (69 files)
+copied    tests/acceptance @ e72180d (94 files)
+copied    tests/contract @ aa20c64 (942 files)
+copied    tools/gluon-kube @ fb387a2 (184 files)
+copied    tools/rust-service-template @ 6cd471c (54 files)
+scanned   2233 allowed matches, none unexplained
+
+Exported to /tmp/tmp.e5oa2Mw76m/gluon; reviewer note: /tmp/tmp.e5oa2Mw76m/gluon/EXPORT-REVIEW.md
+Archived  /tmp/tmp.e5oa2Mw76m/gluon.tar.gz (6191 KiB)
+== [13:23:47, +10s] starting gluon-sandbox-bed (linux/arm64, memory 14g)
+== [13:23:48, +11s] bin/sandbox-setup (as model)
+OK         network       PyPI (200)
+OK         network       crates.io (200)
+OK         network       Rust toolchains (200)
+OK         network       npm (200)
+OK         network       Maven Central (200)
+OK         network       Ubuntu archive (200)
+OK         image         java: /usr/bin/java
+OK         image         node: /usr/local/bin/node
+OK         image         npm: /usr/local/bin/npm
+OK         image         git: /usr/bin/git
+OK         image         curl: /usr/bin/curl
+OK         image         gcc: /usr/bin/gcc
+OK         image         python3: /usr/bin/python3
+OK         image         uv: /home/claude/.local/bin/uv
+OK         image         Python 3.13: /opt/uv-python/cpython-3.13.9-linux-aarch64-gnu/bin/python3.13
+OK         image         bwrap: /usr/bin/bwrap
+OK         image         unshare: /usr/bin/unshare
+OK         image         nsenter: /usr/bin/nsenter
+OK         image         user namespaces: unprivileged `unshare -Ur` works
+OK         image         postgres (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) in /usr/lib/postgresql/16/bin
+INSTALLED  rust          rustc 1.99.1 (58cf8f9c3 2026-10-13); cargo-llvm-cov 0.9.1, cargo-generate 0.26.0; linked into /home/claude/.local/bin
+INSTALLED  c++           c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0 at /home/model/.local/cxx-root/usr/bin/aarch64-linux-gnu-g++-13, as c++ and g++ in /home/claude/.local/bin
+INSTALLED  node          v24.21.0 at /home/model/.local/node-24.21.0/bin/node, as /home/claude/.local/bin/node24
+INSTALLED  cdc           Kafka 3.8.0, Debezium 3.0.0.Final in /home/model/.local/cdc-kafka-3.8.0_debezium-3.0.0.Final: kafka 107 jars, connect 59 jars, plugins/debezium-connector-postgres 10 jars
+INSTALLED  vim           VIM - Vi IMproved 9.1 (2024 Jan 02, compiled Aug 24 2026 22:13:04); vim, view in /home/claude/.local/bin; read-only: vim -M <file>
+INSTALLED  shellcheck    version: 0.9.0 at /home/model/.local/shellcheck-root/usr/bin/shellcheck, as /home/claude/.local/bin/shellcheck
+INSTALLED  redis         Redis server v=7.0.15 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=d064f9f48c901a92; redis-server, redis-cli in /home/claude/.local/bin
+INSTALLED  shell         sr, cdw, gkube in /home/claude/.local/bin (cdw opens a shell with the aliases)
+INSTALLED  git-init      tests/contract: baseline @ aa20c64
+INSTALLED  git-init      services/user-service-rs: baseline @ 8719f21
+INSTALLED  git-init      services/notification-service-rs: baseline @ fa5e5b5
+INSTALLED  git-init      services/cart-service-rs: baseline @ b229be0
+INSTALLED  git-init      services/catalog-service-rs: baseline @ 2ee6ce3
+INSTALLED  git-init      services/inventory-service-rs: baseline @ 765a0b0
+INSTALLED  git-init      services/fulfilment-service-rs: baseline @ 835f1b5
+INSTALLED  git-init      services/payment-service-rs: baseline @ fa625b2
+INSTALLED  git-init      services/order-service-rs: baseline @ c117cf6
+INSTALLED  git-init      lib/gluon-rs: baseline @ 23332d7
+INSTALLED  git-init      tools/gluon-kube: baseline @ fb387a2
+INSTALLED  git-init      tests/acceptance: baseline @ e72180d
+INSTALLED  git-init      frontends/gshop: baseline @ 11597f5
+OK         git-identity  tests/contract: gluon sandbox
+OK         git-identity  services/user-service-rs: gluon sandbox
+OK         git-identity  services/notification-service-rs: gluon sandbox
+OK         git-identity  services/cart-service-rs: gluon sandbox
+OK         git-identity  services/catalog-service-rs: gluon sandbox
+OK         git-identity  services/inventory-service-rs: gluon sandbox
+OK         git-identity  services/fulfilment-service-rs: gluon sandbox
+OK         git-identity  services/payment-service-rs: gluon sandbox
+OK         git-identity  services/order-service-rs: gluon sandbox
+OK         git-identity  lib/gluon-rs: gluon sandbox
+OK         git-identity  tools/gluon-kube: gluon sandbox
+OK         git-identity  tests/acceptance: gluon sandbox
+OK         git-identity  frontends/gshop: gluon sandbox
+INSTALLED  projects      tests/contract: uv sync --locked
+INSTALLED  projects      tools/gluon-kube: uv sync --locked
+OK         projects      services/user-service-rs: locked crates fetched
+OK         projects      services/notification-service-rs: locked crates fetched
+OK         projects      services/cart-service-rs: locked crates fetched
+OK         projects      services/catalog-service-rs: locked crates fetched
+OK         projects      services/inventory-service-rs: locked crates fetched
+OK         projects      services/fulfilment-service-rs: locked crates fetched
+OK         projects      services/payment-service-rs: locked crates fetched
+OK         projects      services/order-service-rs: locked crates fetched
+OK         projects      lib/gluon-rs: locked crates fetched
+INSTALLED  projects      tests/acceptance: npm ci
+INSTALLED  projects      frontends/gshop: npm ci
+INSTALLED  browsers      Chromium 156.0.8078.4 headless shell 1248 from the upload (ms-playwright-1.64.1-linux-arm64.tar.gz); libraries unpacked in /home/model/.local/chromium-libs; launched, a page rendered
+
+Sandbox ready.
+OK         network       PyPI (200)
+OK         network       crates.io (200)
+OK         network       Rust toolchains (200)
+OK         network       npm (200)
+OK         network       Maven Central (200)
+OK         network       Ubuntu archive (200)
+OK         image         java: /usr/bin/java
+OK         image         node: /usr/local/bin/node
+OK         image         npm: /usr/local/bin/npm
+OK         image         git: /usr/bin/git
+OK         image         curl: /usr/bin/curl
+OK         image         gcc: /usr/bin/gcc
+OK         image         python3: /usr/bin/python3
+OK         image         uv: /home/claude/.local/bin/uv
+OK         image         Python 3.13: /opt/uv-python/cpython-3.13.9-linux-aarch64-gnu/bin/python3.13
+OK         image         bwrap: /usr/bin/bwrap
+OK         image         unshare: /usr/bin/unshare
+OK         image         nsenter: /usr/bin/nsenter
+OK         image         user namespaces: unprivileged `unshare -Ur` works
+OK         image         postgres (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) in /usr/lib/postgresql/16/bin
+OK         rust          rustc 1.99.1 (58cf8f9c3 2026-10-13); cargo-llvm-cov 0.9.1, cargo-generate 0.26.0; linked into /home/claude/.local/bin
+OK         c++           c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0 at /home/model/.local/cxx-root/usr/bin/aarch64-linux-gnu-g++-13, as c++ and g++ in /home/claude/.local/bin
+OK         node          v24.21.0 at /home/model/.local/node-24.21.0/bin/node, as /home/claude/.local/bin/node24
+OK         cdc           Kafka 3.8.0, Debezium 3.0.0.Final in /home/model/.local/cdc-kafka-3.8.0_debezium-3.0.0.Final: kafka 107 jars, connect 59 jars, plugins/debezium-connector-postgres 10 jars
+OK         vim           VIM - Vi IMproved 9.1 (2024 Jan 02, compiled Aug 24 2026 22:13:04); vim, view in /home/claude/.local/bin; read-only: vim -M <file>
+OK         shellcheck    version: 0.9.0 at /home/model/.local/shellcheck-root/usr/bin/shellcheck, as /home/claude/.local/bin/shellcheck
+OK         redis         Redis server v=7.0.15 sha=00000000:0 malloc=jemalloc-5.3.0 bits=64 build=d064f9f48c901a92 (unpacked in /home/model/.local/redis-root)
+OK         shell         sr, cdw, gkube in /home/claude/.local/bin (cdw opens a shell with the aliases)
+OK         git-init      tests/contract: git repo
+OK         git-init      services/user-service-rs: git repo
+OK         git-init      services/notification-service-rs: git repo
+OK         git-init      services/cart-service-rs: git repo
+OK         git-init      services/catalog-service-rs: git repo
+OK         git-init      services/inventory-service-rs: git repo
+OK         git-init      services/fulfilment-service-rs: git repo
+OK         git-init      services/payment-service-rs: git repo
+OK         git-init      services/order-service-rs: git repo
+OK         git-init      lib/gluon-rs: git repo
+OK         git-init      tools/gluon-kube: git repo
+OK         git-init      tests/acceptance: git repo
+OK         git-init      frontends/gshop: git repo
+OK         git-identity  tests/contract: gluon sandbox
+OK         git-identity  services/user-service-rs: gluon sandbox
+OK         git-identity  services/notification-service-rs: gluon sandbox
+OK         git-identity  services/cart-service-rs: gluon sandbox
+OK         git-identity  services/catalog-service-rs: gluon sandbox
+OK         git-identity  services/inventory-service-rs: gluon sandbox
+OK         git-identity  services/fulfilment-service-rs: gluon sandbox
+OK         git-identity  services/payment-service-rs: gluon sandbox
+OK         git-identity  services/order-service-rs: gluon sandbox
+OK         git-identity  lib/gluon-rs: gluon sandbox
+OK         git-identity  tools/gluon-kube: gluon sandbox
+OK         git-identity  tests/acceptance: gluon sandbox
+OK         git-identity  frontends/gshop: gluon sandbox
+OK         projects      tests/contract: .venv present
+OK         projects      tools/gluon-kube: .venv present
+OK         projects      services/user-service-rs: locked crates fetched
+OK         projects      services/notification-service-rs: locked crates fetched
+OK         projects      services/cart-service-rs: locked crates fetched
+OK         projects      services/catalog-service-rs: locked crates fetched
+OK         projects      services/inventory-service-rs: locked crates fetched
+OK         projects      services/fulfilment-service-rs: locked crates fetched
+OK         projects      services/payment-service-rs: locked crates fetched
+OK         projects      services/order-service-rs: locked crates fetched
+OK         projects      lib/gluon-rs: locked crates fetched
+OK         projects      tests/acceptance: node_modules present
+OK         projects      frontends/gshop: node_modules present
+OK         browsers      Chromium 156.0.8078.4 headless shell 1248 from the Playwright cache; libraries unpacked in /home/model/.local/chromium-libs; launched, a page rendered
+
+Sandbox ready.
+== [13:31:39, +482s] gkube up (all eight Rust ports, CARGO_BUILD_JOBS=6)
+cluster started: node pid 7699, state /tmp/gluon-kube-1001
+== Applying namespace + shared local infra ==
+namespace/gluon-local created
+registry-reload --configmap-only: skipped (apicurio-registry has no recipe)
+deployment.apps/apicurio-registry-ui created
+service/apicurio-registry-ui created
+deployment.apps/apicurio-registry created
+service/apicurio-registry created
+configmap/debezium-outbox-connectors created
+job.batch/debezium-connector-register created
+configmap/kafka-connect-jmx-exporter created
+deployment.apps/kafka-connect created
+service/kafka-connect created
+deployment.apps/kafka created
+service/kafka created
+namespace/gluon-local unchanged
+cronjob.batch/order-outbox-cleanup created
+cronjob.batch/payment-outbox-cleanup created
+cronjob.batch/user-outbox-cleanup created
+cronjob.batch/fulfilment-outbox-cleanup created
+deployment.apps/catalog-postgres created
+service/catalog-postgres created
+deployment.apps/fulfilment-postgres created
+service/fulfilment-postgres created
+deployment.apps/inventory-postgres created
+service/inventory-postgres created
+deployment.apps/notification-postgres created
+service/notification-postgres created
+deployment.apps/order-postgres created
+service/order-postgres created
+deployment.apps/payment-postgres created
+service/payment-postgres created
+deployment.apps/user-postgres created
+service/user-postgres created
+deployment.apps/cart-redis created
+service/cart-redis created
+deployment.apps/catalog-redis created
+service/catalog-redis created
+deployment.apps/order-redis created
+service/order-redis created
+== Waiting for shared infra to be ready (up to 3m) ==
+== Waiting for Debezium outbox connectors to register (up to 2m) ==
+== Removing retired inventory-events plumbing ==
+== Building catalog-service image from services/catalog-service-rs (gluon-kube build) ==
+== catalog-service-rs: cargo build --release --locked -p catalog-service --bin catalog-service
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling pin-project-lite v0.2.17
+   Compiling serde_core v1.0.229
+   Compiling futures-core v0.3.34
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling version_check v0.9.5
+   Compiling generic-array v0.14.7
+   Compiling bytes v1.12.1
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling futures-sink v0.3.34
+   Compiling itoa v1.0.18
+   Compiling zerocopy v0.8.63
+   Compiling memchr v2.8.3
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling errno v0.3.14
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling futures-task v0.3.34
+   Compiling utf_types v1.0.0
+   Compiling writeable v0.6.4
+   Compiling percent-encoding v2.3.2
+   Compiling futures-io v0.3.34
+   Compiling slab v0.4.12
+   Compiling litemap v0.8.3
+   Compiling thiserror v2.0.21
+   Compiling utf8_iter v1.1.0
+   Compiling zmij v1.0.23
+   Compiling parking_lot_core v0.9.12
+   Compiling once_cell v1.21.4
+   Compiling form_urlencoded v1.2.2
+   Compiling log v0.4.35
+   Compiling typenum v1.20.1
+   Compiling tracing-core v0.1.36
+   Compiling crossbeam-utils v0.8.23
+   Compiling http v1.5.0
+   Compiling autocfg v1.5.1
+   Compiling http-body v1.1.0
+   Compiling num-traits v0.2.19
+   Compiling synstructure v0.14.0
+   Compiling futures-channel v0.3.34
+   Compiling time-core v0.1.9
+   Compiling equivalent v1.0.3
+   Compiling num-conv v0.2.2
+   Compiling time-macros v0.2.32
+   Compiling tracing-attributes v0.1.31
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling httparse v1.10.1
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom v0.1.8
+   Compiling tokio-macros v2.7.2
+   Compiling yoke v0.8.4
+   Compiling zerovec v0.11.9
+   Compiling futures-macro v0.3.34
+   Compiling zerotrie v0.2.5
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling icu_locale_core v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling futures-util v0.3.34
+   Compiling thiserror-impl v2.0.21
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling tracing v0.1.44
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling either v1.19.0
+   Compiling url v2.5.8
+   Compiling ppv-lite86 v0.2.21
+   Compiling subtle v2.6.1
+   Compiling tower-service v0.3.3
+   Compiling digest v0.10.7
+   Compiling sync_wrapper v1.0.2
+   Compiling hashbrown v0.17.1
+   Compiling tower-layer v0.3.3
+   Compiling serde_json v1.0.154
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling indexmap v2.14.2
+   Compiling parking v2.2.1
+   Compiling httpdate v1.0.3
+   Compiling scopeguard v1.2.0
+   Compiling getrandom v0.3.4
+   Compiling atomic-waker v1.1.2
+   Compiling foldhash v0.2.0
+   Compiling bitflags v2.13.2
+   Compiling hyper v1.12.0
+   Compiling lock_api v0.4.14
+   Compiling event-listener v5.4.2
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling getrandom v0.2.17
+   Compiling ipnet v2.12.2
+   Compiling getrandom v0.4.3
+   Compiling foldhash v0.1.5
+   Compiling base64 v0.23.1
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.15.5
+   Compiling hyper-util v0.1.21
+   Compiling rand_core v0.6.4
+   Compiling parking_lot v0.12.5
+   Compiling cpufeatures v0.2.17
+   Compiling ryu v1.0.23
+   Compiling powerfmt v0.2.1
+   Compiling anyhow v1.0.104
+   Compiling deranged v0.5.9
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling unicode-normalization v0.1.26
+   Compiling crc v3.4.0
+   Compiling time v0.3.55
+   Compiling sha2 v0.10.9
+   Compiling tokio-stream v0.1.19
+   Compiling rand_core v0.9.5
+   Compiling crossbeam-queue v0.3.14
+   Compiling futures-intrusive v0.5.0
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling base64 v0.22.1
+   Compiling unicode-properties v0.1.5
+   Compiling unicode-bidi v0.3.18
+   Compiling uuid v1.29.0
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling rand_chacha v0.9.0
+   Compiling tower-http v0.6.11
+   Compiling md-5 v0.10.6
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling byteorder v1.5.0
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling sqlx-postgres v0.8.6
+   Compiling prost-derive v0.14.4
+   Compiling rand v0.9.5
+   Compiling serde_urlencoded v0.7.1
+   Compiling futures-executor v0.3.34
+   Compiling heck v0.5.0
+   Compiling ref-cast v1.0.27
+   Compiling mime v0.3.17
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling sqlx-macros-core v0.8.6
+   Compiling prost v0.14.4
+   Compiling reqwest v0.13.5
+   Compiling event-listener-strategy v0.5.4
+   Compiling tokio-util v0.7.20
+   Compiling ref-cast-impl v1.0.27
+   Compiling async-trait v0.1.92
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling matchit v0.8.4
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling opentelemetry-http v0.33.1
+   Compiling sqlx-macros v0.8.6
+   Compiling combine v4.6.9
+   Compiling async-lock v3.5.0
+   Compiling opentelemetry-proto v0.33.1
+   Compiling dyn-clone v1.0.20
+   Compiling xxhash-rust v0.8.19
+   Compiling arcstr v1.2.0
+   Compiling redis v1.8.1
+   Compiling schemars v1.2.3
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling sqlx v0.8.6
+   Compiling reqwest v0.12.28
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling redis-cache v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/redis-cache)
+   Compiling catalog-service v0.1.0 (/workspace/gluon/services/catalog-service-rs/crates/catalog-service)
+    Finished `release` profile [optimized] target(s) in 32.30s
+== Deploying catalog-service (helm release) ==
+Release "catalog-service" does not exist. Installing it now.
+NAME: catalog-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting catalog-service to pick up the freshly built image ==
+deployment.apps/catalog-service restarted
+Waiting for deployment "catalog-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "catalog-service" successfully rolled out
+== Building cart-service image from services/cart-service-rs (gluon-kube build) ==
+== cart-service-rs: cargo build --release --locked -p cart-service --bin cart-service
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde_core v1.0.229
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling serde v1.0.229
+   Compiling bytes v1.12.1
+   Compiling stable_deref_trait v1.2.1
+   Compiling cfg-if v1.0.5
+   Compiling futures-sink v0.3.34
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling litemap v0.8.3
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling percent-encoding v2.3.2
+   Compiling futures-io v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling slab v0.4.12
+   Compiling errno v0.3.14
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling utf_types v1.0.0
+   Compiling writeable v0.6.4
+   Compiling utf8_iter v1.1.0
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling once_cell v1.21.4
+   Compiling form_urlencoded v1.2.2
+   Compiling log v0.4.35
+   Compiling tracing-core v0.1.36
+   Compiling zerocopy v0.8.63
+   Compiling version_check v0.9.5
+   Compiling http v1.5.0
+   Compiling generic-array v0.14.7
+   Compiling thiserror v2.0.21
+   Compiling futures-channel v0.3.34
+   Compiling equivalent v1.0.3
+   Compiling typenum v1.20.1
+   Compiling http-body v1.1.0
+   Compiling httparse v1.10.1
+   Compiling tower-service v0.3.3
+   Compiling zmij v1.0.23
+   Compiling sync_wrapper v1.0.2
+   Compiling hashbrown v0.17.1
+   Compiling synstructure v0.14.0
+   Compiling serde_json v1.0.154
+   Compiling tower-layer v0.3.3
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling indexmap v2.14.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling tracing-attributes v0.1.31
+   Compiling httpdate v1.0.3
+   Compiling subtle v2.6.1
+   Compiling bitflags v2.13.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling tokio-macros v2.7.2
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling tracing v0.1.44
+   Compiling yoke v0.8.4
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling tokio v1.54.1
+   Compiling thiserror-impl v2.0.21
+   Compiling ppv-lite86 v0.2.21
+   Compiling futures-util v0.3.34
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling icu_locale_core v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling atomic-waker v1.1.2
+   Compiling parking v2.2.1
+   Compiling getrandom v0.3.4
+   Compiling icu_provider v2.4.0
+   Compiling foldhash v0.2.0
+   Compiling smallvec v1.16.4
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling event-listener v5.4.2
+   Compiling url v2.5.8
+   Compiling digest v0.10.7
+   Compiling http-body-util v0.1.5
+   Compiling parking_lot_core v0.9.12
+   Compiling ipnet v2.12.2
+   Compiling getrandom v0.4.3
+   Compiling base64 v0.23.1
+   Compiling tower v0.5.3
+   Compiling hyper v1.12.0
+   Compiling autocfg v1.5.1
+   Compiling ryu v1.0.23
+   Compiling scopeguard v1.2.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling anyhow v1.0.104
+   Compiling num-traits v0.2.19
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling allocator-api2 v0.2.21
+   Compiling either v1.19.0
+   Compiling hyper-util v0.1.21
+   Compiling base64 v0.22.1
+   Compiling foldhash v0.1.5
+   Compiling hashbrown v0.15.5
+   Compiling itertools v0.14.0
+   Compiling rand_core v0.6.4
+   Compiling parking_lot v0.12.5
+   Compiling uuid v1.29.0
+   Compiling rand_chacha v0.9.0
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling cpufeatures v0.2.17
+   Compiling tinyvec v1.13.3
+   Compiling crc-catalog v2.5.0
+   Compiling crc v3.4.0
+   Compiling unicode-normalization v0.1.26
+   Compiling sha2 v0.10.9
+   Compiling crossbeam-queue v0.3.14
+   Compiling prost-derive v0.14.4
+   Compiling rand v0.9.5
+   Compiling hashlink v0.10.0
+   Compiling futures-intrusive v0.5.0
+   Compiling rand_chacha v0.3.1
+   Compiling serde_urlencoded v0.7.1
+   Compiling tokio-stream v0.1.19
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling mime v0.3.17
+   Compiling num-conv v0.2.2
+   Compiling ref-cast v1.0.27
+   Compiling time-core v0.1.9
+   Compiling unicode-bidi v0.3.18
+   Compiling unicode-properties v0.1.5
+   Compiling time-macros v0.2.32
+   Compiling axum-core v0.5.6
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling prost v0.14.4
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling reqwest v0.13.5
+   Compiling tokio-util v0.7.20
+   Compiling md-5 v0.10.6
+   Compiling event-listener-strategy v0.5.4
+   Compiling ref-cast-impl v1.0.27
+   Compiling async-trait v0.1.92
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling whoami v1.6.1
+   Compiling powerfmt v0.2.1
+   Compiling hex v0.4.3
+   Compiling byteorder v1.5.0
+   Compiling matchit v0.8.4
+   Compiling dotenvy v0.15.7
+   Compiling home v0.5.12
+   Compiling deranged v0.5.9
+   Compiling sqlx-postgres v0.8.6
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling time v0.3.55
+   Compiling opentelemetry-http v0.33.1
+   Compiling combine v4.6.9
+   Compiling async-lock v3.5.0
+   Compiling opentelemetry-proto v0.33.1
+   Compiling xxhash-rust v0.8.19
+   Compiling arcstr v1.2.0
+   Compiling dyn-clone v1.0.20
+   Compiling schemars v1.2.3
+   Compiling redis v1.8.1
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling sqlx v0.8.6
+   Compiling reqwest v0.12.28
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling redis-cache v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/redis-cache)
+   Compiling cart-service v0.1.0 (/workspace/gluon/services/cart-service-rs/crates/cart-service)
+    Finished `release` profile [optimized] target(s) in 26.06s
+== Deploying cart-service (helm release) ==
+Release "cart-service" does not exist. Installing it now.
+NAME: cart-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting cart-service to pick up the freshly built image ==
+deployment.apps/cart-service restarted
+Waiting for deployment "cart-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "cart-service" successfully rolled out
+== Building order-service image from services/order-service-rs (gluon-kube build) ==
+== order-service-rs: cargo build --release --locked -p order-service --bin order-service
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling icu_normalizer_data v2.4.0
+   Compiling icu_properties_data v2.4.0
+   Compiling bytes v1.12.1
+   Compiling version_check v0.9.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling cfg-if v1.0.5
+   Compiling generic-array v0.14.7
+   Compiling futures-sink v0.3.34
+   Compiling itoa v1.0.18
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling memchr v2.8.3
+   Compiling errno v0.3.14
+   Compiling zerocopy v0.8.63
+   Compiling signal-hook-registry v1.4.8
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling zmij v1.0.23
+   Compiling slab v0.4.12
+   Compiling litemap v0.8.3
+   Compiling percent-encoding v2.3.2
+   Compiling utf_types v1.0.0
+   Compiling writeable v0.6.4
+   Compiling thiserror v2.0.21
+   Compiling utf8_iter v1.1.0
+   Compiling once_cell v1.21.4
+   Compiling log v0.4.35
+   Compiling form_urlencoded v1.2.2
+   Compiling tracing-core v0.1.36
+   Compiling parking_lot_core v0.9.12
+   Compiling equivalent v1.0.3
+   Compiling http v1.5.0
+   Compiling futures-channel v0.3.34
+   Compiling crossbeam-utils v0.8.23
+   Compiling num-conv v0.2.2
+   Compiling synstructure v0.14.0
+   Compiling http-body v1.1.0
+   Compiling serde_json v1.0.154
+   Compiling time-core v0.1.9
+   Compiling hashbrown v0.17.1
+   Compiling tracing-attributes v0.1.31
+   Compiling typenum v1.20.1
+   Compiling indexmap v2.14.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom v0.1.8
+   Compiling tokio-macros v2.7.2
+   Compiling futures-macro v0.3.34
+   Compiling yoke v0.8.4
+   Compiling thiserror-impl v2.0.21
+   Compiling zerovec v0.11.9
+   Compiling zerotrie v0.2.5
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling futures-util v0.3.34
+   Compiling icu_locale_core v2.4.0
+   Compiling icu_collections v2.4.0
+   Compiling icu_provider v2.4.0
+   Compiling smallvec v1.16.4
+   Compiling icu_properties v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling tracing v0.1.44
+   Compiling either v1.19.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling ppv-lite86 v0.2.21
+   Compiling time-macros v0.2.32
+   Compiling foldhash v0.2.0
+   Compiling tower-service v0.3.3
+   Compiling httparse v1.10.1
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling subtle v2.6.1
+   Compiling bitflags v2.13.2
+   Compiling getrandom v0.3.4
+   Compiling atomic-waker v1.1.2
+   Compiling httpdate v1.0.3
+   Compiling hyper v1.12.0
+   Compiling digest v0.10.7
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling base64 v0.23.1
+   Compiling ipnet v2.12.2
+   Compiling getrandom v0.4.3
+   Compiling hyper-util v0.1.21
+   Compiling anyhow v1.0.104
+   Compiling ryu v1.0.23
+   Compiling scopeguard v1.2.0
+   Compiling parking v2.2.1
+   Compiling event-listener v5.4.2
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling deranged v0.5.9
+   Compiling base64 v0.22.1
+   Compiling allocator-api2 v0.2.21
+   Compiling powerfmt v0.2.1
+   Compiling foldhash v0.1.5
+   Compiling winnow v1.0.4
+   Compiling time v0.3.55
+   Compiling hashbrown v0.15.5
+   Compiling rand_core v0.6.4
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling uuid v1.29.0
+   Compiling parking_lot v0.12.5
+   Compiling rand_chacha v0.9.0
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling cpufeatures v0.2.17
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling unicode-normalization v0.1.26
+   Compiling prost-derive v0.14.4
+   Compiling crc v3.4.0
+   Compiling tokio-stream v0.1.19
+   Compiling toml_edit v0.25.18+spec-1.1.0
+   Compiling sha2 v0.10.9
+   Compiling rand v0.9.5
+   Compiling crossbeam-queue v0.3.14
+   Compiling futures-intrusive v0.5.0
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling rustversion v1.0.23
+   Compiling unicode-properties v0.1.5
+   Compiling ref-cast v1.0.27
+   Compiling unicode-bidi v0.3.18
+   Compiling mime v0.3.17
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling prost v0.14.4
+   Compiling proc-macro-crate v3.5.0
+   Compiling reqwest v0.13.5
+   Compiling md-5 v0.10.6
+   Compiling async-trait v0.1.92
+   Compiling ref-cast-impl v1.0.27
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling byteorder v1.5.0
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling matchit v0.8.4
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling pkg-config v0.3.34
+   Compiling sqlx-postgres v0.8.6
+   Compiling schemars_derive v1.2.3
+   Compiling rdkafka-sys v4.10.0+2.12.1
+   Compiling axum v0.8.9
+   Compiling opentelemetry-http v0.33.1
+   Compiling opentelemetry-proto v0.33.1
+   Compiling num_enum_derive v0.7.6
+   Compiling dyn-clone v1.0.20
+   Compiling heck v0.5.0
+   Compiling schemars v1.2.3
+   Compiling sqlx-macros-core v0.8.6
+   Compiling num_enum v0.7.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling event-listener-strategy v0.5.4
+   Compiling tokio-util v0.7.20
+   Compiling combine v4.6.9
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling async-lock v3.5.0
+   Compiling sqlx-macros v0.8.6
+   Compiling arcstr v1.2.0
+   Compiling xxhash-rust v0.8.19
+   Compiling kafka-event-consumer v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-event-consumer)
+   Compiling sqlx v0.8.6
+   Compiling redis v1.8.1
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling redis-cache v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/redis-cache)
+   Compiling rdkafka v0.39.0
+   Compiling kafka-client v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-client)
+   Compiling order-service v0.1.0 (/workspace/gluon/services/order-service-rs/crates/order-service)
+    Finished `release` profile [optimized] target(s) in 49.81s
+== Deploying order-service (helm release) ==
+Release "order-service" does not exist. Installing it now.
+NAME: order-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting order-service to pick up the freshly built image ==
+deployment.apps/order-service restarted
+Waiting for deployment "order-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "order-service" successfully rolled out
+== Building inventory-service image from services/inventory-service-rs (gluon-kube build) ==
+== inventory-service-rs: cargo build --release --locked -p inventory-service --bin inventory-service
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling version_check v0.9.5
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling generic-array v0.14.7
+   Compiling itoa v1.0.18
+   Compiling zerocopy v0.8.63
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling memchr v2.8.3
+   Compiling futures-sink v0.3.34
+   Compiling errno v0.3.14
+   Compiling slab v0.4.12
+   Compiling zmij v1.0.23
+   Compiling futures-io v0.3.34
+   Compiling thiserror v2.0.21
+   Compiling futures-task v0.3.34
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling utf_types v1.0.0
+   Compiling percent-encoding v2.3.2
+   Compiling utf8_iter v1.1.0
+   Compiling log v0.4.35
+   Compiling once_cell v1.21.4
+   Compiling tracing-core v0.1.36
+   Compiling equivalent v1.0.3
+   Compiling parking_lot_core v0.9.12
+   Compiling form_urlencoded v1.2.2
+   Compiling futures-channel v0.3.34
+   Compiling http v1.5.0
+   Compiling hashbrown v0.17.1
+   Compiling num-conv v0.2.2
+   Compiling typenum v1.20.1
+   Compiling crossbeam-utils v0.8.23
+   Compiling synstructure v0.14.0
+   Compiling http-body v1.1.0
+   Compiling time-core v0.1.9
+   Compiling time-macros v0.2.32
+   Compiling tracing-attributes v0.1.31
+   Compiling indexmap v2.14.2
+   Compiling autocfg v1.5.1
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom v0.1.8
+   Compiling futures-macro v0.3.34
+   Compiling yoke v0.8.4
+   Compiling tokio-macros v2.7.2
+   Compiling zerotrie v0.2.5
+   Compiling thiserror-impl v2.0.21
+   Compiling zerovec v0.11.9
+   Compiling futures-util v0.3.34
+   Compiling tinystr v0.8.5
+   Compiling tokio v1.54.1
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling tracing v0.1.44
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling either v1.19.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling tower-service v0.3.3
+   Compiling httparse v1.10.1
+   Compiling url v2.5.8
+   Compiling num-traits v0.2.19
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling serde_json v1.0.154
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling httpdate v1.0.3
+   Compiling foldhash v0.2.0
+   Compiling bitflags v2.13.2
+   Compiling atomic-waker v1.1.2
+   Compiling subtle v2.6.1
+   Compiling getrandom v0.3.4
+   Compiling digest v0.10.7
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling ipnet v2.12.2
+   Compiling getrandom v0.4.3
+   Compiling base64 v0.23.1
+   Compiling hyper-util v0.1.21
+   Compiling scopeguard v1.2.0
+   Compiling anyhow v1.0.104
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling deranged v0.5.9
+   Compiling foldhash v0.1.5
+   Compiling powerfmt v0.2.1
+   Compiling base64 v0.22.1
+   Compiling winnow v1.0.4
+   Compiling allocator-api2 v0.2.21
+   Compiling time v0.3.55
+   Compiling hashbrown v0.15.5
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling rand_core v0.6.4
+   Compiling uuid v1.29.0
+   Compiling rand_chacha v0.9.0
+   Compiling parking_lot v0.12.5
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling cpufeatures v0.2.17
+   Compiling tinyvec v1.13.3
+   Compiling parking v2.2.1
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling ryu v1.0.23
+   Compiling crc-catalog v2.5.0
+   Compiling crc v3.4.0
+   Compiling prost-derive v0.14.4
+   Compiling serde_urlencoded v0.7.1
+   Compiling tokio-stream v0.1.19
+   Compiling toml_edit v0.25.18+spec-1.1.0
+   Compiling event-listener v5.4.2
+   Compiling unicode-normalization v0.1.26
+   Compiling sha2 v0.10.9
+   Compiling futures-intrusive v0.5.0
+   Compiling rand v0.9.5
+   Compiling crossbeam-queue v0.3.14
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling ref-cast v1.0.27
+   Compiling rustversion v1.0.23
+   Compiling mime v0.3.17
+   Compiling unicode-properties v0.1.5
+   Compiling unicode-bidi v0.3.18
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling atoi v2.0.0
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling proc-macro-crate v3.5.0
+   Compiling prost v0.14.4
+   Compiling reqwest v0.13.5
+   Compiling md-5 v0.10.6
+   Compiling ref-cast-impl v1.0.27
+   Compiling async-trait v0.1.92
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling pkg-config v0.3.34
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling byteorder v1.5.0
+   Compiling matchit v0.8.4
+   Compiling sqlx-postgres v0.8.6
+   Compiling rdkafka-sys v4.10.0+2.12.1
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling opentelemetry-http v0.33.1
+   Compiling opentelemetry-proto v0.33.1
+   Compiling num_enum_derive v0.7.6
+   Compiling heck v0.5.0
+   Compiling dyn-clone v1.0.20
+   Compiling schemars v1.2.3
+   Compiling sqlx-macros-core v0.8.6
+   Compiling num_enum v0.7.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling sqlx-macros v0.8.6
+   Compiling kafka-event-consumer v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-event-consumer)
+   Compiling sqlx v0.8.6
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling rdkafka v0.39.0
+   Compiling kafka-client v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-client)
+   Compiling inventory-service v0.1.0 (/workspace/gluon/services/inventory-service-rs/crates/inventory-service)
+    Finished `release` profile [optimized] target(s) in 47.49s
+== Deploying inventory-service (helm release) ==
+Release "inventory-service" does not exist. Installing it now.
+NAME: inventory-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting inventory-service to pick up the freshly built image ==
+deployment.apps/inventory-service restarted
+Waiting for deployment "inventory-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "inventory-service" successfully rolled out
+== Building payment-service image from services/payment-service-rs (gluon-kube build) ==
+== payment-service-rs: cargo build --release --locked -p payment-service --bin payment-service
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling futures-core v0.3.34
+   Compiling icu_normalizer_data v2.4.0
+   Compiling icu_properties_data v2.4.0
+   Compiling pin-project-lite v0.2.17
+   Compiling version_check v0.9.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling generic-array v0.14.7
+   Compiling cfg-if v1.0.5
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling zerocopy v0.8.63
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling futures-sink v0.3.34
+   Compiling errno v0.3.14
+   Compiling zmij v1.0.23
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling thiserror v2.0.21
+   Compiling slab v0.4.12
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling writeable v0.6.4
+   Compiling utf_types v1.0.0
+   Compiling litemap v0.8.3
+   Compiling percent-encoding v2.3.2
+   Compiling utf8_iter v1.1.0
+   Compiling once_cell v1.21.4
+   Compiling log v0.4.35
+   Compiling tracing-core v0.1.36
+   Compiling equivalent v1.0.3
+   Compiling parking_lot_core v0.9.12
+   Compiling form_urlencoded v1.2.2
+   Compiling futures-channel v0.3.34
+   Compiling http v1.5.0
+   Compiling time-core v0.1.9
+   Compiling hashbrown v0.17.1
+   Compiling synstructure v0.14.0
+   Compiling typenum v1.20.1
+   Compiling http-body v1.1.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling tracing-attributes v0.1.31
+   Compiling num-conv v0.2.2
+   Compiling time-macros v0.2.32
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling tokio-macros v2.7.2
+   Compiling zerotrie v0.2.5
+   Compiling zerovec v0.11.9
+   Compiling futures-util v0.3.34
+   Compiling thiserror-impl v2.0.21
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling tracing v0.1.44
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling either v1.19.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling indexmap v2.14.2
+   Compiling tower-service v0.3.3
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling autocfg v1.5.1
+   Compiling httparse v1.10.1
+   Compiling num-traits v0.2.19
+   Compiling url v2.5.8
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling serde_json v1.0.154
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling subtle v2.6.1
+   Compiling httpdate v1.0.3
+   Compiling bitflags v2.13.2
+   Compiling foldhash v0.2.0
+   Compiling getrandom v0.3.4
+   Compiling atomic-waker v1.1.2
+   Compiling hyper v1.12.0
+   Compiling digest v0.10.7
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling ipnet v2.12.2
+   Compiling base64 v0.23.1
+   Compiling getrandom v0.4.3
+   Compiling hyper-util v0.1.21
+   Compiling scopeguard v1.2.0
+   Compiling anyhow v1.0.104
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling deranged v0.5.9
+   Compiling allocator-api2 v0.2.21
+   Compiling base64 v0.22.1
+   Compiling winnow v1.0.4
+   Compiling foldhash v0.1.5
+   Compiling powerfmt v0.2.1
+   Compiling time v0.3.55
+   Compiling hashbrown v0.15.5
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling rand_core v0.6.4
+   Compiling uuid v1.29.0
+   Compiling rand_chacha v0.9.0
+   Compiling parking_lot v0.12.5
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling cpufeatures v0.2.17
+   Compiling parking v2.2.1
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling ryu v1.0.23
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling toml_edit v0.25.18+spec-1.1.0
+   Compiling prost-derive v0.14.4
+   Compiling tokio-stream v0.1.19
+   Compiling unicode-normalization v0.1.26
+   Compiling serde_urlencoded v0.7.1
+   Compiling crc v3.4.0
+   Compiling event-listener v5.4.2
+   Compiling sha2 v0.10.9
+   Compiling futures-intrusive v0.5.0
+   Compiling rand v0.9.5
+   Compiling crossbeam-queue v0.3.14
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling unicode-properties v0.1.5
+   Compiling unicode-bidi v0.3.18
+   Compiling mime v0.3.17
+   Compiling ref-cast v1.0.27
+   Compiling rustversion v1.0.23
+   Compiling stringprep v0.1.5
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling sqlx-core v0.8.6
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling prost v0.14.4
+   Compiling proc-macro-crate v3.5.0
+   Compiling reqwest v0.13.5
+   Compiling md-5 v0.10.6
+   Compiling async-trait v0.1.92
+   Compiling ref-cast-impl v1.0.27
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling pkg-config v0.3.34
+   Compiling matchit v0.8.4
+   Compiling byteorder v1.5.0
+   Compiling sqlx-postgres v0.8.6
+   Compiling rdkafka-sys v4.10.0+2.12.1
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling opentelemetry-http v0.33.1
+   Compiling opentelemetry-proto v0.33.1
+   Compiling num_enum_derive v0.7.6
+   Compiling heck v0.5.0
+   Compiling dyn-clone v1.0.20
+   Compiling sqlx-macros-core v0.8.6
+   Compiling schemars v1.2.3
+   Compiling num_enum v0.7.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling sqlx-macros v0.8.6
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling kafka-event-consumer v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-event-consumer)
+   Compiling sqlx v0.8.6
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling rdkafka v0.39.0
+   Compiling kafka-client v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-client)
+   Compiling payment-service v0.1.0 (/workspace/gluon/services/payment-service-rs/crates/payment-service)
+    Finished `release` profile [optimized] target(s) in 45.06s
+== Deploying payment-service (helm release) ==
+Release "payment-service" does not exist. Installing it now.
+NAME: payment-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting payment-service to pick up the freshly built image ==
+deployment.apps/payment-service restarted
+Waiting for deployment "payment-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "payment-service" successfully rolled out
+== Building notification-service image from services/notification-service-rs (gluon-kube build) ==
+== notification-service-rs: cargo build --release --locked -p notification-service --bin notification-service
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling icu_normalizer_data v2.4.0
+   Compiling pin-project-lite v0.2.17
+   Compiling icu_properties_data v2.4.0
+   Compiling futures-core v0.3.34
+   Compiling version_check v0.9.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling generic-array v0.14.7
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling cfg-if v1.0.5
+   Compiling zerocopy v0.8.63
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling futures-sink v0.3.34
+   Compiling zmij v1.0.23
+   Compiling errno v0.3.14
+   Compiling futures-io v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling thiserror v2.0.21
+   Compiling slab v0.4.12
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling writeable v0.6.4
+   Compiling utf_types v1.0.0
+   Compiling percent-encoding v2.3.2
+   Compiling litemap v0.8.3
+   Compiling utf8_iter v1.1.0
+   Compiling once_cell v1.21.4
+   Compiling log v0.4.35
+   Compiling tracing-core v0.1.36
+   Compiling equivalent v1.0.3
+   Compiling parking_lot_core v0.9.12
+   Compiling form_urlencoded v1.2.2
+   Compiling futures-channel v0.3.34
+   Compiling http v1.5.0
+   Compiling time-core v0.1.9
+   Compiling crossbeam-utils v0.8.23
+   Compiling synstructure v0.14.0
+   Compiling hashbrown v0.17.1
+   Compiling http-body v1.1.0
+   Compiling typenum v1.20.1
+   Compiling num-conv v0.2.2
+   Compiling time-macros v0.2.32
+   Compiling tracing-attributes v0.1.31
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling tokio-macros v2.7.2
+   Compiling zerotrie v0.2.5
+   Compiling zerovec v0.11.9
+   Compiling thiserror-impl v2.0.21
+   Compiling futures-util v0.3.34
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling tracing v0.1.44
+   Compiling either v1.19.0
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling indexmap v2.14.2
+   Compiling idna_adapter v1.2.2
+   Compiling tower-service v0.3.3
+   Compiling idna v1.1.0
+   Compiling serde_json v1.0.154
+   Compiling autocfg v1.5.1
+   Compiling httparse v1.10.1
+   Compiling num-traits v0.2.19
+   Compiling url v2.5.8
+   Compiling sync_wrapper v1.0.2
+   Compiling foldhash v0.2.0
+   Compiling tower-layer v0.3.3
+   Compiling try-lock v0.2.5
+   Compiling want v0.3.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling httpdate v1.0.3
+   Compiling bitflags v2.13.2
+   Compiling getrandom v0.3.4
+   Compiling atomic-waker v1.1.2
+   Compiling subtle v2.6.1
+   Compiling hyper v1.12.0
+   Compiling digest v0.10.7
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling ipnet v2.12.2
+   Compiling base64 v0.23.1
+   Compiling getrandom v0.4.3
+   Compiling hyper-util v0.1.21
+   Compiling scopeguard v1.2.0
+   Compiling anyhow v1.0.104
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling deranged v0.5.9
+   Compiling allocator-api2 v0.2.21
+   Compiling foldhash v0.1.5
+   Compiling winnow v1.0.4
+   Compiling base64 v0.22.1
+   Compiling powerfmt v0.2.1
+   Compiling time v0.3.55
+   Compiling hashbrown v0.15.5
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling rand_core v0.6.4
+   Compiling uuid v1.29.0
+   Compiling parking_lot v0.12.5
+   Compiling rand_chacha v0.9.0
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling cpufeatures v0.2.17
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling ryu v1.0.23
+   Compiling parking v2.2.1
+   Compiling event-listener v5.4.2
+   Compiling prost-derive v0.14.4
+   Compiling tokio-stream v0.1.19
+   Compiling unicode-normalization v0.1.26
+   Compiling serde_urlencoded v0.7.1
+   Compiling crc v3.4.0
+   Compiling toml_edit v0.25.18+spec-1.1.0
+   Compiling sha2 v0.10.9
+   Compiling rand v0.9.5
+   Compiling futures-intrusive v0.5.0
+   Compiling crossbeam-queue v0.3.14
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling rustversion v1.0.23
+   Compiling unicode-bidi v0.3.18
+   Compiling unicode-properties v0.1.5
+   Compiling mime v0.3.17
+   Compiling ref-cast v1.0.27
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling hkdf v0.12.4
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling proc-macro-crate v3.5.0
+   Compiling prost v0.14.4
+   Compiling reqwest v0.13.5
+   Compiling md-5 v0.10.6
+   Compiling async-trait v0.1.92
+   Compiling ref-cast-impl v1.0.27
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling pkg-config v0.3.34
+   Compiling matchit v0.8.4
+   Compiling byteorder v1.5.0
+   Compiling sqlx-postgres v0.8.6
+   Compiling rdkafka-sys v4.10.0+2.12.1
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling opentelemetry-http v0.33.1
+   Compiling opentelemetry-proto v0.33.1
+   Compiling num_enum_derive v0.7.6
+   Compiling heck v0.5.0
+   Compiling dyn-clone v1.0.20
+   Compiling sqlx-macros-core v0.8.6
+   Compiling schemars v1.2.3
+   Compiling num_enum v0.7.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling sqlx-macros v0.8.6
+   Compiling kafka-event-consumer v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-event-consumer)
+   Compiling sqlx v0.8.6
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling rdkafka v0.39.0
+   Compiling kafka-client v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-client)
+   Compiling notification-service v0.1.0 (/workspace/gluon/services/notification-service-rs/crates/notification-service)
+    Finished `release` profile [optimized] target(s) in 48.22s
+== Deploying notification-service (helm release) ==
+Release "notification-service" does not exist. Installing it now.
+NAME: notification-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting notification-service to pick up the freshly built image ==
+deployment.apps/notification-service restarted
+Waiting for deployment "notification-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "notification-service" successfully rolled out
+== Building user-service image from services/user-service-rs (gluon-kube build) ==
+== user-service-rs: cargo build --release --locked -p user-service --bin user-service --bin asyncapi-spec
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling version_check v0.9.5
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling generic-array v0.14.7
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.34
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling zerocopy v0.8.63
+   Compiling itoa v1.0.18
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling futures-sink v0.3.34
+   Compiling memchr v2.8.3
+   Compiling thiserror v2.0.21
+   Compiling errno v0.3.14
+   Compiling zmij v1.0.23
+   Compiling slab v0.4.12
+   Compiling utf_types v1.0.0
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling percent-encoding v2.3.2
+   Compiling futures-io v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling utf8_iter v1.1.0
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling parking_lot_core v0.9.12
+   Compiling once_cell v1.21.4
+   Compiling tracing-core v0.1.36
+   Compiling log v0.4.35
+   Compiling typenum v1.20.1
+   Compiling crossbeam-utils v0.8.23
+   Compiling form_urlencoded v1.2.2
+   Compiling http v1.5.0
+   Compiling autocfg v1.5.1
+   Compiling synstructure v0.14.0
+   Compiling http-body v1.1.0
+   Compiling num-traits v0.2.19
+   Compiling futures-channel v0.3.34
+   Compiling time-core v0.1.9
+   Compiling num-conv v0.2.2
+   Compiling tracing-attributes v0.1.31
+   Compiling block-buffer v0.10.4
+   Compiling time-macros v0.2.32
+   Compiling crypto-common v0.1.7
+   Compiling httparse v1.10.1
+   Compiling subtle v2.6.1
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling zerotrie v0.2.5
+   Compiling tokio-macros v2.7.2
+   Compiling zerovec v0.11.9
+   Compiling futures-util v0.3.34
+   Compiling thiserror-impl v2.0.21
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling tracing v0.1.44
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling either v1.19.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling tower-service v0.3.3
+   Compiling equivalent v1.0.3
+   Compiling url v2.5.8
+   Compiling digest v0.10.7
+   Compiling sync_wrapper v1.0.2
+   Compiling try-lock v0.2.5
+   Compiling tower-layer v0.3.3
+   Compiling want v0.3.2
+   Compiling httpdate v1.0.3
+   Compiling bitflags v2.13.2
+   Compiling hashbrown v0.17.1
+   Compiling serde_json v1.0.154
+   Compiling atomic-waker v1.1.2
+   Compiling getrandom v0.3.4
+   Compiling scopeguard v1.2.0
+   Compiling lock_api v0.4.14
+   Compiling tower v0.5.3
+   Compiling hyper v1.12.0
+   Compiling indexmap v2.14.2
+   Compiling http-body-util v0.1.5
+   Compiling getrandom v0.2.17
+   Compiling ipnet v2.12.2
+   Compiling base64 v0.23.1
+   Compiling getrandom v0.4.3
+   Compiling foldhash v0.1.5
+   Compiling foldhash v0.2.0
+   Compiling allocator-api2 v0.2.21
+   Compiling hashbrown v0.15.5
+   Compiling hyper-util v0.1.21
+   Compiling rand_core v0.6.4
+   Compiling parking_lot v0.12.5
+   Compiling cpufeatures v0.2.17
+   Compiling parking v2.2.1
+   Compiling crc-catalog v2.5.0
+   Compiling tinyvec v1.13.3
+   Compiling anyhow v1.0.104
+   Compiling deranged v0.5.9
+   Compiling powerfmt v0.2.1
+   Compiling unicode-normalization v0.1.26
+   Compiling time v0.3.55
+   Compiling tokio-stream v0.1.19
+   Compiling crc v3.4.0
+   Compiling event-listener v5.4.2
+   Compiling sha2 v0.10.9
+   Compiling rand_core v0.9.5
+   Compiling crossbeam-queue v0.3.14
+   Compiling futures-intrusive v0.5.0
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling base64 v0.22.1
+   Compiling unicode-properties v0.1.5
+   Compiling uuid v1.29.0
+   Compiling unicode-bidi v0.3.18
+   Compiling sqlx-core v0.8.6
+   Compiling hkdf v0.12.4
+   Compiling stringprep v0.1.5
+   Compiling rand v0.8.8
+   Compiling atoi v2.0.0
+   Compiling rand_chacha v0.9.0
+   Compiling tower-http v0.6.11
+   Compiling md-5 v0.10.6
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling ryu v1.0.23
+   Compiling dotenvy v0.15.7
+   Compiling hex v0.4.3
+   Compiling byteorder v1.5.0
+   Compiling sqlx-postgres v0.8.6
+   Compiling serde_urlencoded v0.7.1
+   Compiling prost-derive v0.14.4
+   Compiling rand v0.9.5
+   Compiling futures-executor v0.3.34
+   Compiling heck v0.5.0
+   Compiling ref-cast v1.0.27
+   Compiling mime v0.3.17
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling sqlx-macros-core v0.8.6
+   Compiling prost v0.14.4
+   Compiling reqwest v0.13.5
+   Compiling ref-cast-impl v1.0.27
+   Compiling async-trait v0.1.92
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling matchit v0.8.4
+   Compiling opentelemetry-http v0.33.1
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling sqlx-macros v0.8.6
+   Compiling opentelemetry-proto v0.33.1
+   Compiling dyn-clone v1.0.20
+   Compiling schemars v1.2.3
+   Compiling sqlx v0.8.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling pbkdf2 v0.12.2
+   Compiling user-service v0.1.0 (/workspace/gluon/services/user-service-rs/crates/user-service)
+    Finished `release` profile [optimized] target(s) in 32.80s
+== user-service-rs: bash scripts/asyncapi-html.sh
+asyncapi-html: spec from the asyncapi-spec binary → target/asyncapi-docs-spec/asyncapi.json
+asyncapi-html: installing @asyncapi/cli@6.2.0 and @asyncapi/html-template@3.5.6 into target/asyncapi-cli/cli-6.2.0_html-3.5.6 (once)
+asyncapi-html: rendering with Node v24.21.0 → target/asyncapi-docs
+asyncapi-html: 5 files in target/asyncapi-docs
+== Deploying user-service (helm release) ==
+Release "user-service" does not exist. Installing it now.
+NAME: user-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting user-service to pick up the freshly built image ==
+deployment.apps/user-service restarted
+Waiting for deployment "user-service" rollout to finish: 0 of 1 updated replicas are available...
+deployment "user-service" successfully rolled out
+== Building fulfilment-service image from services/fulfilment-service-rs (gluon-kube build) ==
+== fulfilment-service-rs: cargo build --release --locked -p fulfilment-service --bin fulfilment-service
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling serde v1.0.229
+   Compiling serde_core v1.0.229
+   Compiling icu_properties_data v2.4.0
+   Compiling pin-project-lite v0.2.17
+   Compiling icu_normalizer_data v2.4.0
+   Compiling futures-core v0.3.34
+   Compiling version_check v0.9.5
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling bytes v1.12.1
+   Compiling generic-array v0.14.7
+   Compiling itoa v1.0.18
+   Compiling zerocopy v0.8.63
+   Compiling syn v3.0.9
+   Compiling syn v2.0.119
+   Compiling memchr v2.8.3
+   Compiling futures-sink v0.3.34
+   Compiling zmij v1.0.23
+   Compiling errno v0.3.14
+   Compiling thiserror v2.0.21
+   Compiling slab v0.4.12
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling signal-hook-registry v1.4.8
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling percent-encoding v2.3.2
+   Compiling writeable v0.6.4
+   Compiling utf_types v1.0.0
+   Compiling litemap v0.8.3
+   Compiling utf8_iter v1.1.0
+   Compiling once_cell v1.21.4
+   Compiling log v0.4.35
+   Compiling tracing-core v0.1.36
+   Compiling parking_lot_core v0.9.12
+   Compiling equivalent v1.0.3
+   Compiling form_urlencoded v1.2.2
+   Compiling futures-channel v0.3.34
+   Compiling http v1.5.0
+   Compiling typenum v1.20.1
+   Compiling num-conv v0.2.2
+   Compiling time-core v0.1.9
+   Compiling hashbrown v0.17.1
+   Compiling http-body v1.1.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling synstructure v0.14.0
+   Compiling indexmap v2.14.2
+   Compiling time-macros v0.2.32
+   Compiling tracing-attributes v0.1.31
+   Compiling httparse v1.10.1
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling displaydoc v0.2.7
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling tokio-macros v2.7.2
+   Compiling thiserror-impl v2.0.21
+   Compiling zerotrie v0.2.5
+   Compiling zerovec v0.11.9
+   Compiling futures-util v0.3.34
+   Compiling tokio v1.54.1
+   Compiling tinystr v0.8.5
+   Compiling icu_locale_core v2.4.0
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling tracing v0.1.44
+   Compiling smallvec v1.16.4
+   Compiling icu_provider v2.4.0
+   Compiling either v1.19.0
+   Compiling icu_normalizer v2.4.0
+   Compiling icu_properties v2.4.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling serde_json v1.0.154
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling tower-service v0.3.3
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling url v2.5.8
+   Compiling sync_wrapper v1.0.2
+   Compiling try-lock v0.2.5
+   Compiling foldhash v0.2.0
+   Compiling tower-layer v0.3.3
+   Compiling want v0.3.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling httpdate v1.0.3
+   Compiling subtle v2.6.1
+   Compiling bitflags v2.13.2
+   Compiling getrandom v0.3.4
+   Compiling atomic-waker v1.1.2
+   Compiling digest v0.10.7
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling http-body-util v0.1.5
+   Compiling ipnet v2.12.2
+   Compiling base64 v0.23.1
+   Compiling getrandom v0.4.3
+   Compiling hyper-util v0.1.21
+   Compiling scopeguard v1.2.0
+   Compiling anyhow v1.0.104
+   Compiling lock_api v0.4.14
+   Compiling rand_core v0.9.5
+   Compiling getrandom v0.2.17
+   Compiling deranged v0.5.9
+   Compiling base64 v0.22.1
+   Compiling powerfmt v0.2.1
+   Compiling allocator-api2 v0.2.21
+   Compiling winnow v1.0.4
+   Compiling foldhash v0.1.5
+   Compiling time v0.3.55
+   Compiling hashbrown v0.15.5
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling rand_core v0.6.4
+   Compiling uuid v1.29.0
+   Compiling rand_chacha v0.9.0
+   Compiling parking_lot v0.12.5
+   Compiling tower-http v0.6.11
+   Compiling opentelemetry v0.33.1
+   Compiling itertools v0.14.0
+   Compiling cpufeatures v0.2.17
+   Compiling toml_datetime v1.1.2+spec-1.1.0
+   Compiling parking v2.2.1
+   Compiling crc-catalog v2.5.0
+   Compiling ryu v1.0.23
+   Compiling tinyvec v1.13.3
+   Compiling unicode-normalization v0.1.26
+   Compiling prost-derive v0.14.4
+   Compiling serde_urlencoded v0.7.1
+   Compiling tokio-stream v0.1.19
+   Compiling crc v3.4.0
+   Compiling toml_edit v0.25.18+spec-1.1.0
+   Compiling event-listener v5.4.2
+   Compiling sha2 v0.10.9
+   Compiling futures-intrusive v0.5.0
+   Compiling crossbeam-queue v0.3.14
+   Compiling rand v0.9.5
+   Compiling rand_chacha v0.3.1
+   Compiling hashlink v0.10.0
+   Compiling hmac v0.12.1
+   Compiling futures-executor v0.3.34
+   Compiling rustversion v1.0.23
+   Compiling mime v0.3.17
+   Compiling ref-cast v1.0.27
+   Compiling unicode-properties v0.1.5
+   Compiling unicode-bidi v0.3.18
+   Compiling axum-core v0.5.6
+   Compiling opentelemetry_sdk v0.33.1
+   Compiling sqlx-core v0.8.6
+   Compiling stringprep v0.1.5
+   Compiling rand v0.8.8
+   Compiling hkdf v0.12.4
+   Compiling atoi v2.0.0
+   Compiling proc-macro-crate v3.5.0
+   Compiling prost v0.14.4
+   Compiling reqwest v0.13.5
+   Compiling md-5 v0.10.6
+   Compiling async-trait v0.1.92
+   Compiling ref-cast-impl v1.0.27
+   Compiling serde_derive_internals v0.30.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling matchit v0.8.4
+   Compiling byteorder v1.5.0
+   Compiling whoami v1.6.1
+   Compiling home v0.5.12
+   Compiling dotenvy v0.15.7
+   Compiling pkg-config v0.3.34
+   Compiling hex v0.4.3
+   Compiling sqlx-postgres v0.8.6
+   Compiling rdkafka-sys v4.10.0+2.12.1
+   Compiling axum v0.8.9
+   Compiling schemars_derive v1.2.3
+   Compiling opentelemetry-http v0.33.1
+   Compiling opentelemetry-proto v0.33.1
+   Compiling num_enum_derive v0.7.6
+   Compiling dyn-clone v1.0.20
+   Compiling heck v0.5.0
+   Compiling sqlx-macros-core v0.8.6
+   Compiling schemars v1.2.3
+   Compiling num_enum v0.7.6
+   Compiling opentelemetry-otlp v0.33.1
+   Compiling reqwest v0.12.28
+   Compiling telemetry v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/telemetry)
+   Compiling sqlx-macros v0.8.6
+   Compiling kafka-event-consumer v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-event-consumer)
+   Compiling sqlx v0.8.6
+   Compiling service-basics v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/service-basics)
+   Compiling rdkafka v0.39.0
+   Compiling kafka-client v0.1.0 (/workspace/gluon/lib/gluon-rs/crates/kafka-client)
+   Compiling fulfilment-service v0.1.0 (/workspace/gluon/services/fulfilment-service-rs/crates/fulfilment-service)
+    Finished `release` profile [optimized] target(s) in 46.83s
+== Deploying fulfilment-service (helm release) ==
+Release "fulfilment-service" does not exist. Installing it now.
+NAME: fulfilment-service
+NAMESPACE: gluon-local
+STATUS: deployed
+REVISION: 1
+== Restarting fulfilment-service to pick up the freshly built image ==
+deployment.apps/fulfilment-service restarted
+Waiting for deployment "fulfilment-service" rollout to finish: 1 old replicas are pending termination...
+deployment "fulfilment-service" successfully rolled out
+== Registering Debezium outbox connectors after the migrations (up to 2m) ==
+job "debezium-connector-register" deleted
+configmap/debezium-outbox-connectors unchanged
+job.batch/debezium-connector-register created
+== Waiting for every outbox connector to be RUNNING (up to 2m) ==
+WARN: connector registration didn't complete in time — check 'gluon-kube logs job/debezium-connector-register'
+== Done. Check status with: gluon-kube get pods ==
+NAME                                     READY   STATUS             RESTARTS   AGE
+apicurio-registry-9sdsfh5b6k-l9v2t       0/2     ImageUnavailable   0          9m9s
+apicurio-registry-ui-clxr7k2v7g-r8789    0/1     ImageUnavailable   0          9m9s
+cart-redis-gqnfwl6qxj-ms8cb              1/1     Running            0          9m9s
+cart-service-5c5lbrhjfl-4lbrm            1/1     Running            0          7m41s
+catalog-postgres-zmzdq2kvsn-9grdw        1/1     Running            0          9m9s
+catalog-redis-kp5cw9f764-w626b           1/1     Running            0          9m9s
+catalog-service-qfz697rvsc-8jxlb         1/1     Running            0          8m12s
+debezium-connector-register-zczvt        0/1     Completed          0          11s
+fulfilment-postgres-58sh7b2ns4-v79mn     1/1     Running            0          9m9s
+fulfilment-service-fzth4lng6k-745qc      1/1     Running            0          18s
+inventory-postgres-c85fl26n4n-b9qtz      1/1     Running            0          9m9s
+inventory-service-d2kxq5j48g-8dl4m       1/1     Running            0          5m52s
+kafka-connect-dpk58nxrdv-lqrj5           1/1     Running            0          9m9s
+kafka-zj92q7fkj6-6gxz4                   1/1     Running            0          9m9s
+notification-postgres-pwtcfjbmkx-8xgww   1/1     Running            0          9m9s
+notification-service-gskgr5vvvf-2hjbj    1/1     Running            0          4m7s
+order-postgres-5wdgldkc85-qnlv8          1/1     Running            0          9m9s
+order-redis-zd5pc6q4xb-rv4bm             1/1     Running            0          9m9s
+order-service-5qg265ql5g-pmk9p           1/1     Running            0          6m45s
+payment-postgres-zkvqf7s8cd-nnqns        1/1     Running            0          9m9s
+payment-service-2dkh7rg5rg-dc8m5         1/1     Running            0          5m1s
+user-postgres-5s7crpnn59-ghlwc           1/1     Running            0          9m9s
+user-service-9pf6229vfx-cqnvs            1/1     Running            0          71s
+== [13:40:50, +1033s] bin/run-acceptance --gkube (the original suite, headless)
+== Port-forwarding every Service (gkube port-forward) ==
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  fulfilment-postgres
+  inventory-postgres
+  notification-postgres
+  order-postgres
+  payment-postgres
+  user-postgres
+== Purging event topics
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Rerun skips orders recorded in /workspace/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Done.
+== Acceptance suite ==
+
+Running 53 tests using 2 workers
+
+  ✓   2 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:11:3 › Browse catalog (US-1) › The catalog shows products from the catalog service @US-1.1 @smoke @CATALOG-F6 (582ms)
+  ✓   3 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:15:3 › Browse catalog (US-1) › Each product shows its name, SKU and price @US-1.1 @CATALOG-F6 (567ms)
+  ✓   4 [chromium] › .features-gen/features/us-01-browse-catalog.feature.spec.js:19:3 › Browse catalog (US-1) › Loading more shows the next page of the catalog @US-1.1 @CATALOG-F6 (325ms)
+  ✓   1 [chromium] › .features-gen/features/support.feature.spec.js:6:3 › Test data fixtures (ACC-2) › An order placed through the API shows in the shopper's history @support (1.7s)
+  ✓   5 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:12:3 › Add to cart (US-2) › A new shopper's cart is empty @US-2.1 @CART-F1 @CART-F2 (318ms)
+  ✓   7 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:17:3 › Add to cart (US-2) › Adding a product puts it in my cart @US-2.1 @CART-F3 @CART-F2 (442ms)
+  ✓   8 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:24:3 › Add to cart (US-2) › Adding one more increases the quantity and total @US-2.1 @CART-F3 (680ms)
+  ✓   6 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:11:3 › Cancellation (US-9, US-21) › I cancel my authorized order @US-9.1 @US-9.4 @US-9.8 @INV-F12 @PAY-F12 @ORDER-F8 (1.5s)
+  ✓   9 [chromium] › .features-gen/features/us-02-cart.feature.spec.js:31:3 › Add to cart (US-2) › Removing the product empties my cart @US-2.1 @CART-F5 (580ms)
+  ✓  11 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:11:3 › Checkout (US-11 to US-14) › An anonymous shopper places an order @US-3.1 @US-4.1 @US-8.1 @US-11.1 @US-11.2 @US-12.2 @US-13.1 @US-13.2 @US-13.3 @US-14.1 @US-14.4 @INV-F7 @PAY-F1 @PAY-F5 @ORDER-F1 @ORDER-F5 (1.4s)
+  ✓  10 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:19:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Pending stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (4.0s)
+  ✓  12 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:20:3 › Checkout (US-11 to US-14) › Billing address different from shipping @US-12.2 @PAY-F1 @ORDER-F1 (2.4s)
+  ✓  13 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:27:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Picking stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (1.5s)
+  ✓  14 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:28:3 › Checkout (US-11 to US-14) › A signed-in customer's order is saved to their account @US-8.1 @US-14.4 @US-16.5 @ORDER-F6 (1.6s)
+  ✓  16 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:12:5 › Checkout failures (US-14) › A declined card can be retried with another › Example #1 @US-14.1 @US-14.2 @US-14.4 @PAY-F6 @ORDER-F4 (736ms)
+  ✓  17 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:26:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (0 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 @ORDER-F3 (888ms)
+  ✓  18 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:36:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (1 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 @ORDER-F3 (996ms)
+  ✓  19 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:50:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Address line 1 is caught before ordering: "Enter the first line of the address" @US-11.2 @US-13.3 (531ms)
+  ✓  15 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:35:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Packed stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (4.0s)
+  ✓  20 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:57:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid City is caught before ordering: "Enter a city" @US-11.2 @US-13.3 (555ms)
+  ✓  22 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:64:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Postcode is caught before ordering: "Enter a postcode" @US-11.2 @US-13.3 (627ms)
+  ✓  23 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:71:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Country is caught before ordering: "Use a two-letter country code (e.g. GB)" @US-11.2 @US-13.3 (605ms)
+  ✓  24 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:78:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Card number is caught before ordering: "Enter a card number" @US-11.2 @US-13.3 (531ms)
+  ✓  25 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:85:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Card number is caught before ordering: "Card number must be 12 to 19 digits" @US-11.2 @US-13.3 (613ms)
+  ✓  26 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:92:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Expiry date is caught before ordering: "Enter the expiry date" @US-11.2 @US-13.3 (580ms)
+  ✓  27 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:99:5 › Checkout failures (US-14) › An invalid <field> is caught before ordering: "<message>" › An invalid Expiry date is caught before ordering: "Enter a valid future expiry date (MM/YY)" @US-11.2 @US-13.3 (520ms)
+  ✓  28 [chromium] › .features-gen/features/us-16-account.feature.spec.js:11:3 › Account (US-16) › Creating an account signs me in @US-16.1 @US-16.5 (672ms)
+  ✓  21 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:45:3 › Cancellation (US-9, US-21) › I can't cancel once my order has shipped @US-21.1 @US-21.5 @ORDER-F9 @FUL-F7 (4.7s)
+  ✓  29 [chromium] › .features-gen/features/us-16-account.feature.spec.js:16:3 › Account (US-16) › Signing in and out @US-16.2 @US-16.5 (962ms)
+  ✓  31 [chromium] › .features-gen/features/us-16-account.feature.spec.js:24:3 › Account (US-16) › A wrong password is rejected @US-16.2 (711ms)
+  ✓  32 [chromium] › .features-gen/features/us-16-account.feature.spec.js:30:3 › Account (US-16) › An email can only be registered once @US-16.1 (665ms)
+  ✓  33 [chromium] › .features-gen/features/us-16-account.feature.spec.js:36:3 › Account (US-16) › Passwords must match when creating an account @US-16.5 (531ms)
+  ✓  30 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:12:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Pending to Picking @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (3.2s)
+  ✓  34 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:14:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Pending fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (3.4s)
+  ✓  35 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:20:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Picking to Packed @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (2.8s)
+  ✓  37 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:28:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Packed to Dispatched @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (2.3s)
+  ✓  36 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:23:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Picking fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (3.6s)
+  ✓  38 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:38:3 › Fulfilment and capture (US-17, US-19) › My payment is captured once my order is dispatched @US-14.3 @US-17.3 @US-17.4 @US-19.1 @US-19.2 @US-19.5 @INV-F13 @PAY-F10 @ORDER-F11 @ORDER-F14 @FUL-F7 (3.5s)
+  ✓  39 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:32:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Packed fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (3.7s)
+  ✓  40 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:45:3 › Fulfilment and capture (US-17, US-19) › A card declined at capture leaves my order with payment failed @US-19.1 @US-19.3 @US-19.5 @PAY-F11 @ORDER-F12 @FUL-F7 (3.5s)
+  ✓  41 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:43:3 › Dispatch failure (US-18) › A problem can't be reported without a reason @US-17.7 @FUL-F8 (2.7s)
+  ✓  42 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:11:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator sees my order, its customer and its reserved stock @US-24.1 @US-24.2 @US-24.3 @US-27.3 @INV-F11 @ORDER-F7 (1.8s)
+  ✓  43 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:10:3 › Customer record and email history (US-27, and every customer email) › A guest's record shows their order and its emails @US-27.1 @US-27.2 @US-27.4 @US-7.1 @US-17.5 @US-19.4 @NOTIF-F16 @NOTIF-F26 @NOTIF-F31 (4.8s)
+  ✓  44 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:18:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator cancels my order @US-22.2 @US-22.4 @US-25.2 @INV-F11 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (3.8s)
+  ✓  45 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:19:3 › Customer record and email history (US-27, and every customer email) › A card declined at capture is emailed @US-19.4 @US-7.1 @NOTIF-F17 @NOTIF-F27 @PAY-F11 @ORDER-F12 (4.8s)
+  ✓  46 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:27:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator expires my payment authorization @US-20.1 @US-20.2 @US-20.3 @US-20.4 @US-20.6 @US-25.1 @US-25.2 @PAY-F9 @ORDER-F13 @FUL-F10 (5.1s)
+  ✓  47 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:27:3 › Customer record and email history (US-27, and every customer email) › A failed dispatch is emailed @US-18.4 @NOTIF-F32 @FUL-F8 (3.9s)
+  ✓  48 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:36:3 › Operator order console (US-24, US-25, US-22, US-20) › A shipped order can't be cancelled from the console @US-22.4 @US-25.2 @ORDER-F9 (5.0s)
+  ✓  50 [chromium] › .features-gen/features/us-28-catalogue-admin.feature.spec.js:10:3 › Catalogue stock (US-28) › The operator adds and removes one unit of stock @US-28.1 (645ms)
+  ✓  49 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:38:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: I asked @US-9.9 @US-20.5 @NOTIF-F18 (2.9s)
+  ✓  51 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:45:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: support cancelled it @US-9.9 @US-20.5 @NOTIF-F18 (1.6s)
+  ✓  52 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:52:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: the payment hold ran out @US-9.9 @US-20.5 @NOTIF-F18 (4.4s)
+  ✓  53 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:61:3 › Customer record and email history (US-27, and every customer email) › A registered customer's record shows their welcome email @US-16.4 @US-27.4 @NOTIF-F6 (2.4s)
+
+  53 passed (1.0m)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /workspace/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)
+== [13:42:33, +1136s] the suite exited 0; serving the laptop (bin/lib/sandbox-bed/serve)
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+curl: (52) Empty reply from server
+== [13:43:06, +1169s] done
+
+All-Rust gluon in gluon-kube, in the sandbox bed (linux/arm64):
+  acceptance  exit 0; results /Users/<user>/<path-to>/gluon/target/sandbox-bed/acceptance-results.json
+  report      http://localhost:19323/
+  gshop       http://localhost:15173/ (demo data)
+  services    http://127.0.0.1:18081-18089 (bin/lib/gkube-forwards.sh)
+Stop: bin/sandbox-bed down
+exit 0

@@ -1,0 +1,3538 @@
+{
+  "config": {
+    "argv": [
+      "/home/model/.local/node-24.21.0/bin/node",
+      "/workspace/gluon/tests/acceptance/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/workspace/gluon/tests/acceptance/playwright.config.ts",
+    "rootDir": "/workspace/gluon/tests/acceptance/.features-gen",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/workspace/gluon/tests/acceptance/src/support/globalSetup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/workspace/gluon/tests/acceptance/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/workspace/gluon/tests/acceptance/.features-gen",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/workspace/gluon/tests/acceptance/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "name": "chromium",
+        "testDir": "/workspace/gluon/tests/acceptance/.features-gen",
+        "snapshotDir": "/workspace/gluon/tests/acceptance/.features-gen",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://localhost:5173",
+          "trace": "retain-on-failure",
+          "launchOptions": {
+            "slowMo": 0,
+            "args": [
+              "--host-resolver-rules=MAP 127.0.0.1 127.0.0.1"
+            ]
+          },
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "target/acceptance-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.1",
+    "workers": 2,
+    "webServer": {
+      "command": "npm run dev -- --port 5173 --strictPort",
+      "cwd": "/workspace/gluon/frontends/gshop",
+      "env": {
+        "VITE_ORDER_SERVICE_URL": "http://127.0.0.1:18081",
+        "VITE_PAYMENT_SERVICE_URL": "http://127.0.0.1:18082",
+        "VITE_INVENTORY_SERVICE_URL": "http://127.0.0.1:18083",
+        "VITE_USER_SERVICE_URL": "http://127.0.0.1:18084",
+        "VITE_CATALOG_SERVICE_URL": "http://127.0.0.1:18085",
+        "VITE_FULFILMENT_SERVICE_URL": "http://127.0.0.1:18086",
+        "VITE_CART_SERVICE_URL": "http://127.0.0.1:18087",
+        "VITE_NOTIFICATION_SERVICE_URL": "http://127.0.0.1:18088",
+        "VITE_CHECKOUT_MOCK": "false",
+        "VITE_AUTH_MOCK": "false"
+      },
+      "url": "http://localhost:5173",
+      "reuseExistingServer": true,
+      "timeout": 60000
+    }
+  },
+  "suites": [
+    {
+      "title": "features/support.feature.spec.js",
+      "file": "features/support.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Test data fixtures (ACC-2)",
+          "file": "features/support.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "An order placed through the API shows in the shopper's history",
+              "ok": true,
+              "tags": [
+                "support"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "order",
+                      "description": "6162b289-9aa1-47d4-b5b1-f5c1edb28c6a"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1694,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given a product is in stock",
+                          "duration": 13
+                        },
+                        {
+                          "title": "And I have placed an order for it",
+                          "duration": 47
+                        },
+                        {
+                          "title": "When I open my order history",
+                          "duration": 261
+                        },
+                        {
+                          "title": "Then I see my order with status \"Authorized\"",
+                          "duration": 27
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:33.829Z",
+                      "annotations": [
+                        {
+                          "type": "order",
+                          "description": "6162b289-9aa1-47d4-b5b1-f5c1edb28c6a"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "0cd305723c28d136ffdf-f402cd239af7951273cc",
+              "file": "features/support.feature.spec.js",
+              "line": 6,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-01-browse-catalog.feature.spec.js",
+      "file": "features/us-01-browse-catalog.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Browse catalog (US-1)",
+          "file": "features/us-01-browse-catalog.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "The catalog shows products from the catalog service",
+              "ok": true,
+              "tags": [
+                "US-1.1",
+                "smoke",
+                "CATALOG-F6"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 582,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Then I see products from the catalog",
+                          "duration": 38
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:33.836Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4b860328ab3715cbfb22-fae954d5071e9d9c2fe8",
+              "file": "features/us-01-browse-catalog.feature.spec.js",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "Each product shows its name, SKU and price",
+              "ok": true,
+              "tags": [
+                "US-1.1",
+                "CATALOG-F6"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 567,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Then each product shows its name, SKU and price",
+                          "duration": 244
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:35.058Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4b860328ab3715cbfb22-2ce52c099b409952c401",
+              "file": "features/us-01-browse-catalog.feature.spec.js",
+              "line": 15,
+              "column": 3
+            },
+            {
+              "title": "Loading more shows the next page of the catalog",
+              "ok": true,
+              "tags": [
+                "US-1.1",
+                "CATALOG-F6"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 325,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I load more products",
+                          "duration": 30
+                        },
+                        {
+                          "title": "Then I see the first two pages of the catalog in order",
+                          "duration": 33
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:35.642Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4b860328ab3715cbfb22-de1647b3eaeebc67739a",
+              "file": "features/us-01-browse-catalog.feature.spec.js",
+              "line": 19,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-02-cart.feature.spec.js",
+      "file": "features/us-02-cart.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Add to cart (US-2)",
+          "file": "features/us-02-cart.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "A new shopper's cart is empty",
+              "ok": true,
+              "tags": [
+                "US-2.1",
+                "CART-F1",
+                "CART-F2"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 318,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I view my cart",
+                          "duration": 37
+                        },
+                        {
+                          "title": "Then my cart is empty",
+                          "duration": 11
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:35.990Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41f19f93624b0f0c03d1-5963e5a0fdc39b973bc6",
+              "file": "features/us-02-cart.feature.spec.js",
+              "line": 12,
+              "column": 3
+            },
+            {
+              "title": "Adding a product puts it in my cart",
+              "ok": true,
+              "tags": [
+                "US-2.1",
+                "CART-F3",
+                "CART-F2"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 442,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I add it to my cart",
+                          "duration": 72
+                        },
+                        {
+                          "title": "Then the product shows it was added",
+                          "duration": 15
+                        },
+                        {
+                          "title": "When I view my cart",
+                          "duration": 79
+                        },
+                        {
+                          "title": "Then my cart has it with quantity 1",
+                          "duration": 14
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:36.322Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41f19f93624b0f0c03d1-fbd77d057d59f2ba881e",
+              "file": "features/us-02-cart.feature.spec.js",
+              "line": 17,
+              "column": 3
+            },
+            {
+              "title": "Adding one more increases the quantity and total",
+              "ok": true,
+              "tags": [
+                "US-2.1",
+                "CART-F3"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 680,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have added it to my cart",
+                          "duration": 256
+                        },
+                        {
+                          "title": "When I view my cart",
+                          "duration": 43
+                        },
+                        {
+                          "title": "And I increase its quantity",
+                          "duration": 60
+                        },
+                        {
+                          "title": "Then my cart has it with quantity 2",
+                          "duration": 31
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:36.786Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41f19f93624b0f0c03d1-6abb260225b3978054dd",
+              "file": "features/us-02-cart.feature.spec.js",
+              "line": 24,
+              "column": 3
+            },
+            {
+              "title": "Removing the product empties my cart",
+              "ok": true,
+              "tags": [
+                "US-2.1",
+                "CART-F5"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 580,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have added it to my cart",
+                          "duration": 232
+                        },
+                        {
+                          "title": "When I view my cart",
+                          "duration": 64
+                        },
+                        {
+                          "title": "And I remove it from my cart",
+                          "duration": 49
+                        },
+                        {
+                          "title": "Then my cart is empty",
+                          "duration": 35
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:37.483Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "41f19f93624b0f0c03d1-1c57bcfd592ae8d84572",
+              "file": "features/us-02-cart.feature.spec.js",
+              "line": 31,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-09-21-cancellation.feature.spec.js",
+      "file": "features/us-09-21-cancellation.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Cancellation (US-9, US-21)",
+          "file": "features/us-09-21-cancellation.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "I cancel my authorized order",
+              "ok": true,
+              "tags": [
+                "US-9.1",
+                "US-9.4",
+                "US-9.8",
+                "INV-F12",
+                "PAY-F12",
+                "ORDER-F8"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1527,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I cancel my order from my order history",
+                          "duration": 417
+                        },
+                        {
+                          "title": "Then I see my order with status \"Cancelled\"",
+                          "duration": 9
+                        },
+                        {
+                          "title": "And its stock is released",
+                          "duration": 370
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:36.177Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "87b8a375e6e6e1f7695a-18a99e7f11e5464975fe",
+              "file": "features/us-09-21-cancellation.feature.spec.js",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "I can't cancel once my order has shipped",
+              "ok": true,
+              "tags": [
+                "US-21.1",
+                "US-21.5",
+                "ORDER-F9",
+                "FUL-F7"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4713,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I open my order history",
+                          "duration": 144
+                        },
+                        {
+                          "title": "And meanwhile the operator picks, packs and dispatches my order",
+                          "duration": 3719
+                        },
+                        {
+                          "title": "When I try to cancel it",
+                          "duration": 117
+                        },
+                        {
+                          "title": "Then I'm told it's past cancelling and pointed at returns",
+                          "duration": 19
+                        },
+                        {
+                          "title": "And my order is still \"Confirmed\"",
+                          "duration": 8
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:47.233Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "87b8a375e6e6e1f7695a-a97724aa35724cbea6fd",
+              "file": "features/us-09-21-cancellation.feature.spec.js",
+              "line": 45,
+              "column": 3
+            }
+          ],
+          "suites": [
+            {
+              "title": "Cancelling while <state> stops fulfilment",
+              "file": "features/us-09-21-cancellation.feature.spec.js",
+              "line": 17,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Cancelling while Pending stops fulfilment",
+                  "ok": true,
+                  "tags": [
+                    "US-9.5",
+                    "INV-F12",
+                    "PAY-F12",
+                    "ORDER-F8",
+                    "FUL-F10"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3964,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator opens order processing",
+                              "duration": 1465
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Pending\"",
+                              "duration": 14
+                            },
+                            {
+                              "title": "When I cancel my order from my order history",
+                              "duration": 315
+                            },
+                            {
+                              "title": "Then the operator sees my order as \"Cancelled\"",
+                              "duration": 1474
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 4
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:37.720Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "87b8a375e6e6e1f7695a-86d6d4e3d473c853a326",
+                  "file": "features/us-09-21-cancellation.feature.spec.js",
+                  "line": 19,
+                  "column": 5
+                },
+                {
+                  "title": "Cancelling while Picking stops fulfilment",
+                  "ok": true,
+                  "tags": [
+                    "US-9.5",
+                    "INV-F12",
+                    "PAY-F12",
+                    "ORDER-F8",
+                    "FUL-F10"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1521,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator opens order processing",
+                              "duration": 294
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Picking\"",
+                              "duration": 72
+                            },
+                            {
+                              "title": "When I cancel my order from my order history",
+                              "duration": 271
+                            },
+                            {
+                              "title": "Then the operator sees my order as \"Cancelled\"",
+                              "duration": 253
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 3
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:41.701Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "87b8a375e6e6e1f7695a-9bc202a5129e2bd01226",
+                  "file": "features/us-09-21-cancellation.feature.spec.js",
+                  "line": 27,
+                  "column": 5
+                },
+                {
+                  "title": "Cancelling while Packed stops fulfilment",
+                  "ok": true,
+                  "tags": [
+                    "US-9.5",
+                    "INV-F12",
+                    "PAY-F12",
+                    "ORDER-F8",
+                    "FUL-F10"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3989,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator opens order processing",
+                              "duration": 1453
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Packed\"",
+                              "duration": 118
+                            },
+                            {
+                              "title": "When I cancel my order from my order history",
+                              "duration": 298
+                            },
+                            {
+                              "title": "Then the operator sees my order as \"Cancelled\"",
+                              "duration": 1434
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 2
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:43.234Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "87b8a375e6e6e1f7695a-e07a010bd95e11b0b626",
+                  "file": "features/us-09-21-cancellation.feature.spec.js",
+                  "line": 35,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-11-14-checkout.feature.spec.js",
+      "file": "features/us-11-14-checkout.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Checkout (US-11 to US-14)",
+          "file": "features/us-11-14-checkout.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "An anonymous shopper places an order",
+              "ok": true,
+              "tags": [
+                "US-3.1",
+                "US-4.1",
+                "US-8.1",
+                "US-11.1",
+                "US-11.2",
+                "US-12.2",
+                "US-13.1",
+                "US-13.2",
+                "US-13.3",
+                "US-14.1",
+                "US-14.4",
+                "INV-F7",
+                "PAY-F1",
+                "PAY-F5",
+                "ORDER-F1",
+                "ORDER-F5"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1421,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I place my order paying with card \"4242 4242 4242 4242\"",
+                          "duration": 151
+                        },
+                        {
+                          "title": "Then my order is placed",
+                          "duration": 49
+                        },
+                        {
+                          "title": "And my payment is authorized",
+                          "duration": 10
+                        },
+                        {
+                          "title": "And the confirmation shows my shipping address and total",
+                          "duration": 16
+                        },
+                        {
+                          "title": "And its stock is reserved",
+                          "duration": 4
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Authorized\"",
+                          "duration": 223
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:38.076Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "59ac8976357bb45633cb-dde9f01f1628729a607c",
+              "file": "features/us-11-14-checkout.feature.spec.js",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "Billing address different from shipping",
+              "ok": true,
+              "tags": [
+                "US-12.2",
+                "PAY-F1",
+                "ORDER-F1"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2360,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I enter my shipping address",
+                          "duration": 86
+                        },
+                        {
+                          "title": "And I enter a different billing address",
+                          "duration": 98
+                        },
+                        {
+                          "title": "And I pay with card \"4242 4242 4242 4242\"",
+                          "duration": 30
+                        },
+                        {
+                          "title": "And I place my order",
+                          "duration": 67
+                        },
+                        {
+                          "title": "Then my order is placed",
+                          "duration": 51
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:39.508Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "59ac8976357bb45633cb-abbaabe130514f7d1ca4",
+              "file": "features/us-11-14-checkout.feature.spec.js",
+              "line": 20,
+              "column": 3
+            },
+            {
+              "title": "A signed-in customer's order is saved to their account",
+              "ok": true,
+              "tags": [
+                "US-8.1",
+                "US-14.4",
+                "US-16.5",
+                "ORDER-F6"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 1649,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I am a registered customer",
+                          "duration": 0
+                        },
+                        {
+                          "title": "When I sign in",
+                          "duration": 301
+                        },
+                        {
+                          "title": "And I place my order paying with card \"4242 4242 4242 4242\"",
+                          "duration": 117
+                        },
+                        {
+                          "title": "Then my order is placed",
+                          "duration": 49
+                        },
+                        {
+                          "title": "And my order is saved to my account",
+                          "duration": 176
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:41.878Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "59ac8976357bb45633cb-b5f8e2181729470a4219",
+              "file": "features/us-11-14-checkout.feature.spec.js",
+              "line": 28,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-14-checkout-failures.feature.spec.js",
+      "file": "features/us-14-checkout-failures.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Checkout failures (US-14)",
+          "file": "features/us-14-checkout-failures.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "A declined card can be retried with another",
+              "file": "features/us-14-checkout-failures.feature.spec.js",
+              "line": 10,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "Example #1",
+                  "ok": true,
+                  "tags": [
+                    "US-14.1",
+                    "US-14.2",
+                    "US-14.4",
+                    "PAY-F6",
+                    "ORDER-F4"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 736,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 410
+                            },
+                            {
+                              "title": "When I place my order paying with card \"4000 0000 0000 0002\"",
+                              "duration": 132
+                            },
+                            {
+                              "title": "Then my payment is declined",
+                              "duration": 43
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 6
+                            },
+                            {
+                              "title": "When I pay with card \"4242 4242 4242 4242\"",
+                              "duration": 17
+                            },
+                            {
+                              "title": "And I place my order",
+                              "duration": 32
+                            },
+                            {
+                              "title": "Then my order is placed",
+                              "duration": 39
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:43.548Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-a83f50bdb30a584baec0",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 12,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "An item that sold out (<available> left) can be removed and the rest ordered",
+              "file": "features/us-14-checkout-failures.feature.spec.js",
+              "line": 24,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "An item that sold out (0 left) can be removed and the rest ordered",
+                  "ok": true,
+                  "tags": [
+                    "US-4.1",
+                    "US-14.2",
+                    "US-14.4",
+                    "INV-F7",
+                    "ORDER-F3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 888,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout with 2 of it and 1 of another product",
+                              "duration": 438
+                            },
+                            {
+                              "title": "When only 0 of it is left in stock",
+                              "duration": 8
+                            },
+                            {
+                              "title": "And I place my order paying with card \"4242 4242 4242 4242\"",
+                              "duration": 115
+                            },
+                            {
+                              "title": "Then it can't be reserved for insufficient stock",
+                              "duration": 38
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 4
+                            },
+                            {
+                              "title": "When I remove it from my cart and place my order again",
+                              "duration": 106
+                            },
+                            {
+                              "title": "Then my order is placed for the other product only",
+                              "duration": 45
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:44.295Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-21ee5445e43c213e72b6",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 26,
+                  "column": 5
+                },
+                {
+                  "title": "An item that sold out (1 left) can be removed and the rest ordered",
+                  "ok": true,
+                  "tags": [
+                    "US-4.1",
+                    "US-14.2",
+                    "US-14.4",
+                    "INV-F7",
+                    "ORDER-F3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 996,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout with 2 of it and 1 of another product",
+                              "duration": 523
+                            },
+                            {
+                              "title": "When only 1 of it is left in stock",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And I place my order paying with card \"4242 4242 4242 4242\"",
+                              "duration": 143
+                            },
+                            {
+                              "title": "Then it can't be reserved for insufficient stock",
+                              "duration": 38
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 5
+                            },
+                            {
+                              "title": "When I remove it from my cart and place my order again",
+                              "duration": 101
+                            },
+                            {
+                              "title": "Then my order is placed for the other product only",
+                              "duration": 47
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:45.192Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-53072144f54b8f904594",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 36,
+                  "column": 5
+                }
+              ]
+            },
+            {
+              "title": "An invalid <field> is caught before ordering: \"<message>\"",
+              "file": "features/us-14-checkout-failures.feature.spec.js",
+              "line": 48,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "An invalid Address line 1 is caught before ordering: \"Enter the first line of the address\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 531,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 324
+                            },
+                            {
+                              "title": "When I place my order with \"Address line 1\" set to \"\"",
+                              "duration": 111
+                            },
+                            {
+                              "title": "Then I see \"Enter the first line of the address\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 3
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:46.198Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-c45b5659f74d04966c58",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 50,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid City is caught before ordering: \"Enter a city\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 555,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 343
+                            },
+                            {
+                              "title": "When I place my order with \"City\" set to \"\"",
+                              "duration": 123
+                            },
+                            {
+                              "title": "Then I see \"Enter a city\"",
+                              "duration": 3
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 4
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:46.737Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-5e12668897e0ebef2ff5",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 57,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Postcode is caught before ordering: \"Enter a postcode\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 627,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 415
+                            },
+                            {
+                              "title": "When I place my order with \"Postcode\" set to \"\"",
+                              "duration": 161
+                            },
+                            {
+                              "title": "Then I see \"Enter a postcode\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 5
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:47.302Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-5930cb97c64603e12925",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 64,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Country is caught before ordering: \"Use a two-letter country code (e.g. GB)\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 605,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 392
+                            },
+                            {
+                              "title": "When I place my order with \"Country\" set to \"G\"",
+                              "duration": 118
+                            },
+                            {
+                              "title": "Then I see \"Use a two-letter country code (e.g. GB)\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 4
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:47.938Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-6f0b5a5529f577055794",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 71,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Card number is caught before ordering: \"Enter a card number\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 531,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 331
+                            },
+                            {
+                              "title": "When I place my order with \"Card number\" set to \"\"",
+                              "duration": 145
+                            },
+                            {
+                              "title": "Then I see \"Enter a card number\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 6
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:48.552Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-b5899024325f48e24e50",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 78,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Card number is caught before ordering: \"Card number must be 12 to 19 digits\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 613,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 359
+                            },
+                            {
+                              "title": "When I place my order with \"Card number\" set to \"4242\"",
+                              "duration": 152
+                            },
+                            {
+                              "title": "Then I see \"Card number must be 12 to 19 digits\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 5
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:49.091Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-6d59d079001a1365cdff",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 85,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Expiry date is caught before ordering: \"Enter the expiry date\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 580,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 355
+                            },
+                            {
+                              "title": "When I place my order with \"Expiry date\" set to \"\"",
+                              "duration": 108
+                            },
+                            {
+                              "title": "Then I see \"Enter the expiry date\"",
+                              "duration": 4
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 5
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:49.713Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-990ff1224bc5452e59f8",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 92,
+                  "column": 5
+                },
+                {
+                  "title": "An invalid Expiry date is caught before ordering: \"Enter a valid future expiry date (MM/YY)\"",
+                  "ok": true,
+                  "tags": [
+                    "US-11.2",
+                    "US-13.3"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 520,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I am at checkout",
+                              "duration": 366
+                            },
+                            {
+                              "title": "When I place my order with \"Expiry date\" set to \"01/20\"",
+                              "duration": 110
+                            },
+                            {
+                              "title": "Then I see \"Enter a valid future expiry date (MM/YY)\"",
+                              "duration": 3
+                            },
+                            {
+                              "title": "And no order was created",
+                              "duration": 4
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:50.304Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "ed475a2fecfd4a284ead-4633ced5844ac4064851",
+                  "file": "features/us-14-checkout-failures.feature.spec.js",
+                  "line": 99,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-16-account.feature.spec.js",
+      "file": "features/us-16-account.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Account (US-16)",
+          "file": "features/us-16-account.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Creating an account signs me in",
+              "ok": true,
+              "tags": [
+                "US-16.1",
+                "US-16.5"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 672,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I create an account with a new email",
+                          "duration": 300
+                        },
+                        {
+                          "title": "Then I am signed in",
+                          "duration": 5
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:50.840Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1363e05dae9b0c4afab-3d0ddad6badde4d043db",
+              "file": "features/us-16-account.feature.spec.js",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "Signing in and out",
+              "ok": true,
+              "tags": [
+                "US-16.2",
+                "US-16.5"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 962,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I am a registered customer",
+                          "duration": 0
+                        },
+                        {
+                          "title": "When I sign in",
+                          "duration": 300
+                        },
+                        {
+                          "title": "Then I am signed in",
+                          "duration": 6
+                        },
+                        {
+                          "title": "When I sign out",
+                          "duration": 32
+                        },
+                        {
+                          "title": "Then I am signed out",
+                          "duration": 10
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:51.520Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1363e05dae9b0c4afab-1c52914d1d3baecc6500",
+              "file": "features/us-16-account.feature.spec.js",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "A wrong password is rejected",
+              "ok": true,
+              "tags": [
+                "US-16.2"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 711,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I am a registered customer",
+                          "duration": 1
+                        },
+                        {
+                          "title": "When I sign in with a wrong password",
+                          "duration": 72
+                        },
+                        {
+                          "title": "Then the sign-in fails with \"Email or password is incorrect\"",
+                          "duration": 89
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:52.499Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1363e05dae9b0c4afab-349f702f27696980cb7f",
+              "file": "features/us-16-account.feature.spec.js",
+              "line": 24,
+              "column": 3
+            },
+            {
+              "title": "An email can only be registered once",
+              "ok": true,
+              "tags": [
+                "US-16.1"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 665,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I am a registered customer",
+                          "duration": 0
+                        },
+                        {
+                          "title": "When I create an account with my email",
+                          "duration": 100
+                        },
+                        {
+                          "title": "Then the sign-in fails with \"An account with this email already exists\"",
+                          "duration": 93
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:53.220Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1363e05dae9b0c4afab-9b8dfd6bb631d537f1f8",
+              "file": "features/us-16-account.feature.spec.js",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "Passwords must match when creating an account",
+              "ok": true,
+              "tags": [
+                "US-16.5"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 531,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When I create an account with passwords that don't match",
+                          "duration": 102
+                        },
+                        {
+                          "title": "Then I see \"Passwords must match\"",
+                          "duration": 5
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:41:53.897Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1363e05dae9b0c4afab-bb50e8012742185d6980",
+              "file": "features/us-16-account.feature.spec.js",
+              "line": 36,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-17-19-fulfilment.feature.spec.js",
+      "file": "features/us-17-19-fulfilment.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Fulfilment and capture (US-17, US-19)",
+          "file": "features/us-17-19-fulfilment.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "My payment is captured once my order is dispatched",
+              "ok": true,
+              "tags": [
+                "US-14.3",
+                "US-17.3",
+                "US-17.4",
+                "US-19.1",
+                "US-19.2",
+                "US-19.5",
+                "INV-F13",
+                "PAY-F10",
+                "ORDER-F11",
+                "ORDER-F14",
+                "FUL-F7"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3471,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                          "duration": 603
+                        },
+                        {
+                          "title": "When the operator picks, packs and dispatches my order",
+                          "duration": 1678
+                        },
+                        {
+                          "title": "Then it shows the carrier and tracking number",
+                          "duration": 6
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Confirmed\"",
+                          "duration": 1090
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:00.281Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f2c733f4e49be35d324-38696dcdcc8065be95bf",
+              "file": "features/us-17-19-fulfilment.feature.spec.js",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "A card declined at capture leaves my order with payment failed",
+              "ok": true,
+              "tags": [
+                "US-19.1",
+                "US-19.3",
+                "US-19.5",
+                "PAY-F11",
+                "ORDER-F12",
+                "FUL-F7"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3468,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have bought it with card \"5555 5555 5555 4444\"",
+                          "duration": 568
+                        },
+                        {
+                          "title": "When the operator picks, packs and dispatches my order",
+                          "duration": 1718
+                        },
+                        {
+                          "title": "Then my order history eventually shows status \"Payment failed\"",
+                          "duration": 1093
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:03.765Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f2c733f4e49be35d324-dbfe720dbf3b48b0fae1",
+              "file": "features/us-17-19-fulfilment.feature.spec.js",
+              "line": 45,
+              "column": 3
+            }
+          ],
+          "suites": [
+            {
+              "title": "An operator moves my order from <from> to <to>",
+              "file": "features/us-17-19-fulfilment.feature.spec.js",
+              "line": 10,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "An operator moves my order from Pending to Picking",
+                  "ok": true,
+                  "tags": [
+                    "US-17.1",
+                    "US-17.2",
+                    "US-17.7",
+                    "FUL-F1",
+                    "FUL-F5",
+                    "FUL-F6",
+                    "FUL-F7"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 3173,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 531
+                            },
+                            {
+                              "title": "And the operator opens order processing",
+                              "duration": 1455
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Pending\"",
+                              "duration": 9
+                            },
+                            {
+                              "title": "When the operator starts picking it",
+                              "duration": 33
+                            },
+                            {
+                              "title": "Then my order shows as \"Picking\"",
+                              "duration": 34
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:51.965Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4f2c733f4e49be35d324-a8a7c13c4134d9c77486",
+                  "file": "features/us-17-19-fulfilment.feature.spec.js",
+                  "line": 12,
+                  "column": 5
+                },
+                {
+                  "title": "An operator moves my order from Picking to Packed",
+                  "ok": true,
+                  "tags": [
+                    "US-17.1",
+                    "US-17.2",
+                    "US-17.7",
+                    "FUL-F1",
+                    "FUL-F5",
+                    "FUL-F6",
+                    "FUL-F7"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2772,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 542
+                            },
+                            {
+                              "title": "And the operator opens order processing",
+                              "duration": 1463
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Picking\"",
+                              "duration": 63
+                            },
+                            {
+                              "title": "When the operator packs it",
+                              "duration": 32
+                            },
+                            {
+                              "title": "Then my order shows as \"Packed\"",
+                              "duration": 34
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:55.153Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4f2c733f4e49be35d324-0de265dfba7c1edb93b0",
+                  "file": "features/us-17-19-fulfilment.feature.spec.js",
+                  "line": 20,
+                  "column": 5
+                },
+                {
+                  "title": "An operator moves my order from Packed to Dispatched",
+                  "ok": true,
+                  "tags": [
+                    "US-17.1",
+                    "US-17.2",
+                    "US-17.7",
+                    "FUL-F1",
+                    "FUL-F5",
+                    "FUL-F6",
+                    "FUL-F7"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2312,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 603
+                            },
+                            {
+                              "title": "And the operator opens order processing",
+                              "duration": 314
+                            },
+                            {
+                              "title": "And the operator has moved my order to \"Packed\"",
+                              "duration": 118
+                            },
+                            {
+                              "title": "When the operator dispatches it",
+                              "duration": 84
+                            },
+                            {
+                              "title": "Then my order shows as \"Dispatched\"",
+                              "duration": 34
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:57.946Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4f2c733f4e49be35d324-fb657a0f1f41a3d0f8a1",
+                  "file": "features/us-17-19-fulfilment.feature.spec.js",
+                  "line": 28,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-18-dispatch-failure.feature.spec.js",
+      "file": "features/us-18-dispatch-failure.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Dispatch failure (US-18)",
+          "file": "features/us-18-dispatch-failure.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "A problem can't be reported without a reason",
+              "ok": true,
+              "tags": [
+                "US-17.7",
+                "FUL-F8"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2699,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When the operator reports a problem: \"\"",
+                          "duration": 106
+                        },
+                        {
+                          "title": "Then the operator is told \"A reason is required\"",
+                          "duration": 11
+                        },
+                        {
+                          "title": "And my order shows as \"Pending\"",
+                          "duration": 6
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:05.123Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "636759ac54f6d1a3ec73-bf18ea7c1c0174be882a",
+              "file": "features/us-18-dispatch-failure.feature.spec.js",
+              "line": 43,
+              "column": 3
+            }
+          ],
+          "suites": [
+            {
+              "title": "A problem reported while <state> fails the dispatch",
+              "file": "features/us-18-dispatch-failure.feature.spec.js",
+              "line": 12,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "A problem reported while Pending fails the dispatch",
+                  "ok": true,
+                  "tags": [
+                    "US-18.1",
+                    "US-18.3",
+                    "US-18.5",
+                    "ORDER-F14",
+                    "FUL-F8"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3379,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator has moved my order to \"Pending\"",
+                              "duration": 8
+                            },
+                            {
+                              "title": "When the operator reports a problem: \"Damaged in the warehouse\"",
+                              "duration": 74
+                            },
+                            {
+                              "title": "Then my order shows as \"Dispatch failed\"",
+                              "duration": 12
+                            },
+                            {
+                              "title": "And it shows it wasn't dispatched because \"Damaged in the warehouse\"",
+                              "duration": 8
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 875
+                            },
+                            {
+                              "title": "And my order history eventually shows status \"Dispatch failed\"",
+                              "duration": 184
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:54.443Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "636759ac54f6d1a3ec73-d5dbce75b64c615e24b3",
+                  "file": "features/us-18-dispatch-failure.feature.spec.js",
+                  "line": 14,
+                  "column": 5
+                },
+                {
+                  "title": "A problem reported while Picking fails the dispatch",
+                  "ok": true,
+                  "tags": [
+                    "US-18.1",
+                    "US-18.3",
+                    "US-18.5",
+                    "ORDER-F14",
+                    "FUL-F8"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3551,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator has moved my order to \"Picking\"",
+                              "duration": 87
+                            },
+                            {
+                              "title": "When the operator reports a problem: \"Damaged in the warehouse\"",
+                              "duration": 147
+                            },
+                            {
+                              "title": "Then my order shows as \"Dispatch failed\"",
+                              "duration": 10
+                            },
+                            {
+                              "title": "And it shows it wasn't dispatched because \"Damaged in the warehouse\"",
+                              "duration": 16
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 873
+                            },
+                            {
+                              "title": "And my order history eventually shows status \"Dispatch failed\"",
+                              "duration": 184
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:41:57.836Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "636759ac54f6d1a3ec73-bc374d0762be690729b5",
+                  "file": "features/us-18-dispatch-failure.feature.spec.js",
+                  "line": 23,
+                  "column": 5
+                },
+                {
+                  "title": "A problem reported while Packed fails the dispatch",
+                  "ok": true,
+                  "tags": [
+                    "US-18.1",
+                    "US-18.3",
+                    "US-18.5",
+                    "ORDER-F14",
+                    "FUL-F8"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 3711,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given the operator has moved my order to \"Packed\"",
+                              "duration": 149
+                            },
+                            {
+                              "title": "When the operator reports a problem: \"Damaged in the warehouse\"",
+                              "duration": 149
+                            },
+                            {
+                              "title": "Then my order shows as \"Dispatch failed\"",
+                              "duration": 37
+                            },
+                            {
+                              "title": "And it shows it wasn't dispatched because \"Damaged in the warehouse\"",
+                              "duration": 10
+                            },
+                            {
+                              "title": "And its stock is released",
+                              "duration": 869
+                            },
+                            {
+                              "title": "And my order history eventually shows status \"Dispatch failed\"",
+                              "duration": 257
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:42:01.399Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "636759ac54f6d1a3ec73-57aca8734e6c58eb36e9",
+                  "file": "features/us-18-dispatch-failure.feature.spec.js",
+                  "line": 32,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-24-25-admin-orders.feature.spec.js",
+      "file": "features/us-24-25-admin-orders.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Operator order console (US-24, US-25, US-22, US-20)",
+          "file": "features/us-24-25-admin-orders.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "The operator sees my order, its customer and its reserved stock",
+              "ok": true,
+              "tags": [
+                "US-24.1",
+                "US-24.2",
+                "US-24.3",
+                "US-27.3",
+                "INV-F11",
+                "ORDER-F7"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1808,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When the operator opens the console",
+                          "duration": 260
+                        },
+                        {
+                          "title": "Then the console lists my order as \"authorized\" for my guest email",
+                          "duration": 87
+                        },
+                        {
+                          "title": "When the operator opens my order in the console",
+                          "duration": 327
+                        },
+                        {
+                          "title": "Then the console shows my order \"authorized\" with fulfilment \"PENDING\" and its stock \"active\"",
+                          "duration": 66
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:07.253Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a1481b70cc5ff0ca662-1fbbe46254df211d02b0",
+              "file": "features/us-24-25-admin-orders.feature.spec.js",
+              "line": 11,
+              "column": 3
+            },
+            {
+              "title": "The operator cancels my order",
+              "ok": true,
+              "tags": [
+                "US-22.2",
+                "US-22.4",
+                "US-25.2",
+                "INV-F11",
+                "INV-F12",
+                "PAY-F12",
+                "ORDER-F8",
+                "FUL-F10"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3795,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given the operator opens my order in the console",
+                          "duration": 427
+                        },
+                        {
+                          "title": "And the console shows my order \"authorized\" with fulfilment \"PENDING\" and its stock \"active\"",
+                          "duration": 1243
+                        },
+                        {
+                          "title": "When the operator cancels it from the console",
+                          "duration": 103
+                        },
+                        {
+                          "title": "Then the console shows my order \"cancelled\" with fulfilment \"CANCELLED\" and its stock \"released\"",
+                          "duration": 1203
+                        },
+                        {
+                          "title": "And its stock is released",
+                          "duration": 5
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Cancelled\"",
+                          "duration": 209
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:09.074Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a1481b70cc5ff0ca662-a360b7489ee19a0df2ca",
+              "file": "features/us-24-25-admin-orders.feature.spec.js",
+              "line": 18,
+              "column": 3
+            },
+            {
+              "title": "The operator expires my payment authorization",
+              "ok": true,
+              "tags": [
+                "US-20.1",
+                "US-20.2",
+                "US-20.3",
+                "US-20.4",
+                "US-20.6",
+                "US-25.1",
+                "US-25.2",
+                "PAY-F9",
+                "ORDER-F13",
+                "FUL-F10"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 5125,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given the operator opens my order in the console",
+                          "duration": 326
+                        },
+                        {
+                          "title": "And the console shows my order \"authorized\" with fulfilment \"PENDING\" and its stock \"active\"",
+                          "duration": 1211
+                        },
+                        {
+                          "title": "When the operator expires its payment authorization",
+                          "duration": 107
+                        },
+                        {
+                          "title": "Then the console shows my order \"cancelled\" with fulfilment \"CANCELLED\" and its stock \"released\"",
+                          "duration": 2570
+                        },
+                        {
+                          "title": "And its stock is released",
+                          "duration": 6
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Cancelled\"",
+                          "duration": 175
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:12.882Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a1481b70cc5ff0ca662-312f984d5fc5b1ef9458",
+              "file": "features/us-24-25-admin-orders.feature.spec.js",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "A shipped order can't be cancelled from the console",
+              "ok": true,
+              "tags": [
+                "US-22.4",
+                "US-25.2",
+                "ORDER-F9"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4973,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given the operator picks, packs and dispatches my order",
+                          "duration": 1891
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Confirmed\"",
+                          "duration": 2129
+                        },
+                        {
+                          "title": "When the operator opens my order in the console",
+                          "duration": 314
+                        },
+                        {
+                          "title": "Then the console offers no cancel or expiry, saying \"Past cancelling — returns/refunds are out of scope (US-23).\"",
+                          "duration": 10
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:18.016Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a1481b70cc5ff0ca662-09679acab00dee2024b4",
+              "file": "features/us-24-25-admin-orders.feature.spec.js",
+              "line": 36,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-27-admin-emails.feature.spec.js",
+      "file": "features/us-27-admin-emails.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Customer record and email history (US-27, and every customer email)",
+          "file": "features/us-27-admin-emails.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "A guest's record shows their order and its emails",
+              "ok": true,
+              "tags": [
+                "US-27.1",
+                "US-27.2",
+                "US-27.4",
+                "US-7.1",
+                "US-17.5",
+                "US-19.4",
+                "NOTIF-F16",
+                "NOTIF-F26",
+                "NOTIF-F31"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4796,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                          "duration": 529
+                        },
+                        {
+                          "title": "And the operator picks, packs and dispatches my order",
+                          "duration": 1725
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Confirmed\"",
+                          "duration": 2087
+                        },
+                        {
+                          "title": "When the operator opens my customer record",
+                          "duration": 273
+                        },
+                        {
+                          "title": "Then it shows my order as \"confirmed\"",
+                          "duration": 6
+                        },
+                        {
+                          "title": "And it lists the emails \"Your order has shipped\", \"Your payment was received\" and \"Your order is confirmed\"",
+                          "duration": 72
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:07.843Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a41212a988ee09f18ec-7bdb448ab25663a013cd",
+              "file": "features/us-27-admin-emails.feature.spec.js",
+              "line": 10,
+              "column": 3
+            },
+            {
+              "title": "A card declined at capture is emailed",
+              "ok": true,
+              "tags": [
+                "US-19.4",
+                "US-7.1",
+                "NOTIF-F17",
+                "NOTIF-F27",
+                "PAY-F11",
+                "ORDER-F12"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 4759,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have bought it with card \"5555 5555 5555 4444\"",
+                          "duration": 558
+                        },
+                        {
+                          "title": "And the operator picks, packs and dispatches my order",
+                          "duration": 1714
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Payment failed\"",
+                          "duration": 2084
+                        },
+                        {
+                          "title": "When the operator opens my customer record",
+                          "duration": 284
+                        },
+                        {
+                          "title": "Then it lists the emails \"We couldn't take your payment\" and \"We couldn't process your payment\"",
+                          "duration": 55
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:12.651Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a41212a988ee09f18ec-603b8fe6e40a552eedae",
+              "file": "features/us-27-admin-emails.feature.spec.js",
+              "line": 19,
+              "column": 3
+            },
+            {
+              "title": "A failed dispatch is emailed",
+              "ok": true,
+              "tags": [
+                "US-18.4",
+                "NOTIF-F32",
+                "FUL-F8"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 3872,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                          "duration": 589
+                        },
+                        {
+                          "title": "And the operator opens order processing",
+                          "duration": 1517
+                        },
+                        {
+                          "title": "And the operator reports a problem: \"Damaged in the warehouse\"",
+                          "duration": 131
+                        },
+                        {
+                          "title": "And my order history eventually shows status \"Dispatch failed\"",
+                          "duration": 1195
+                        },
+                        {
+                          "title": "When the operator opens my customer record",
+                          "duration": 305
+                        },
+                        {
+                          "title": "Then it lists the email \"We couldn't ship your order\"",
+                          "duration": 65
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:17.421Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a41212a988ee09f18ec-2bf8834ac6e8559fcb8d",
+              "file": "features/us-27-admin-emails.feature.spec.js",
+              "line": 27,
+              "column": 3
+            },
+            {
+              "title": "A registered customer's record shows their welcome email",
+              "ok": true,
+              "tags": [
+                "US-16.4",
+                "US-27.4",
+                "NOTIF-F6"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 2362,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Given I am a registered customer",
+                          "duration": 1
+                        },
+                        {
+                          "title": "And I am at checkout",
+                          "duration": 329
+                        },
+                        {
+                          "title": "When I sign in",
+                          "duration": 290
+                        },
+                        {
+                          "title": "And I place my order paying with card \"4242 4242 4242 4242\"",
+                          "duration": 113
+                        },
+                        {
+                          "title": "And my order is placed",
+                          "duration": 98
+                        },
+                        {
+                          "title": "And the operator opens my customer record",
+                          "duration": 273
+                        },
+                        {
+                          "title": "Then it lists the email \"Welcome to gshop\"",
+                          "duration": 47
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:30.331Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "5a41212a988ee09f18ec-489eaca8eba8dd33a62f",
+              "file": "features/us-27-admin-emails.feature.spec.js",
+              "line": 61,
+              "column": 3
+            }
+          ],
+          "suites": [
+            {
+              "title": "The cancellation email says why: <why>",
+              "file": "features/us-27-admin-emails.feature.spec.js",
+              "line": 36,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "The cancellation email says why: I asked",
+                  "ok": true,
+                  "tags": [
+                    "US-9.9",
+                    "US-20.5",
+                    "NOTIF-F18"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 2923,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 596
+                            },
+                            {
+                              "title": "And my order is cancelled by \"me\"",
+                              "duration": 1827
+                            },
+                            {
+                              "title": "When the operator opens my customer record",
+                              "duration": 277
+                            },
+                            {
+                              "title": "Then the email \"Your order was cancelled\" says \"was cancelled at your request.\"",
+                              "duration": 113
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:42:21.306Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "5a41212a988ee09f18ec-49747fdd95c19206bf97",
+                  "file": "features/us-27-admin-emails.feature.spec.js",
+                  "line": 38,
+                  "column": 5
+                },
+                {
+                  "title": "The cancellation email says why: support cancelled it",
+                  "ok": true,
+                  "tags": [
+                    "US-9.9",
+                    "US-20.5",
+                    "NOTIF-F18"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 1621,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 472
+                            },
+                            {
+                              "title": "And my order is cancelled by \"the operator\"",
+                              "duration": 698
+                            },
+                            {
+                              "title": "When the operator opens my customer record",
+                              "duration": 259
+                            },
+                            {
+                              "title": "Then the email \"Your order was cancelled\" says \"was cancelled by our support team.\"",
+                              "duration": 95
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:42:24.244Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "5a41212a988ee09f18ec-166a96f0fb4ed70ceb13",
+                  "file": "features/us-27-admin-emails.feature.spec.js",
+                  "line": 45,
+                  "column": 5
+                },
+                {
+                  "title": "The cancellation email says why: the payment hold ran out",
+                  "ok": true,
+                  "tags": [
+                    "US-9.9",
+                    "US-20.5",
+                    "NOTIF-F18"
+                  ],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": [
+                        {
+                          "workerIndex": 1,
+                          "parallelIndex": 1,
+                          "status": "passed",
+                          "duration": 4444,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "steps": [
+                            {
+                              "title": "Given I have bought it with card \"4242 4242 4242 4242\"",
+                              "duration": 521
+                            },
+                            {
+                              "title": "And my order is cancelled by \"expiry\"",
+                              "duration": 2272
+                            },
+                            {
+                              "title": "When the operator opens my customer record",
+                              "duration": 272
+                            },
+                            {
+                              "title": "Then the email \"Your order was cancelled\" says \"was cancelled because its payment authorization expired.\"",
+                              "duration": 1242
+                            }
+                          ],
+                          "startTime": "2026-11-23T13:42:25.876Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "5a41212a988ee09f18ec-a3ac730179064d8cff11",
+                  "file": "features/us-27-admin-emails.feature.spec.js",
+                  "line": 52,
+                  "column": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "features/us-28-catalogue-admin.feature.spec.js",
+      "file": "features/us-28-catalogue-admin.feature.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Catalogue stock (US-28)",
+          "file": "features/us-28-catalogue-admin.feature.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "The operator adds and removes one unit of stock",
+              "ok": true,
+              "tags": [
+                "US-28.1"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 645,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "When the operator finds the product in the catalogue",
+                          "duration": 366
+                        },
+                        {
+                          "title": "Then the catalogue shows its stock",
+                          "duration": 6
+                        },
+                        {
+                          "title": "When the operator adds one to its stock",
+                          "duration": 81
+                        },
+                        {
+                          "title": "Then the catalogue and inventory both show 1 more available",
+                          "duration": 16
+                        },
+                        {
+                          "title": "When the operator removes one from its stock",
+                          "duration": 65
+                        },
+                        {
+                          "title": "Then the catalogue and inventory both show 0 more available",
+                          "duration": 10
+                        }
+                      ],
+                      "startTime": "2026-11-23T13:42:23.007Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "da37c257a8d543cd7d2a-4b659318f6a16a060a6d",
+              "file": "features/us-28-catalogue-admin.feature.spec.js",
+              "line": 10,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-23T13:41:32.588Z",
+    "duration": 60200.191,
+    "expected": 53,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
