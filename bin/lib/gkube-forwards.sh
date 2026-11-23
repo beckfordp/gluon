@@ -6,9 +6,13 @@
 # `<SERVICE>_URL`, CATALOG_SERVICE_URL, INVENTORY_SERVICE_URL) read. bin/sandbox-bed
 # publishes the same ports to the laptop.
 
-# gkube_forwards: "SERVICE LOCAL_PORT REMOTE_PORT" per line.
+# gkube_forwards: "SERVICE LOCAL_PORT REMOTE_PORT" per line, each local port moved by
+# GKUBE_FORWARD_OFFSET (default 0). The sandbox bed sets 10000 for runs inside it: its own
+# forwards on the published ports serve the laptop, and OrbStack drops a published port
+# once another socket in the container has used it (all-Rust Stage B).
 gkube_forwards() {
-  cat << 'LIST'
+  local offset="${GKUBE_FORWARD_OFFSET:-0}"
+  awk -v offset="$offset" '{ print $1, $2 + offset, $3 }' << 'LIST'
 order-service 18081 8080
 payment-service 18082 8080
 inventory-service 18083 8080

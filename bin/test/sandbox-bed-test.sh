@@ -73,6 +73,8 @@ expect "up --all-rust: every port, acceptance, gshop and the report to the lapto
   "publish 127.0.0.1:18081:18081 127.0.0.1:18082:18082" "127.0.0.1:18089:18089" \
   "127.0.0.1:15173:5174" "127.0.0.1:19323:9323" \
   "target volume gluon-sandbox-bed-arm64-target"
+expect "runs inside the bed forward off the published ports" 0 arm64 up --all-rust -- \
+  "forward offset in the bed 10000"
 expect "up SERVICE publishes 8080 only, as before" 0 arm64 up cart-service -- \
   "publish 127.0.0.1:8080:8080" "service cart-service"
 expect "amd64's target cache is named as its others" 0 x86_64 up --all-rust -- \

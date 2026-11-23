@@ -37,6 +37,10 @@ BED="$GLUON/bin/lib/sandbox-bed"
 NAME=gluon-sandbox-bed
 MEMORY="${SANDBOX_BED_MEMORY:-14g}"
 JOBS="${CARGO_BUILD_JOBS:-6}"
+# The local ports of forwards run inside the bed (`bin/run-acceptance --gkube`) move by this
+# (bin/lib/gkube-forwards.sh): the published ports are bin/lib/sandbox-bed/serve's only, as
+# OrbStack drops a published port once another socket in the container has used it.
+FORWARD_OFFSET=10000
 # macOS's caffeinate, held while `up` runs: idle sleep froze a suite for six minutes
 # (Stage B). SANDBOX_BED_CAFFEINATE overrides it; empty: none.
 CAFFEINATE="${SANDBOX_BED_CAFFEINATE-$(command -v caffeinate || true)}"
@@ -120,6 +124,7 @@ check_only() {
   echo "browsers $BROWSERS"
   echo "memory $MEMORY"
   echo "cargo jobs $JOBS"
+  echo "forward offset in the bed $FORWARD_OFFSET"
   if [ -n "$CAFFEINATE" ]; then echo "keep awake caffeinate -i ($CAFFEINATE)"; else echo "keep awake none"; fi
   if [ "$1" = up ]; then
     shift
@@ -164,6 +169,7 @@ up() {
     "${publish[@]}" \
     -v "$MODEL_VOLUME:/home/model" -v "$BIN_VOLUME:/home/claude/.local/bin" \
     -v "$TARGET_VOLUME:/var/cache/bed-target" \
+    -e GKUBE_FORWARD_OFFSET="$FORWARD_OFFSET" \
     "$image" > /dev/null
   docker cp "$scratch/gluon.tar.gz" "$NAME:/tmp/gluon.tar.gz"
   # The other uploads, beside gluon as in the sandbox (bin/fetch-playwright-browsers).

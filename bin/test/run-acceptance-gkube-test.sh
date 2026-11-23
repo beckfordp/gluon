@@ -64,6 +64,10 @@ check "the URLs the suite and the seed read" \
     CATALOG_SERVICE_URL=http://127.0.0.1:18085 INVENTORY_SERVICE_URL=http://127.0.0.1:18083 | sort)"
 check "a URL per service for the suite" \
   "$(gkube_urls | grep -cE '^(ORDER|PAYMENT|INVENTORY|USER|CATALOG|FULFILMENT|CART|NOTIFICATION)_URL=')" "8"
+check "GKUBE_FORWARD_OFFSET moves every local port (the bed's own runs: OrbStack drops a
+published port another socket used)" \
+  "$(GKUBE_FORWARD_OFFSET=10000 gkube_forwards | awk '{print $2}' | sed -n '1p;$p' | paste -sd' ' -) $(GKUBE_FORWARD_OFFSET=10000 gkube_urls | grep '^USER_URL=')" \
+  "28081 28089 USER_URL=http://127.0.0.1:28084"
 
 : > "$GKUBE_LOG"
 PATH="$scratch/bin:$PATH" GKUBE_STATUS=1 "$BIN/run-acceptance" --gkube --no-open \
