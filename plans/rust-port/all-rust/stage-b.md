@@ -93,7 +93,7 @@ No blocker.
   suite 1m43s: **53 passed, 0 skipped, 0 flaky, ledger OK**
   (`docs/ports/evidence/all-rust-bed/`); gshop, report and every service answer on the
   laptop. gluon-kube track `allrust-parity_20261123` reviewed (CI 291 passed) and archived.
-- [x] B7 cheat sheet + amd64 smoke — ~13:47–14:25 (~38 min).
+- [x] B7 cheat sheet + amd64 smoke — ~13:47–14:20 (~33 min).
   `plans/private/ports/all-rust-bed-cheat-sheet.md`; every command run from a fresh login
   shell (`env -i … zsh -l`): up, shell, acceptance again (53 passed, 58s), reseed, logs,
   the connector check, check-only, `down`. `down --purge` run at 13:22 from this session's
