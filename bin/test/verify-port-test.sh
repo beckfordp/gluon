@@ -173,6 +173,13 @@ states = dict((c.id, s) for c, s in vp.evaluate(crit, {
 want = {"A": "MET", "B": "NOT MET", "C": "not run", "D": "MET"}
 check("states: MET, group red, not run, partly run", states == want, states)
 
+# A kind spread over one module per topic: `contract:functional` needs every
+# `*_functional` group green (all-Rust Stage A, notification).
+crit = vp.Criteria("notification-service", [vp.Criterion("F", "", ["contract:functional"])])
+topics = lambda rest: step("contract", True, {"rest_functional": rest, "user_events_functional": True, "rest_wire": False})  # noqa: E731
+got = [vp.evaluate(crit, {"contract": topics(ok)})[0][1] for ok in (True, False)]
+check("a kind's topic groups: all green MET, one red NOT MET", got == ["MET", "NOT MET"], got)
+
 
 # Exit codes, main() end to end with fake steps.
 def main_exit(argv, fakes):
@@ -187,16 +194,18 @@ def main_exit(argv, fakes):
     return code, out.getvalue()
 
 
+GROUPS = {"rest_functional": True, "user_events_functional": True, "docs": True, "rest_wire": True}
+"""notification-service's groups, as its modules name them."""
 green = {
     "step_ci": lambda logs, name, repo: step(name, True),
     "step_build": lambda logs, service: step("build", True),
-    "step_contract": lambda logs, service, acceptance, group: step("contract", True, {"rest": True}),
+    "step_contract": lambda logs, service, acceptance, group: step("contract", True, GROUPS),
 }
 code, out = main_exit(["notification-service"], green)
 check("all green: exit 0", code == 0 and "MET      C1" in out and "PASS:" in out, out)
-red = dict(green, step_contract=lambda logs, service, acceptance, group: step("contract", False, {"rest": False}))
+red = dict(green, step_contract=lambda logs, service, acceptance, group: step("contract", False, dict(GROUPS, rest_functional=False)))
 code, out = main_exit(["notification-service"], red)
-check("contract red: exit 1", code == 1 and "NOT MET: C1" in out, out)
+check("contract red: exit 1", code == 1 and "NOT MET: F, C1" in out, out)
 broken = dict(green, step_build=lambda logs, service: step("build", False))
 code, out = main_exit(["notification-service", "--only", "build"], broken)
 check("--only build, build red (no criterion names it): exit 1",
@@ -209,7 +218,7 @@ report = work / "acceptance-results.json"
 report.write_text("{}")
 seen = []
 spy = dict(green, step_contract=lambda logs, service, acceptance, group: (
-    seen.append(acceptance), step("contract", True, {"rest": True}))[1])
+    seen.append(acceptance), step("contract", True, GROUPS))[1])
 code, out = main_exit(["notification-service", "--acceptance", str(report)], spy)
 check("--acceptance reaches the contract step, resolved", code == 0 and seen == [report.resolve()], out)
 

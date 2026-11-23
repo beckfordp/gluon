@@ -218,6 +218,13 @@ def steps_for(
     return [s for s in STEP_ORDER if s in wanted]
 
 
+def group_green(groups: dict[str, bool], group: str) -> bool:
+    """Whether `group` ran green: every group named it, or ending `_<group>` (a kind spread
+    over one module per topic, as `group_modules` selects them), at least one."""
+    found = [ok for name, ok in groups.items() if name == group or name.endswith(f"_{group}")]
+    return bool(found) and all(found)
+
+
 def evaluate(criteria: Criteria, steps: dict[str, "Step"]) -> list[tuple[Criterion, str]]:
     """Each criterion's state: MET / NOT MET, or not run when none of its steps ran."""
     states = []
@@ -227,7 +234,7 @@ def evaluate(criteria: Criteria, steps: dict[str, "Step"]) -> list[tuple[Criteri
             name, _, group = need.partition(":")
             if name in steps:
                 step = steps[name]
-                outcomes.append(step.groups.get(group, False) if group else step.ok)
+                outcomes.append(group_green(step.groups, group) if group else step.ok)
         state = "not run" if not outcomes else ("MET" if all(outcomes) else "NOT MET")
         states.append((criterion, state))
     return states
