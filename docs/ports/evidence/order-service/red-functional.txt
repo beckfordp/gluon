@@ -1,0 +1,33 @@
+order-service port verification — logs in /tmp/verify-port-order-service-20261123-044553-gnqqeyte
+
+== 1. build ==
+     (34 s, log /tmp/verify-port-order-service-20261123-044553-gnqqeyte/build.log)
+ok   build: order-service
+== 2. contract ==
+     (7 s, log /tmp/verify-port-order-service-20261123-044553-gnqqeyte/contract.log)
+FAIL contract: 0/27 checks green — events_functional 0/9, functional 0/18
+       test_order_events_functional::test_payment_captured_confirms_an_authorized_or_dispatched_order
+       test_order_events_functional::test_payment_failed_fails_the_order_and_flags_it
+       test_order_events_functional::test_an_expired_authorization_cancels_the_order_as_the_system
+       test_order_events_functional::test_dispatch_moves_the_order_and_a_failure_releases_its_stock
+       test_order_events_functional::test_a_failed_release_after_a_dispatch_failure_flags_the_order
+       test_order_events_functional::test_a_duplicate_event_or_an_unknown_order_flags_nothing
+       test_order_events_functional::test_a_record_it_cant_act_on_is_skipped_not_dead_lettered
+       test_order_events_functional::test_a_record_it_cant_store_is_dead_lettered_with_its_key_and_value
+       test_order_events_functional::test_an_operator_resolves_a_flag_and_the_first_resolver_wins
+       test_order_functional::test_a_checkout_reserves_authorizes_and_saves_the_order_authorized
+       test_order_functional::test_a_guest_email_is_trimmed_and_lower_cased_and_a_blank_one_absent
+       test_order_functional::test_an_undecodable_checkout_is_400
+       test_order_functional::test_lines_inventory_cant_reserve_are_409_and_nothing_else_happens
+       test_order_functional::test_a_declined_or_unknown_method_releases_the_stock_and_saves_nothing
+       test_order_functional::test_a_callee_unavailable_is_503_and_releases_the_stock
+       test_order_functional::test_an_order_is_found_by_id_with_its_items_by_sku
+       test_order_functional::test_a_customers_history_is_newest_first_and_cached_until_its_entry_goes
+       test_order_functional::test_a_history_the_scala_service_cached_is_served_as_cached
+       test_order_functional::test_redis_down_the_history_is_read_from_postgres
+       test_order_functional::test_the_admin_list_is_every_order_newest_first_filtered
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (27 checks; logs in /tmp/verify-port-order-service-20261123-044553-gnqqeyte)

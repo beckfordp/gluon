@@ -1,0 +1,109 @@
+...................................F........                             [100%]
+=================================== FAILURES ===================================
+______________ test_redis_down_the_history_is_read_from_postgres _______________
+
+harness = <gluon_contract.harness.Harness object at 0x103ad81a0>
+
+    @pytest.mark.behaviour("ORDER-F6")
+    def test_redis_down_the_history_is_read_from_postgres(harness: Harness) -> None:
+        """Redis down: the history is answered from Postgres, and readiness stays.
+    
+        Source: Scala OrderRoutes.listOrdersServerEndpoint ("falling back to Postgres"; Scala's
+        client hangs instead: capture http/history-redis-down.txt, all-Rust decision A13);
+        http/health-ready-redis-down.txt.
+        """
+        customer = new_customer()
+        order = order_id(harness, customerId=customer)
+        assert harness.redis is not None
+        harness.redis.stop()
+        try:
+            ready = probe(harness, "/health/ready", PROBE_TIMEOUT_S)
+            assert ready == 200, f"ready, Redis down: answered {ready}, expected 200"
+>           response = call(harness, "GET", f"/orders?customerId={customer}", timeout_s=10.0)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+checks/test_order_functional.py:403: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+checks/support.py:62: in call
+    return request(harness.base_url, method, path, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/gluon_contract/http.py:81: in request
+    raw = connection.getresponse()
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/http/client.py:1430: in getresponse
+    response.begin()
+/opt/anaconda3/lib/python3.13/http/client.py:331: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/http/client.py:292: in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.SocketIO object at 0x1039cae60>, b = <memory at 0x1041dd600>
+
+    def readinto(self, b):
+        """Read up to len(b) bytes into the writable buffer *b* and return
+        the number of bytes read.  If the socket is non-blocking and no bytes
+        are available, None is returned.
+    
+        If *b* is non-empty, a 0 return value indicates that the connection
+        was shutdown at the other end.
+        """
+        self._checkClosed()
+        self._checkReadable()
+        if self._timeout_occurred:
+            raise OSError("cannot read from timed out object")
+        try:
+>           return self._sock.recv_into(b)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+E           TimeoutError: timed out
+
+/opt/anaconda3/lib/python3.13/socket.py:719: TimeoutError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED checks/test_order_docs.py::test_swagger_ui_loads_the_document_of_the_routes_served
+PASSED checks/test_order_docs.py::test_the_asyncapi_document_and_its_page_describe_what_it_sends_and_receives
+PASSED checks/test_order_events_functional.py::test_payment_captured_confirms_an_authorized_or_dispatched_order
+PASSED checks/test_order_events_functional.py::test_payment_failed_fails_the_order_and_flags_it
+PASSED checks/test_order_events_functional.py::test_an_expired_authorization_cancels_the_order_as_the_system
+PASSED checks/test_order_events_functional.py::test_dispatch_moves_the_order_and_a_failure_releases_its_stock
+PASSED checks/test_order_events_functional.py::test_a_failed_release_after_a_dispatch_failure_flags_the_order
+PASSED checks/test_order_events_functional.py::test_an_event_the_status_doesnt_allow_flags_the_order_once[cancel-dispatched-cancelled-DispatchConfirmed rejected from cancelled]
+PASSED checks/test_order_events_functional.py::test_an_event_the_status_doesnt_allow_flags_the_order_once[captured-expired-confirmed-PaymentAuthorizationExpired rejected from confirmed]
+PASSED checks/test_order_events_functional.py::test_an_event_the_status_doesnt_allow_flags_the_order_once[dispatched-dispatch_failed-dispatched-DispatchFailed rejected from dispatched]
+PASSED checks/test_order_events_functional.py::test_an_event_the_status_doesnt_allow_flags_the_order_once[captured-capture_failed-confirmed-PaymentFailed rejected from confirmed]
+PASSED checks/test_order_events_functional.py::test_a_duplicate_event_or_an_unknown_order_flags_nothing
+PASSED checks/test_order_events_functional.py::test_a_record_it_cant_act_on_is_skipped_not_dead_lettered
+PASSED checks/test_order_events_functional.py::test_a_record_it_cant_store_is_dead_lettered_with_its_key_and_value
+PASSED checks/test_order_events_functional.py::test_an_operator_resolves_a_flag_and_the_first_resolver_wins
+PASSED checks/test_order_functional.py::test_a_checkout_reserves_authorizes_and_saves_the_order_authorized
+PASSED checks/test_order_functional.py::test_a_guest_email_is_trimmed_and_lower_cased_and_a_blank_one_absent
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes0-Order must have at least one item]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes1-quantity must be positive, got 0 for sku 'SKU-A']
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes2-unitPriceCents must be non-negative, got -1 for sku 'SKU-A']
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes3-order total exceeds the wire contract's Int range: 4294967294]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes4-line1 is required]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes5-city is required]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes6-postalCode is required]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes7-country must be an ISO 3166-1 alpha-2 code]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes8-paymentMethodId must be a UUID]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes9-email must be a valid email address]
+PASSED checks/test_order_functional.py::test_a_checkout_that_fails_validation_is_400_and_calls_nothing[changes10-quantity must be positive, got 0 for sku 'SKU-A']
+PASSED checks/test_order_functional.py::test_an_undecodable_checkout_is_400
+PASSED checks/test_order_functional.py::test_lines_inventory_cant_reserve_are_409_and_nothing_else_happens
+PASSED checks/test_order_functional.py::test_a_declined_or_unknown_method_releases_the_stock_and_saves_nothing
+PASSED checks/test_order_functional.py::test_a_callee_unavailable_is_503_and_releases_the_stock
+PASSED checks/test_order_functional.py::test_an_order_is_found_by_id_with_its_items_by_sku
+PASSED checks/test_order_functional.py::test_a_customers_history_is_newest_first_and_cached_until_its_entry_goes
+PASSED checks/test_order_functional.py::test_a_history_the_scala_service_cached_is_served_as_cached
+PASSED checks/test_order_functional.py::test_the_admin_list_is_every_order_newest_first_filtered
+PASSED checks/test_order_functional.py::test_a_customer_cancels_an_authorized_order_once
+PASSED checks/test_order_functional.py::test_an_operator_token_cancels_as_the_operator
+PASSED checks/test_order_functional.py::test_a_cancel_it_refuses_changes_nothing
+PASSED checks/test_order_functional.py::test_an_order_is_deleted_without_an_event
+PASSED checks/test_order_functional.py::test_reconciliations_are_listed_and_filtered
+PASSED checks/test_order_functional.py::test_readiness_follows_postgres
+PASSED checks/test_order_functional.py::test_gshops_origin_may_call_it_from_the_browser
+FAILED checks/test_order_functional.py::test_redis_down_the_history_is_read_from_postgres
+1 failed, 43 passed, 280 deselected in 49.41s
