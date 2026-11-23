@@ -83,7 +83,29 @@ Started 2026-11-22 19:05 GMT.
   Cheat sheet `docs/ports/catalog-service.cheatsheet.md` (every command run from a login
   shell, incl. the switch back to Scala and reseed).
 
+- [x] inventory — 23:42–00:45 (63 min, from the RED track's commit; reading the Scala
+  service before it, and a usage-limit pause, not counted). RED `inventory-red_20261122`
+  (tests/contract): capture `86e6227` (its own compose project, Kafka on 19092: OrbStack
+  holds 9092; `sbt -batch clean compile stage`, the cold AsyncAPI race failing `clean
+  stage` every time), INV-F1–F18 and D1–D2 `f5e1129`, INV-F18 reordered `e4e4e9e` so the
+  skeleton is red for its 404, not the preflight; on Scala 33/33; skeleton
+  `inventory-service-rs` `4169f20` → every check red for "answered 404" (31 F, 2 D). GREEN
+  `port_20261122`: `8f8508f` (Scala Flyway V1–V8 verbatim, the Scala SQL and advisory
+  lock), contract 33/33 first run, CI 98.40% lines. `bin/verify-port inventory-service`
+  all MET. Deployed `INVENTORY_SERVICE_IMPL=rust`; `--grep @INV-F` 10 passed, ledger OK
+  (tests/acceptance `1fb8d17`; the scenarios place orders, so the run isn't staged); full run
+  53/53, ledger OK, on the second run: the first was 52/53, an acceptance-suite race (O1). Cheat sheet `docs/ports/inventory-service.cheatsheet.md` (login shell).
+
 ## Finish
+
+## Open
+
+- O1 (inventory) Acceptance race: `pickStockedProduct` indexes the products with 2+
+  available by the worker's `parallelIndex`, so when one worker's product drops below 2
+  (the sold-out scenario sets it to 1) the offsets shift and two workers can share a
+  SKU. Seen once: "Cancelling while Packed" read 1 available, not 10, because another
+  worker set it (`docs/ports/evidence/inventory-service/acceptance-full-1-race.txt`);
+  the re-run was 53/53. Not a port difference; a tests/acceptance fix, not done here.
 
 ## Decisions
 
@@ -115,6 +137,16 @@ Started 2026-11-22 19:05 GMT.
   Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
   fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
   keeps gshop browsing through a Redis outage.
+- A11 (inventory) Three differences from Scala, none observable to its callers: (1) a
+  UUID (path, `orderId`) is the canonical 8-4-4-4-12 form only, where Java's
+  `UUID.fromString` also takes short hex groups (`1-1-1-1-1`); nothing sends those.
+  (2) A null-valued record on `order-events`/`fulfilment-events` is skipped, not
+  dead-lettered: gluon-rs `kafka-event-consumer`'s rule, shared with
+  notification-service-rs; only a tombstone is null, and no producer writes one.
+  (3) The resolve operation's optional `Authorization` header isn't a parameter in the
+  OpenAPI document (gluon-rs's builder has no header parameters); the 401 is
+  documented. Reason: the shared libraries' behaviour, not worth forking for inputs
+  nothing produces.
 - A2 (P0.2) user-service keeps topic modules (criteria need `contract:probe`,
   `contract:metrics`); its wire rows are one per topic. `test_user_docs` →
   `test_user_documentation` (a docs-named module would have to be docs only).

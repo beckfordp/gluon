@@ -1,0 +1,25 @@
+inventory-service port verification — logs in /tmp/verify-port-inventory-service-20261123-001001-60hy9d63
+
+== 1. harness-ci ==
+     (160 s, log /tmp/verify-port-inventory-service-20261123-001001-60hy9d63/harness-ci.log)
+ok   harness-ci: 481 passed, coverage 95.30%
+== 2. rust-ci ==
+     (37 s, log /tmp/verify-port-inventory-service-20261123-001001-60hy9d63/rust-ci.log)
+ok   rust-ci: line coverage 98.40%
+== 3. build ==
+     (5 s, log /tmp/verify-port-inventory-service-20261123-001001-60hy9d63/build.log)
+ok   build: inventory-service
+== 4. contract ==
+     (28 s, log /tmp/verify-port-inventory-service-20261123-001001-60hy9d63/contract.log)
+ok   contract: 33/33 checks green — docs 2/2, events_functional 9/9, functional 22/22
+
+== inventory-service contract criteria ==
+MET      F       [functional INV-F1–F18] what order-service, gshop, the admin screens, its consumers and readiness rely on, against the Rust service
+MET      D       [docs INV-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/inventory-service.cheatsheet.md))
+rows met: functional 18/18, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-inventory-service-20261123-001001-60hy9d63)

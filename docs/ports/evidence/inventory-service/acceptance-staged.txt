@@ -1,0 +1,40 @@
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  fulfilment-postgres
+  inventory-postgres
+  notification-postgres
+  order-postgres
+  payment-postgres
+  user-postgres
+== Purging event topics
+  fulfilment-events,order-events,payment-events,user-events
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Rerun skips orders recorded in /Users/p.beckford.ext/dev/personal/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Done.
+== Acceptance suite ==
+
+Running 10 tests using 2 workers
+
+  ✓   2 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:11:3 › Cancellation (US-9, US-21) › I cancel my authorized order @US-9.1 @US-9.4 @US-9.8 @INV-F12 (3.6s)
+  ✓   1 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:11:3 › Checkout (US-11 to US-14) › An anonymous shopper places an order @US-3.1 @US-4.1 @US-8.1 @US-11.1 @US-11.2 @US-12.2 @US-13.1 @US-13.2 @US-13.3 @US-14.1 @US-14.4 @INV-F7 (4.3s)
+  ✓   4 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:26:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (0 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 (1.1s)
+  ✓   3 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:19:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Pending stops fulfilment @US-9.5 @INV-F12 (2.5s)
+  ✓   5 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:36:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (1 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 (2.7s)
+  ✓   6 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:27:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Picking stops fulfilment @US-9.5 @INV-F12 (3.8s)
+  ✓   7 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:38:3 › Fulfilment and capture (US-17, US-19) › My payment is captured once my order is dispatched @US-14.3 @US-17.3 @US-17.4 @US-19.1 @US-19.2 @US-19.5 @INV-F13 (4.3s)
+  ✓   8 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:35:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Packed stops fulfilment @US-9.5 @INV-F12 (3.7s)
+  ✓   9 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:11:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator sees my order, its customer and its reserved stock @US-24.1 @US-24.2 @US-24.3 @US-27.3 @INV-F11 (2.1s)
+  ✓  10 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:18:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator cancels my order @US-22.2 @US-22.4 @US-25.2 @INV-F11 @INV-F12 (3.5s)
+
+  10 passed (20.3s)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)
