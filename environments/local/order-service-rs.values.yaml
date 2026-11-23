@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MIT
+# The Rust order-service (all-Rust Stage A), installed by bin/k8s-local-up
+# under the same release name, `order-service`, when ORDER_SERVICE_IMPL=rust.
+# The same env vars as order-service.values.yaml; the chart's JVM-only
+# settings blanked (the chart renders them only when non-empty).
+
+image:
+  repository: order-service-rs
+  tag: latest
+
+javaOpts: ""
+mallocArenaMax: ""
+
+env:
+  # Spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021), as the Scala service.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
+  - name: POSTGRES_HOST
+    value: order-postgres
+  - name: POSTGRES_DB
+    value: order
+  - name: POSTGRES_USER
+    value: order
+  - name: POSTGRES_PASSWORD
+    value: order
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  - name: REDIS_URI
+    value: redis://order-redis:6379
+  - name: INVENTORY_SERVICE_URL
+    value: http://inventory-service:8080
+  - name: PAYMENT_SERVICE_URL
+    value: http://payment-service:8080

@@ -1,0 +1,25 @@
+order-service port verification — logs in /tmp/verify-port-order-service-20261123-051832-o4idrfxg
+
+== 1. harness-ci ==
+     (164 s, log /tmp/verify-port-order-service-20261123-051832-o4idrfxg/harness-ci.log)
+ok   harness-ci: 488 passed, coverage 95.33%
+== 2. rust-ci ==
+     (44 s, log /tmp/verify-port-order-service-20261123-051832-o4idrfxg/rust-ci.log)
+ok   rust-ci: line coverage 96.99%
+== 3. build ==
+     (5 s, log /tmp/verify-port-order-service-20261123-051832-o4idrfxg/build.log)
+ok   build: order-service
+== 4. contract ==
+     (53 s, log /tmp/verify-port-order-service-20261123-051832-o4idrfxg/contract.log)
+ok   contract: 29/29 checks green — docs 2/2, events_functional 9/9, functional 18/18
+
+== order-service contract criteria ==
+MET      F       [functional ORDER-F1–F18] what gshop, the admin screens, notification-service, its callees, its consumers, its outbox and readiness rely on, against the Rust service
+MET      D       [docs ORDER-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/order-service.cheatsheet.md))
+rows met: functional 18/18, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-order-service-20261123-051832-o4idrfxg)

@@ -1,0 +1,51 @@
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  fulfilment-postgres
+  inventory-postgres
+  notification-postgres
+  order-postgres
+  payment-postgres
+  user-postgres
+== Purging event topics
+  fulfilment-events,order-events,payment-events,user-events
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Rerun skips orders recorded in /Users/p.beckford.ext/dev/personal/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Done.
+== Acceptance suite ==
+
+Running 21 tests using 2 workers
+
+  ✓   2 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:11:3 › Cancellation (US-9, US-21) › I cancel my authorized order @US-9.1 @US-9.4 @US-9.8 @INV-F12 @PAY-F12 @ORDER-F8 (2.9s)
+  ✓   1 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:11:3 › Checkout (US-11 to US-14) › An anonymous shopper places an order @US-3.1 @US-4.1 @US-8.1 @US-11.1 @US-11.2 @US-12.2 @US-13.1 @US-13.2 @US-13.3 @US-14.1 @US-14.4 @INV-F7 @PAY-F1 @PAY-F5 @ORDER-F1 @ORDER-F5 (4.1s)
+  ✓   3 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:19:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Pending stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 (2.4s)
+  ✓   4 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:20:3 › Checkout (US-11 to US-14) › Billing address different from shipping @US-12.2 @PAY-F1 @ORDER-F1 (2.2s)
+  ✓   6 [chromium] › .features-gen/features/us-11-14-checkout.feature.spec.js:28:3 › Checkout (US-11 to US-14) › A signed-in customer's order is saved to their account @US-8.1 @US-14.4 @US-16.5 @ORDER-F6 (2.8s)
+  ✓   5 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:27:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Picking stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 (4.0s)
+  ✓   7 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:12:5 › Checkout failures (US-14) › A declined card can be retried with another › Example #1 @US-14.1 @US-14.2 @US-14.4 @PAY-F6 @ORDER-F4 (650ms)
+  ✓   9 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:26:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (0 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 @ORDER-F3 (791ms)
+  ✓  10 [chromium] › .features-gen/features/us-14-checkout-failures.feature.spec.js:36:5 › Checkout failures (US-14) › An item that sold out (<available> left) can be removed and the rest ordered › An item that sold out (1 left) can be removed and the rest ordered @US-4.1 @US-14.2 @US-14.4 @INV-F7 @ORDER-F3 (2.1s)
+  ✓   8 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:35:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Packed stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 (3.6s)
+  ✓  11 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:38:3 › Fulfilment and capture (US-17, US-19) › My payment is captured once my order is dispatched @US-14.3 @US-17.3 @US-17.4 @US-19.1 @US-19.2 @US-19.5 @INV-F13 @PAY-F10 @ORDER-F11 @ORDER-F14 (3.1s)
+  ✓  12 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:45:3 › Cancellation (US-9, US-21) › I can't cancel once my order has shipped @US-21.1 @US-21.5 @ORDER-F9 (3.4s)
+  ✓  14 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:14:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Pending fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 (4.1s)
+  ✓  13 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:45:3 › Fulfilment and capture (US-17, US-19) › A card declined at capture leaves my order with payment failed @US-19.1 @US-19.3 @US-19.5 @PAY-F11 @ORDER-F12 (5.7s)
+  ✓  15 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:23:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Picking fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 (3.1s)
+  ✓  16 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:11:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator sees my order, its customer and its reserved stock @US-24.1 @US-24.2 @US-24.3 @US-27.3 @INV-F11 @ORDER-F7 (3.4s)
+  ✓  17 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:32:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Packed fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 (3.1s)
+  ✓  18 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:18:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator cancels my order @US-22.2 @US-22.4 @US-25.2 @INV-F11 @INV-F12 @PAY-F12 @ORDER-F8 (3.6s)
+  ✓  19 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:19:3 › Customer record and email history (US-27, and every customer email) › A card declined at capture is emailed @US-19.4 @US-7.1 @NOTIF-F17 @NOTIF-F27 @PAY-F11 @ORDER-F12 (4.5s)
+  ✓  20 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:27:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator expires my payment authorization @US-20.1 @US-20.2 @US-20.3 @US-20.4 @US-20.6 @US-25.1 @US-25.2 @PAY-F9 @ORDER-F13 (4.7s)
+  ✓  21 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:36:3 › Operator order console (US-24, US-25, US-22, US-20) › A shipped order can't be cancelled from the console @US-22.4 @US-25.2 @ORDER-F9 (3.8s)
+
+  21 passed (39.2s)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

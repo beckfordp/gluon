@@ -120,6 +120,19 @@ Started 2026-11-22 19:05 GMT.
   OK (tests/acceptance `f9a32bb`, archived `7fa4bc6`); full run 53/53, ledger OK first
   time. Cheat sheet `docs/ports/payment-service.cheatsheet.md` (login shell). Differences A12.
 
+- [x] order — 03:36–05:47 (131 min, incl. ~10 min for I2). RED `order-red_20261123`
+  (tests/contract): order profile and stubs answering order's writes `83bf7d2`, capture
+  `47902e7`, ORDER-F1–F18 and D1–D2 `9a788e8`; on Scala 43/44, F6 (Redis down) red by
+  design, A13 (`scala-reference.txt`); skeleton `order-service-rs` `f9dd537` → every check
+  red for "answered 404". gluon-rs: `ResilientClient::post_json` `44ce190`,
+  `Routes::DEAD_LETTERS_POISON` `27b27a2` (order skips undecodable records). GREEN
+  `port_20261123`: `c4a05c2` (Scala Flyway V1–V16 verbatim, the Scala SQL, transitions
+  with their outbox, flag and audit rows in one tx), contract 29/29 first run, CI 96.99%
+  lines. `bin/verify-port order-service` all MET (`green.txt`). Deployed
+  `ORDER_SERVICE_IMPL=rust` after I2; `--grep @ORDER-F` 21 passed, ledger OK
+  (tests/acceptance `f1d820a`, archived `8395896`); full run 53/53, ledger OK first time.
+  Cheat sheet `docs/ports/order-service.cheatsheet.md` (login shell). Differences A13.
+
 ## Finish
 
 ## Open
@@ -141,6 +154,11 @@ Started 2026-11-22 19:05 GMT.
   row (the reseed's "no PENDING fulfilment task"): stopped the connector, deleted its
   offsets (`DELETE /connectors/payment-outbox-connector/offsets`), resumed; reseed OK.
   Environment, not the port. The docker volumes (15.5 GB reclaimable) were not touched.
+- I2 (order, 05:27) Before order's deploy the Kubernetes API stopped answering (TLS
+  handshake timeouts) with the Mac's memory exhausted (105 MB free, 13 GB compressed) and
+  no stray test processes. Fixed by `orb stop` / `orb start`; every pod came back Running,
+  no node pressure, and the deploy's register Job re-created the Debezium connectors.
+  Environment, not the port.
 
 ## Decisions
 
@@ -172,6 +190,14 @@ Started 2026-11-22 19:05 GMT.
   Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
   fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
   keeps gshop browsing through a Redis outage.
+- A13 (order) (1) With Redis refusing connections, Scala's history doesn't answer (its
+  Redis client hangs; ORDER-F6's Redis-down check times out on Scala, by design); Rust
+  falls back to Postgres within the 500 ms cache timeout, as A10. (2)–(4) as A12: a UUID
+  is the canonical form only; the cancel and resolve routes' optional `Authorization`
+  header isn't listed in the OpenAPI document; an undecodable body's 400 is tapir's
+  "Invalid value for: body (…)" with serde's reason. Undecodable records are skipped, not
+  dead-lettered, as in Scala (gluon-rs's new opt-out). Reason: the documented fallback
+  keeps the order history up through a Redis outage; the rest is the shared libraries.
 - A12 (payment) As A11, none observable to its callers: (1) a payment id or
   paymentMethodId is the canonical UUID form only; (2) a null-valued record on
   `order-events`/`fulfilment-events` is skipped, not dead-lettered; (3) the expire and
