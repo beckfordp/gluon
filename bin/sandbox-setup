@@ -24,6 +24,7 @@ and installs its own copy only when that is missing.
 import argparse
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -41,10 +42,34 @@ HOME = Path.home()
 
 # --- What the sandbox needs, recorded in one place -------------------------
 
+
+@dataclass(frozen=True, slots=True)
+class Arch:
+    """A machine's names for what setup downloads (all-Rust Stage B, B2)."""
+
+    rust: str
+    """rustup's host triple."""
+    node: str
+    """npm's node-linux-<node> package; Playwright's linux-<node> builds."""
+    multiarch: str
+    """Debian's library directory for the machine."""
+
+
+ARCHES = {
+    "x86_64": Arch("x86_64-unknown-linux-gnu", "x64", "x86_64-linux-gnu"),
+    "aarch64": Arch("aarch64-unknown-linux-gnu", "arm64", "aarch64-linux-gnu"),
+}
+"""By `uname -m`: x86_64 is the sandbox's; aarch64 the arm64 sandbox bed's (Apple Silicon)."""
+MACHINE = platform.machine()
+ARCH = ARCHES.get(MACHINE, ARCHES["x86_64"])
+"""An unknown machine gets x86_64's names, and the image step reports it MISSING."""
+
+RUSTUP_INIT_URL = f"https://static.rust-lang.org/rustup/dist/{ARCH.rust}/rustup-init"
+
 PACKAGE_SOURCES = {
     "PyPI": "https://pypi.org/simple/pip/",
     "crates.io": "https://index.crates.io/config.json",
-    "Rust toolchains": "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init",
+    "Rust toolchains": RUSTUP_INIT_URL,
     "npm": "https://registry.npmjs.org/typescript",
     "Maven Central": "https://repo1.maven.org/maven2/org/apache/kafka/kafka_2.13/maven-metadata.xml",
     "Ubuntu archive": "http://archive.ubuntu.com/ubuntu/",
@@ -56,7 +81,6 @@ ISOLATION_TOOLS = ("bwrap", "unshare", "nsenter")
 """What tools/gluon-kube runs pods with (ADR 0030; GK-1 found them enough, no root)."""
 PYTHON_VERSION = "3.13"
 
-RUSTUP_INIT_URL = "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"
 RUST_TOOLCHAIN = "1.99.1"
 """Matches services/user-service-rs/rust-toolchain.toml (RUST-2.2)."""
 RUST_COMPONENTS = ("rustfmt", "clippy", "llvm-tools-preview")
@@ -67,8 +91,9 @@ CARGO_HOME = HOME / ".cargo"
 
 NODE_VERSION = "24.21.0"
 """Node for the AsyncAPI HTML (RUST-4.2): @asyncapi/generator 3.x needs >= 24.11
-and the image has 22. npm's node-linux-x64 package (the official binary), run
+and the image has 22. npm's node-linux-<arch> package (the official binary), run
 as `node24`; the image's npm drives it."""
+NODE_PACKAGE = f"node-linux-{ARCH.node}"
 NODE_ROOT = HOME / ".local" / f"node-{NODE_VERSION}"
 
 KAFKA_VERSION = "3.8.0"
@@ -114,6 +139,7 @@ CDC_SETS: dict[str, tuple[tuple[tuple[str, str, str], ...], bool]] = {
 VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2", "libsodium23", "libpython3.12t64")
 """vim and the libraries it links that a minimal image lacks (the sandbox bed's did)."""
 VIM_ROOT = HOME / ".local" / "vim-root"
+VIM_LIB = VIM_ROOT / "usr" / "lib" / ARCH.multiarch
 SHELLCHECK_ROOT = HOME / ".local" / "shellcheck-root"
 """shellcheck (RPN-10), unpacked from Ubuntu's .deb as vim is."""
 APT_STATE = HOME / ".local" / "apt"
@@ -143,7 +169,9 @@ PLAYWRIGHT_CACHE = Path(
 )
 BROWSERS_UPLOAD = "ms-playwright"
 """bin/fetch-playwright-browsers' archive, uploaded beside gluon.tar.gz: either
-`ms-playwright-<version>-linux-x64.tar.gz` or, unpacked by the upload, `ms-playwright/`."""
+`ms-playwright-<version>-linux-<arch>.tar.gz` (this machine's) or, unpacked by the upload,
+`ms-playwright/`."""
+BROWSERS_GLOB = f"{BROWSERS_UPLOAD}-*-linux-{ARCH.node}.tar.gz"
 CHROMIUM_LIB_PACKAGES = (
     "libglib2.0-0t64",
     "libatk1.0-0t64",
@@ -243,6 +271,14 @@ def first_line(argv: Sequence[str]) -> str:
         return ""
 
 
+def output(argv: Sequence[str]) -> str:
+    """A command's output, or '' if it can't run."""
+    try:
+        return run(argv)
+    except (OSError, RuntimeError, subprocess.TimeoutExpired):
+        return ""
+
+
 def bin_dir() -> Path:
     """Where wrappers and links go: SANDBOX_BIN, else the first writable ~/.local/bin on PATH."""
     if explicit := os.environ.get("SANDBOX_BIN"):
@@ -295,6 +331,7 @@ def step_image(_install: bool) -> list[Result]:
             f"uv can't find Python {PYTHON_VERSION} (expected under /opt/uv-python)",
         )
     )
+    results.extend(arch_results())
     results.extend(isolation())
     pg_ctl = shutil.which("pg_ctl")
     if pg_ctl is None:
@@ -339,6 +376,25 @@ def isolation() -> list[Result]:
     return results
 
 
+def arch_results() -> list[Result]:
+    """Nothing when setup knows this machine's downloads; else why not."""
+    if MACHINE in ARCHES:
+        return []
+    known = ", ".join(ARCHES)
+    return [Result("image", "MISSING", f"machine {MACHINE}: setup knows {known} only")]
+
+
+def toolchain_mismatch(verbose: str) -> str | None:
+    """None when `rustc -vV`'s host is this machine's; else what is wrong (a cache volume
+    made on another machine)."""
+    host = re.search(r"^host: (\S+)$", verbose, re.MULTILINE)
+    if host is None:
+        return "rustc doesn't run on this machine"
+    if host[1] != ARCH.rust:
+        return f"the toolchain is {host[1]}'s, this machine is {ARCH.rust}"
+    return None
+
+
 def step_rust(install: bool) -> list[Result]:
     """Rust via rustup (pinned toolchain, components, cargo tools), linked onto the PATH."""
     cargo_bin = CARGO_HOME / "bin"
@@ -369,6 +425,9 @@ def step_rust(install: bool) -> list[Result]:
                 ]
             )
         status = "INSTALLED"
+    mismatch = toolchain_mismatch(output([str(cargo_bin / "rustc"), "-vV"]))
+    if mismatch is not None:
+        return [Result("rust", "MISSING", f"{mismatch} (remove {CARGO_HOME} and ~/.rustup)")]
     rustup = str(cargo_bin / "rustup")
     toolchain = ["--toolchain", RUST_TOOLCHAIN]
     if RUST_TOOLCHAIN not in run([rustup, "toolchain", "list"]):
@@ -414,7 +473,7 @@ def provided_node() -> str | None:
 
 
 def step_node(install: bool) -> list[Result]:
-    """Node 24 from npm's node-linux-x64 into ~/.local, linked onto the PATH as node24."""
+    """Node 24 from npm's node-linux-<arch> into ~/.local, linked onto the PATH as node24."""
     link = bin_dir() / "node24"
     provided = provided_node()
     if provided is not None:
@@ -435,8 +494,8 @@ def step_node(install: bool) -> list[Result]:
                 )
             ]
         with tempfile.TemporaryDirectory() as scratch:
-            run(["npm", "pack", f"node-linux-x64@{NODE_VERSION}", "--silent"], cwd=Path(scratch))
-            tarball = Path(scratch) / f"node-linux-x64-{NODE_VERSION}.tgz"
+            run(["npm", "pack", f"{NODE_PACKAGE}@{NODE_VERSION}", "--silent"], cwd=Path(scratch))
+            tarball = Path(scratch) / f"{NODE_PACKAGE}-{NODE_VERSION}.tgz"
             run(["tar", "xzf", str(tarball), "-C", scratch])
             shutil.rmtree(NODE_ROOT, ignore_errors=True)
             shutil.copytree(Path(scratch) / "package", NODE_ROOT, symlinks=True)
@@ -591,7 +650,7 @@ def step_vim(install: bool) -> list[Result]:
         "#!/usr/bin/env bash\n"
         "# vim unpacked from Ubuntu's .debs by bin/sandbox-setup (no root in the sandbox).\n"
         f'export VIMRUNTIME="{runtime}"\n'
-        f'export LD_LIBRARY_PATH="{VIM_ROOT}/usr/lib/x86_64-linux-gnu'
+        f'export LD_LIBRARY_PATH="{VIM_LIB}'
         '${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n'
         # The desktop terminal runs as root, whose HOME has no .vimrc: use this one.
         f'[ -f "$HOME/.vimrc" ] || export VIMINIT="source {HOME / ".vimrc"}"\n'
@@ -637,7 +696,7 @@ def redis_major() -> int | None:
 
 def lib_path(root: Path) -> str:
     """The library directories of .debs unpacked into `root`."""
-    return f"{root}/usr/lib/x86_64-linux-gnu:{root}/lib/x86_64-linux-gnu"
+    return f"{root}/usr/lib/{ARCH.multiarch}:{root}/lib/{ARCH.multiarch}"
 
 
 def step_redis(install: bool) -> list[Result]:
@@ -701,7 +760,7 @@ def browsers_from_upload() -> str | None:
     cache; the upload's name, or None without one."""
     uploads = GLUON.parent
     unpacked = uploads / BROWSERS_UPLOAD
-    archives = sorted(uploads.glob(f"{BROWSERS_UPLOAD}-*-linux-x64.tar.gz"))
+    archives = sorted(uploads.glob(BROWSERS_GLOB))
     with tempfile.TemporaryDirectory() as scratch:
         if not unpacked.is_dir():
             if not archives:
@@ -758,7 +817,7 @@ def step_browsers(install: bool) -> list[Result]:
                         "browsers",
                         "MISSING",
                         f"no {shell.name}: Playwright's download failed and the upload "
-                        f"({BROWSERS_UPLOAD}-*-linux-x64.tar.gz beside gluon) lacks it",
+                        f"({BROWSERS_GLOB} beside gluon) lacks it",
                     )
                 ]
             source = f"the upload ({upload})"
