@@ -1,0 +1,31 @@
+payment-service port verification — logs in /tmp/verify-port-payment-service-20261123-003452-sp2bxpau
+
+== 1. build ==
+     (1 s, log /tmp/verify-port-payment-service-20261123-003452-sp2bxpau/build.log)
+ok   build: payment-service
+== 2. contract ==
+     (7 s, log /tmp/verify-port-payment-service-20261123-003452-sp2bxpau/contract.log)
+FAIL contract: 0/18 checks green — events_functional 0/8, functional 0/10
+       test_payment_events_functional::test_dispatch_confirmed_captures_and_writes_payment_captured
+       test_payment_events_functional::test_a_declined_capture_fails_the_payment_and_writes_payment_failed
+       test_payment_events_functional::test_a_failed_dispatch_or_a_cancellation_voids_the_hold[DispatchFailed]
+       test_payment_events_functional::test_a_failed_dispatch_or_a_cancellation_voids_the_hold[OrderCancelled]
+       test_payment_events_functional::test_a_late_event_after_another_outcome_flags_the_order
+       test_payment_events_functional::test_records_it_cant_act_on_are_dead_lettered
+       test_payment_events_functional::test_reconciliations_are_listed_newest_first_and_filtered
+       test_payment_events_functional::test_an_operator_resolves_a_flag_and_the_first_resolver_wins
+       test_payment_functional::test_a_card_is_tokenized_and_only_its_last_four_come_back
+       test_payment_functional::test_a_payment_is_created_pending_and_one_per_order
+       test_payment_functional::test_a_payment_is_read_and_deleted_by_its_id
+       test_payment_functional::test_an_approved_authorization_holds_and_writes_payment_authorized
+       test_payment_functional::test_a_declined_authorization_is_402_and_publishes_nothing
+       test_payment_functional::test_an_authorization_is_replayed_per_order_and_conflicts_are_409
+       test_payment_functional::test_an_authorize_request_that_isnt_valid_is_refused
+       test_payment_functional::test_an_operator_expires_an_authorization_now
+       test_payment_functional::test_readiness_follows_postgres
+       test_payment_functional::test_gshops_origin_may_call_it_from_the_browser
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (18 checks; logs in /tmp/verify-port-payment-service-20261123-003452-sp2bxpau)

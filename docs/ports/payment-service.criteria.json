@@ -1,0 +1,14 @@
+{
+  "service": "payment-service",
+  "guide": "deployment criteria: on the laptop (all-Rust Stage A, docs/ports/payment-service.cheatsheet.md)",
+  "criteria": [
+    {"id": "F", "needs": ["contract:functional"], "kind": "functional", "rows": "PAY-F1–F18",
+     "description": "what order-service, gshop, the admin screens, its consumers, its outbox and readiness rely on, against the Rust service"},
+    {"id": "D", "needs": ["contract:docs"], "kind": "docs", "rows": "PAY-D1–D2",
+     "description": "Swagger UI and the AsyncAPI document and page"},
+    {"id": "harness", "needs": ["harness-ci"],
+     "description": "tests/contract CI: the harness and catalogue"},
+    {"id": "ci", "needs": ["rust-ci"],
+     "description": "Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)"}
+  ]
+}

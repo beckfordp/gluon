@@ -1,0 +1,35 @@
+...............................                                          [100%]
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED checks/test_payment_docs.py::test_swagger_ui_loads_the_document_of_the_routes_served
+PASSED checks/test_payment_docs.py::test_the_asyncapi_document_and_its_page_describe_what_it_sends_and_receives
+PASSED checks/test_payment_events_functional.py::test_dispatch_confirmed_captures_and_writes_payment_captured
+PASSED checks/test_payment_events_functional.py::test_a_declined_capture_fails_the_payment_and_writes_payment_failed
+PASSED checks/test_payment_events_functional.py::test_a_failed_dispatch_or_a_cancellation_voids_the_hold[DispatchFailed]
+PASSED checks/test_payment_events_functional.py::test_a_failed_dispatch_or_a_cancellation_voids_the_hold[OrderCancelled]
+PASSED checks/test_payment_events_functional.py::test_a_late_event_after_another_outcome_flags_the_order
+PASSED checks/test_payment_events_functional.py::test_records_it_cant_act_on_are_dead_lettered
+PASSED checks/test_payment_events_functional.py::test_reconciliations_are_listed_newest_first_and_filtered
+PASSED checks/test_payment_events_functional.py::test_an_operator_resolves_a_flag_and_the_first_resolver_wins
+PASSED checks/test_payment_functional.py::test_a_card_is_tokenized_and_only_its_last_four_come_back
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes0-Invalid card number]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes1-Invalid card number]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes2-Invalid card number]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes3-Invalid expiry, expected MM/YY]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes4-Invalid expiry, expected MM/YY]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes5-Card has expired]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes6-customerId is required]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes7-line1 is required]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes8-city is required]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes9-postalCode is required]
+PASSED checks/test_payment_functional.py::test_a_card_or_address_that_fails_validation_is_400[changes10-country must be an ISO 3166-1 alpha-2 code]
+PASSED checks/test_payment_functional.py::test_a_payment_is_created_pending_and_one_per_order
+PASSED checks/test_payment_functional.py::test_a_payment_is_read_and_deleted_by_its_id
+PASSED checks/test_payment_functional.py::test_an_approved_authorization_holds_and_writes_payment_authorized
+PASSED checks/test_payment_functional.py::test_a_declined_authorization_is_402_and_publishes_nothing
+PASSED checks/test_payment_functional.py::test_an_authorization_is_replayed_per_order_and_conflicts_are_409
+PASSED checks/test_payment_functional.py::test_an_authorize_request_that_isnt_valid_is_refused
+PASSED checks/test_payment_functional.py::test_an_operator_expires_an_authorization_now
+PASSED checks/test_payment_functional.py::test_readiness_follows_postgres
+PASSED checks/test_payment_functional.py::test_gshops_origin_may_call_it_from_the_browser
+31 passed in 28.58s
