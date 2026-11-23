@@ -1,0 +1,25 @@
+fulfilment-service port verification — logs in /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa
+
+== 1. harness-ci ==
+     (166 s, log /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa/harness-ci.log)
+ok   harness-ci: 492 passed, coverage 95.37%
+== 2. rust-ci ==
+     (34 s, log /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa/rust-ci.log)
+ok   rust-ci: line coverage 97.11%
+== 3. build ==
+     (4 s, log /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa/build.log)
+ok   build: fulfilment-service
+== 4. contract ==
+     (58 s, log /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa/contract.log)
+ok   contract: 22/22 checks green — docs 2/2, events_functional 8/8, functional 12/12
+
+== fulfilment-service contract criteria ==
+MET      F       [functional FUL-F1–F15] what the gshop admin fulfilment screen, the demo's simulate-next, the admin reconciliations, its callee, its consumers, its outbox and readiness rely on, against the Rust service
+MET      D       [docs FUL-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/fulfilment-service.cheatsheet.md))
+rows met: functional 15/15, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-fulfilment-service-20261123-063254-w_mizjfa)

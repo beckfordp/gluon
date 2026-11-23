@@ -1,0 +1,46 @@
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  fulfilment-postgres
+  inventory-postgres
+  notification-postgres
+  order-postgres
+  payment-postgres
+  user-postgres
+== Purging event topics
+  fulfilment-events,order-events,payment-events,user-events
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Rerun skips orders recorded in /Users/p.beckford.ext/dev/personal/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Done.
+== Acceptance suite ==
+
+Running 16 tests using 2 workers
+
+  ✓   2 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:12:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Pending to Picking @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (4.1s)
+  ✓   1 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:19:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Pending stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (4.4s)
+  ✓   3 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:20:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Picking to Packed @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (2.6s)
+  ✓   4 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:27:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Picking stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (2.4s)
+  ✓   5 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:28:5 › Fulfilment and capture (US-17, US-19) › An operator moves my order from <from> to <to> › An operator moves my order from Packed to Dispatched @US-17.1 @US-17.2 @US-17.7 @FUL-F1 @FUL-F5 @FUL-F6 @FUL-F7 (2.6s)
+  ✓   6 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:35:5 › Cancellation (US-9, US-21) › Cancelling while <state> stops fulfilment › Cancelling while Packed stops fulfilment @US-9.5 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (2.9s)
+  ✓   7 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:38:3 › Fulfilment and capture (US-17, US-19) › My payment is captured once my order is dispatched @US-14.3 @US-17.3 @US-17.4 @US-19.1 @US-19.2 @US-19.5 @INV-F13 @PAY-F10 @ORDER-F11 @ORDER-F14 @FUL-F7 (2.2s)
+  ✓   9 [chromium] › .features-gen/features/us-17-19-fulfilment.feature.spec.js:45:3 › Fulfilment and capture (US-17, US-19) › A card declined at capture leaves my order with payment failed @US-19.1 @US-19.3 @US-19.5 @PAY-F11 @ORDER-F12 @FUL-F7 (3.2s)
+  ✓  10 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:14:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Pending fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (2.7s)
+  ✓   8 [chromium] › .features-gen/features/us-09-21-cancellation.feature.spec.js:45:3 › Cancellation (US-9, US-21) › I can't cancel once my order has shipped @US-21.1 @US-21.5 @ORDER-F9 @FUL-F7 (8.1s)
+  ✓  11 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:23:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Picking fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (3.3s)
+  ✓  12 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:18:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator cancels my order @US-22.2 @US-22.4 @US-25.2 @INV-F11 @INV-F12 @PAY-F12 @ORDER-F8 @FUL-F10 (3.4s)
+  ✓  13 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:32:5 › Dispatch failure (US-18) › A problem reported while <state> fails the dispatch › A problem reported while Packed fails the dispatch @US-18.1 @US-18.3 @US-18.5 @ORDER-F14 @FUL-F8 (7.2s)
+  ✓  15 [chromium] › .features-gen/features/us-18-dispatch-failure.feature.spec.js:43:3 › Dispatch failure (US-18) › A problem can't be reported without a reason @US-17.7 @FUL-F8 (2.4s)
+  ✓  14 [chromium] › .features-gen/features/us-24-25-admin-orders.feature.spec.js:27:3 › Operator order console (US-24, US-25, US-22, US-20) › The operator expires my payment authorization @US-20.1 @US-20.2 @US-20.3 @US-20.4 @US-20.6 @US-25.1 @US-25.2 @PAY-F9 @ORDER-F13 @FUL-F10 (9.7s)
+  ✓  16 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:27:3 › Customer record and email history (US-27, and every customer email) › A failed dispatch is emailed @US-18.4 @NOTIF-F32 @FUL-F8 (2.7s)
+
+  16 passed (35.3s)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

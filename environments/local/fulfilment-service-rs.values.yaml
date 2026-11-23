@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT
+# The Rust fulfilment-service (all-Rust Stage A), installed by bin/k8s-local-up
+# under the same release name, `fulfilment-service`, when FULFILMENT_SERVICE_IMPL=rust.
+# The same env vars as fulfilment-service.values.yaml; the chart's JVM-only
+# settings blanked (the chart renders them only when non-empty).
+
+image:
+  repository: fulfilment-service-rs
+  tag: latest
+
+javaOpts: ""
+mallocArenaMax: ""
+
+env:
+  # Spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021), as the Scala service.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
+  - name: POSTGRES_HOST
+    value: fulfilment-postgres
+  - name: POSTGRES_DB
+    value: fulfilment
+  - name: POSTGRES_USER
+    value: fulfilment
+  - name: POSTGRES_PASSWORD
+    value: fulfilment
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  - name: ORDER_SERVICE_URL
+    value: http://order-service:8080
+  - name: FULFILMENT_SIMULATION_ENABLED
+    value: "true"

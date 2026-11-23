@@ -133,6 +133,20 @@ Started 2026-11-22 19:05 GMT.
   (tests/acceptance `f1d820a`, archived `8395896`); full run 53/53, ledger OK first time.
   Cheat sheet `docs/ports/order-service.cheatsheet.md` (login shell). Differences A13.
 
+- [x] fulfilment — 05:48–06:51 (63 min). RED `fulfilment-red_20261123` (tests/contract):
+  fulfilment profile, order-service's stub finding marked orders, `HttpStub.answering_gets`
+  `8420c27`, capture `39a06ce` (order-service the harness's stub, 503 by flag file),
+  FUL-F1–F15 and D1–D2 `5cb9d35`; on Scala 22/22 (`scala-reference.txt`); skeleton
+  `fulfilment-service-rs` `ddb700c` → every check red for "answered 404". GREEN
+  `port_20261123`: `9aa980c` (Scala Flyway V1–V5 verbatim, the Scala SQL, each transition
+  and its outbox row in one tx, the order client through purerest's resilience),
+  functional 15/15 first run; FUL-D2 red once (DispatchConfirmed's `items` required in the
+  schema, tapir's optional), fixed in the same commit; CI 97.11% lines.
+  `bin/verify-port fulfilment-service` all MET (`green.txt`). Deployed
+  `FULFILMENT_SERVICE_IMPL=rust`; `--grep @FUL-F` 16 passed, ledger OK (tests/acceptance
+  `d6734a5`, archived `e72180d`); full run 53/53, ledger OK first time. Cheat sheet
+  `docs/ports/fulfilment-service.cheatsheet.md` (login shell). Differences A14.
+
 ## Finish
 
 ## Open
@@ -190,6 +204,15 @@ Started 2026-11-22 19:05 GMT.
   Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
   fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
   keeps gshop browsing through a Redis outage.
+- A14 (fulfilment) As A12/A13, none observable to its callers: a UUID is the canonical
+  form only; the resolve route's optional `Authorization` header isn't listed in the
+  OpenAPI document; an undecodable body's 400 is tapir's "Invalid value for: body (…)"
+  with serde's reason; two schema descriptions gain backticks (clippy `doc_markdown`).
+  Mirrored on purpose, though odd: simulate-next with `forceFailure` and a blank reason
+  is a 500 (tapir has no 400 variant on that route); `payment-events` poison is skipped
+  (Scala decodes outside the guard) while `order-events` poison is dead-lettered (Scala
+  guards it); the docs list simulate-next only when it is served. Reason: the shared
+  libraries' behaviour, and the Scala service's as captured.
 - A13 (order) (1) With Redis refusing connections, Scala's history doesn't answer (its
   Redis client hangs; ORDER-F6's Redis-down check times out on Scala, by design); Rust
   falls back to Postgres within the 500 ms cache timeout, as A10. (2)–(4) as A12: a UUID
