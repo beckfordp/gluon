@@ -120,7 +120,7 @@ check_only() {
   echo "browsers $BROWSERS"
   echo "memory $MEMORY"
   echo "cargo jobs $JOBS"
-  echo "keep awake ${CAFFEINATE:+caffeinate -i ($CAFFEINATE)}${CAFFEINATE:-none}"
+  if [ -n "$CAFFEINATE" ]; then echo "keep awake caffeinate -i ($CAFFEINATE)"; else echo "keep awake none"; fi
   if [ "$1" = up ]; then
     shift
     up_args "$@"
