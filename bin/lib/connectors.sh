@@ -17,6 +17,23 @@ connector_names() {
     "$GLUON_DIR/infra/k8s/local-infra/debezium-connectors-register.yaml"
 }
 
+# deployed_connectors: the connectors to wait for, one per line: `<short>-outbox-connector`
+# only when Deployment `<short>-service` exists (a service not deployed has no outbox
+# table, so its connector can't run); any other connector always. The rest named on stderr.
+deployed_connectors() {
+  local deployed name short skipped=""
+  deployed="$(kubectl -n "$NAMESPACE" get deploy -o name | sed 's|^deployment.apps/||')"
+  for name in $(connector_names); do
+    short="${name%-outbox-connector}"
+    if [ "$short" = "$name" ] || printf '%s\n' "$deployed" | grep -qx "$short-service"; then
+      echo "$name"
+    else
+      skipped="$skipped $name"
+    fi
+  done
+  [ -z "$skipped" ] || echo "not waited for (service not deployed):$skipped" >&2
+}
+
 # connect_api METHOD PATH: Connect's REST API from inside its pod; prints the body,
 # then the HTTP status on a line of its own.
 connect_api() {
@@ -72,10 +89,11 @@ connectors_check() {
 }
 
 connectors_ensure() {
-  local deadline=$(($(date +%s) + $1)) name state pending
+  local deadline=$(($(date +%s) + $1)) name state pending watched
+  watched="$(deployed_connectors)"
   while :; do
     pending=""
-    for name in $(connector_names); do
+    for name in $watched; do
       state="$(connector_state "$name")"
       case "$state" in
         RUNNING) ;;

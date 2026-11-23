@@ -192,7 +192,7 @@ kubectl wait --for=condition=complete job/debezium-connector-register -n "$NAMES
 
 # The register Job can run before a service has created outbox_events (a fresh or
 # wiped database): that connector's task stays FAILED until restarted (TD-30.3).
-echo "== Waiting for every outbox connector to be RUNNING (up to 2m) =="
+echo "== Waiting for every deployed service's outbox connector to be RUNNING (up to 2m) =="
 connectors_ensure 120 || {
   echo "FAIL: see 'kubectl logs deploy/kafka-connect -n $NAMESPACE'" >&2
   exit 1
