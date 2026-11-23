@@ -1,0 +1,33 @@
+ALL_RUST=1 bin/k8s-local-up after bin/k8s-local-down: 10:03-10:21, exit 0
+== Applying namespace + shared local infra ==
+== Rebuilding ConfigMap apicurio-registry-export (5 files) ==
+== Waiting for shared infra to be ready (up to 3m) ==
+== Waiting for Debezium outbox connectors to register (up to 2m) ==
+== Removing retired inventory-events plumbing ==
+== Building catalog-service image from services/catalog-service-rs (docker build) ==
+== Deploying catalog-service (helm release) ==
+== Restarting catalog-service to pick up the freshly built image ==
+== Building cart-service image from services/cart-service-rs (docker build) ==
+== Deploying cart-service (helm release) ==
+== Restarting cart-service to pick up the freshly built image ==
+== Building order-service image from services/order-service-rs (docker build) ==
+== Deploying order-service (helm release) ==
+== Restarting order-service to pick up the freshly built image ==
+== Building inventory-service image from services/inventory-service-rs (docker build) ==
+== Deploying inventory-service (helm release) ==
+== Restarting inventory-service to pick up the freshly built image ==
+== Building payment-service image from services/payment-service-rs (docker build) ==
+== Deploying payment-service (helm release) ==
+== Restarting payment-service to pick up the freshly built image ==
+== Building notification-service image from services/notification-service-rs (docker build) ==
+== Deploying notification-service (helm release) ==
+== Restarting notification-service to pick up the freshly built image ==
+== Building user-service image from services/user-service-rs (docker build) ==
+== Deploying user-service (helm release) ==
+== Restarting user-service to pick up the freshly built image ==
+== Building fulfilment-service image from services/fulfilment-service-rs (docker build) ==
+== Deploying fulfilment-service (helm release) ==
+== Restarting fulfilment-service to pick up the freshly built image ==
+== Registering Debezium outbox connectors after the migrations (up to 2m) ==
+== Waiting for every outbox connector to be RUNNING (up to 2m) ==
+== Done. Check status with: kubectl get pods -n gluon-local ==

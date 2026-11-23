@@ -912,3 +912,22 @@ own line. See each repo's own `git log` for full detail either way.
   tests/contract has one helper per job and one profile per service, with
   full failure reasons. `bin/verify-port user-service --quick` is green on the
   laptop (128/128). TD-39 moves to RPN-6.
+
+## 2026-11-23
+
+### Added
+- **All-Rust gluon (Stage A).** Every gshop service now has a Rust port beside its
+  untouched Scala repo (`services/<svc>-rs`, generated from
+  `tools/rust-service-template`): cart, catalog, inventory, payment, order, fulfilment
+  and the rest of notification, joining user. `ALL_RUST=1 bin/k8s-local-up` from clean
+  passes the original acceptance suite 53/53 unscoped, ledger OK. Each port was judged
+  first by its F (functional) and D (docs) rows in `tests/contract/docs/behaviours.md`,
+  checked against the Scala service and seen red against the skeleton, then
+  `bin/verify-port <svc>` all MET with ≥90% line coverage. Enablers:
+  - `bin/verify-port` `--expect-red` and `--group`.
+  - `<SVC>_IMPL` and `ALL_RUST` switches in `bin/k8s-local-up`.
+  - `ACCEPTANCE_SERVICES` staging.
+  - gluon-rs Redis, outbox, resilient-client and docs builders.
+
+  Deliberate differences: plan decisions A1–A15. How-to: `docs/all-rust.cheatsheet.md`.
+

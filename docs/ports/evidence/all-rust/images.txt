@@ -1,0 +1,8 @@
+cart-service            cart-service-rs:latest
+catalog-service         catalog-service-rs:latest
+fulfilment-service      fulfilment-service-rs:latest
+inventory-service       inventory-service-rs:latest
+notification-service    notification-service-rs:latest
+order-service           order-service-rs:latest
+payment-service         payment-service-rs:latest
+user-service            user-service-rs:latest

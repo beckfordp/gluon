@@ -165,6 +165,13 @@ Started 2026-11-22 19:05 GMT.
 
 ## Finish
 
+- [x] 10:03–10:26. `bin/k8s-local-down`, then `ALL_RUST=1 bin/k8s-local-up` from clean
+  (10:03–10:21, every image `<svc>-rs:latest`, `docs/ports/evidence/all-rust/images.txt`);
+  `bin/run-acceptance` unscoped (resets and reseeds): 53 passed, 0 flaky/skipped, ledger OK
+  (`docs/ports/evidence/all-rust/acceptance-full.txt`). `docs/all-rust.cheatsheet.md`: every
+  command run from a login shell (headed on one scenario; the Playwright UI started and
+  stopped). CHANGELOG entry 2026-11-23. gshop left on http://localhost:5173 with demo data.
+
 ## Open
 
 - O1 (inventory) Acceptance race — RESOLVED 01:05: `pickStockedProduct` indexed the
