@@ -9,6 +9,12 @@
 #   bin/sandbox-bed shell          a shell as model in /workspace/gluon
 #   bin/sandbox-bed down [--purge] stop the cluster and the container; --purge also
 #                                  drops the cached installs (Rust, Node, CDC jars)
+#   --arch amd64|arm64             any command: the bed's architecture. Default: the
+#                                  host's own (arm64 on Apple Silicon: native, not
+#                                  emulated). amd64 is the sandbox's (x86_64): use it
+#                                  for fidelity. Each arch has its own image tag and
+#                                  cached installs (amd64's volumes keep their names).
+# SANDBOX_BED_CHECK_ONLY=1 prints the choices (arch, image, volumes) and stops.
 # What it doesn't prove: the bed has the laptop's network (the sandbox reaches only
 # the package sources in plans/private/sandbox.md) and OrbStack's kernel. It runs
 # privileged, for gluon-kube's nested user namespaces. The export removes build output
@@ -17,11 +23,52 @@ set -euo pipefail
 GLUON="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BED="$GLUON/bin/lib/sandbox-bed"
 NAME=gluon-sandbox-bed
-PLATFORM=linux/amd64
 
 usage() {
-  echo "usage: bin/sandbox-bed up [SERVICE] | shell | down [--purge]" >&2
+  echo "usage: bin/sandbox-bed up [SERVICE] | shell | down [--purge]   [--arch amd64|arm64]" >&2
   exit 2
+}
+
+# host_arch: the host's architecture as Docker names it.
+host_arch() {
+  local machine
+  machine="$(uname -m)"
+  case "$machine" in
+    arm64 | aarch64) echo arm64 ;;
+    x86_64 | amd64) echo amd64 ;;
+    *)
+      echo "unknown host architecture '$machine': choose one with --arch amd64|arm64" >&2
+      exit 2
+      ;;
+  esac
+}
+
+# choose ARCH: the platform, the browsers upload's arch (Playwright's names) and the
+# cache volumes. amd64's volumes are named as before arches existed.
+choose() {
+  ARCH="$1"
+  case "$ARCH" in
+    amd64) BROWSERS_ARCH=x64 VOLUME_PREFIX="$NAME" ;;
+    arm64) BROWSERS_ARCH=arm64 VOLUME_PREFIX="$NAME-arm64" ;;
+    *) echo "--arch must be amd64 or arm64, got '$ARCH'" >&2; exit 2 ;;
+  esac
+  PLATFORM="linux/$ARCH"
+  MODEL_VOLUME="$VOLUME_PREFIX-model"
+  BIN_VOLUME="$VOLUME_PREFIX-bin"
+  BROWSERS="ms-playwright-*-linux-$BROWSERS_ARCH.tar.gz"
+  IMAGE="$NAME:$ARCH-$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)"
+}
+
+# check_only COMMAND ARGS...: under SANDBOX_BED_CHECK_ONLY=1, the choices, then exit.
+check_only() {
+  [ "${SANDBOX_BED_CHECK_ONLY:-0}" = 1 ] || return 0
+  echo "command $*"
+  echo "platform $PLATFORM"
+  echo "image $IMAGE"
+  echo "volumes $MODEL_VOLUME $BIN_VOLUME"
+  echo "browsers $BROWSERS"
+  [ "$1" = up ] && echo "service ${2:-user-service}"
+  exit 0
 }
 
 # as_model COMMAND: COMMAND in /workspace/gluon as model, in a login-like environment.
@@ -30,10 +77,9 @@ as_model() {
 }
 
 up() {
-  local service="${1:-user-service}" image
-  image="$NAME:$(cksum < "$BED/Dockerfile" | cut -d' ' -f1)"
+  local service="${1:-user-service}" image="$IMAGE"
   if ! docker image inspect "$image" > /dev/null 2>&1; then
-    echo "== building $image (once per Dockerfile change)"
+    echo "== building $image (once per Dockerfile change and arch)"
     docker build --platform "$PLATFORM" -t "$image" "$BED"
   fi
 
@@ -43,16 +89,16 @@ up() {
   echo "== exporting (bin/sandbox-export --no-plans)"
   "$GLUON/bin/sandbox-export" --no-plans --out "$scratch/gluon"
 
-  echo "== starting $NAME"
+  echo "== starting $NAME ($PLATFORM)"
   docker rm -f "$NAME" > /dev/null 2>&1 || true
   docker run -d --name "$NAME" --platform "$PLATFORM" --privileged \
     -p 127.0.0.1:8080:8080 \
-    -v "$NAME-model:/home/model" -v "$NAME-bin:/home/claude/.local/bin" \
+    -v "$MODEL_VOLUME:/home/model" -v "$BIN_VOLUME:/home/claude/.local/bin" \
     "$image" > /dev/null
   docker cp "$scratch/gluon.tar.gz" "$NAME:/tmp/gluon.tar.gz"
   # The other uploads, beside gluon as in the sandbox (bin/fetch-playwright-browsers).
   local upload
-  for upload in "$GLUON"/../sandbox/workspace/ms-playwright-*-linux-x64.tar.gz; do
+  for upload in "$GLUON"/../sandbox/workspace/$BROWSERS; do
     [ -f "$upload" ] && docker cp "$upload" "$NAME:/workspace/"
   done
   docker exec -u root "$NAME" bash -c \
@@ -91,12 +137,29 @@ down() {
     echo "removed $NAME"
   fi
   if [ "${1:-}" = --purge ]; then
-    docker volume rm "$NAME-model" "$NAME-bin" > /dev/null 2>&1 || true
+    docker volume rm "$MODEL_VOLUME" "$BIN_VOLUME" > /dev/null 2>&1 || true
     echo "removed the cached installs"
   fi
 }
 
-case "${1:-}" in
+# --arch anywhere; the rest in order.
+args=()
+arch=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --arch) [ "$#" -ge 2 ] || usage; arch="$2"; shift 2 ;;
+    --arch=*) arch="${1#--arch=}"; shift ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+[ "${#args[@]}" -gt 0 ] || usage
+[ -n "$arch" ] || arch="$(host_arch)" || exit 2
+choose "$arch"
+set -- "${args[@]}"
+case "$1" in
+  up | shell | down) check_only "$@" ;;
+esac
+case "$1" in
   up) shift; up "$@" ;;
   shell) docker exec -it -u model -w /workspace/gluon "$NAME" bash ;;
   down) shift; down "$@" ;;

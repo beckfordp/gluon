@@ -2,13 +2,16 @@
 # The sandbox bed's image (bin/sandbox-bed): what the sandbox's image provides, as
 # plans/private/sandbox.md "Provided by the image" lists it, so bin/sandbox-setup meets
 # here what it meets there and installs the rest itself (Rust, Node 24, Maven, the CDC
-# jars, vim, shellcheck). x86_64, as the sandbox is: build and run with
-# --platform linux/amd64. Not the sandbox: its network is the laptop's, and no `ip` or
-# iptables, as there.
+# jars, vim, shellcheck). Built for bin/sandbox-bed's --platform: linux/amd64 is the
+# sandbox's (x86_64), linux/arm64 the Apple Silicon host's own (no emulation; all-Rust
+# Stage B). Not the sandbox: its network is the laptop's, and no `ip` or iptables, as
+# there.
 FROM ubuntu:24.04
 
 ARG NODE_VERSION=22.21.1
 ARG UV_VERSION=0.9.10
+# Set by BuildKit from --platform: amd64 or arm64.
+ARG TARGETARCH
 
 # PostgreSQL 16, Java 21, Python 3.12, the build basics, and gluon-kube's isolation
 # tools (bwrap, unshare, nsenter).
@@ -21,7 +24,9 @@ RUN apt-get update \
       /usr/lib/postgresql/16/bin/postgres /usr/local/bin/
 
 # Node 22 with its npm 10 (the image's node; setup adds Node 24 beside it).
-RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+RUN case "$TARGETARCH" in amd64) node_arch=x64 ;; arm64) node_arch=arm64 ;; \
+      *) echo "no Node build for '$TARGETARCH'" >&2; exit 1 ;; esac \
+ && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${node_arch}.tar.xz" \
       | tar -xJ -C /usr/local --strip-components=1
 
 # The two users' layout: the session runs as model; /home/claude/.local/bin is on the
