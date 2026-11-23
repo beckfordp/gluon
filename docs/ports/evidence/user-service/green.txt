@@ -1,0 +1,40 @@
+user-service port verification — logs in /tmp/verify-port-user-service-20261123-004827-enc5ds88
+
+skip cluster: sandbox only (gluon-kube needs Linux); its criterion is not run
+
+== 1. harness-ci ==
+     (161 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/harness-ci.log)
+ok   harness-ci: 483 passed, coverage 95.31%
+== 2. rust-ci ==
+     (71 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/rust-ci.log)
+ok   rust-ci: line coverage 96.74%
+== 3. build ==
+     (0 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/build.log)
+     (7 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/asyncapi-html.log)
+ok   build: user-service, events-probe, AsyncAPI HTML
+== 4. contract ==
+     (171 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/contract.log)
+ok   contract: 126/126 checks green — cdc 3/3, config 10/10, documentation 22/22, logs 16/16, metrics 7/7, outbox 5/5, probe 10/10, rest 39/39, schema 6/6, traces 8/8
+== 5. tracks ==
+     user-service-rs/scripts/verify-rust-ci.sh
+     (329 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/user-service-rs-verify-rust-ci.log)
+     FAIL FAIL: 1 of 17 checks failed
+     contract/scripts/verify-cluster-mode.sh
+     (19 s, log /tmp/verify-port-user-service-20261123-004827-enc5ds88/contract-verify-cluster-mode.log)
+     ok   PASS: cluster mode verified (2 checks)
+FAIL tracks: 1 of 2 track scripts pass
+       user-service-rs/verify-rust-ci: FAIL: 1 of 17 checks failed
+
+== user-service contract criteria ==
+MET      C1      the harness green against the Rust service, isolated mode
+MET      C10     the consumer probe group green
+MET      C8      (contract part) the metric families, labels and buckets dashboards query
+MET      C3      (contract part) cluster mode, against a started service
+not run  cluster cluster mode green inside gluon-kube, the simulated gluon-local (ADR 0030)
+MET      ci      Rust CI: fmt, clippy, tests, coverage; payload schema = registry
+NOT MET  tracks  the track scripts CI can't replace
+(deployment criteria C2–C9: plans/private/ports/user-service-verification.md, Part B (laptop, private))
+rows met: functional 13/13, docs 2/2, wire 13/13 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+FAIL: NOT MET: tracks; failed: tracks (logs in /tmp/verify-port-user-service-20261123-004827-enc5ds88)

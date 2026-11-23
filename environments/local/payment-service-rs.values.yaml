@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+# The Rust payment-service (all-Rust Stage A), installed by bin/k8s-local-up
+# under the same release name, `payment-service`, when PAYMENT_SERVICE_IMPL=rust.
+# The same env vars as payment-service.values.yaml; the chart's JVM-only
+# settings blanked (the chart renders them only when non-empty).
+
+image:
+  repository: payment-service-rs
+  tag: latest
+
+javaOpts: ""
+mallocArenaMax: ""
+
+env:
+  # Spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021), as the Scala service.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
+  - name: POSTGRES_HOST
+    value: payment-postgres
+  - name: POSTGRES_DB
+    value: payment
+  - name: POSTGRES_USER
+    value: payment
+  - name: POSTGRES_PASSWORD
+    value: payment
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  # US-20.1: short sweep interval so verify-auth-expiry.sh need not wait 30s.
+  - name: PAYMENT_EXPIRY_SWEEP_INTERVAL
+    value: 5s

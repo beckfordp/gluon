@@ -1,0 +1,25 @@
+payment-service port verification — logs in /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9
+
+== 1. harness-ci ==
+     (158 s, log /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9/harness-ci.log)
+ok   harness-ci: 483 passed, coverage 95.31%
+== 2. rust-ci ==
+     (37 s, log /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9/rust-ci.log)
+ok   rust-ci: line coverage 94.71%
+== 3. build ==
+     (1 s, log /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9/build.log)
+ok   build: payment-service
+== 4. contract ==
+     (30 s, log /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9/contract.log)
+ok   contract: 20/20 checks green — docs 2/2, events_functional 8/8, functional 10/10
+
+== payment-service contract criteria ==
+MET      F       [functional PAY-F1–F18] what order-service, gshop, the admin screens, its consumers, its outbox and readiness rely on, against the Rust service
+MET      D       [docs PAY-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      harness tests/contract CI: the harness and catalogue
+MET      ci      Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/payment-service.cheatsheet.md))
+rows met: functional 18/18, docs 2/2, wire 0/0 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-payment-service-20261123-010600-d5jbx6s9)

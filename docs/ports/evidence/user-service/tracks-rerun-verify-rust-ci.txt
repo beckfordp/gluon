@@ -1,0 +1,24 @@
+== Prerequisites ==
+ok   toolchain from rust-toolchain.toml: rustc 1.99.1 (58cf8f9c3 2026-10-13)
+ok   cargo-llvm-cov 0.9.1
+ok   scripts/ci.sh present
+== 1. scripts/ci.sh on the repo ==
+     (the first run compiles the workspace twice: once plain, once instrumented)
+ok   step passed: cargo fmt --check
+ok   step passed: cargo clippy (warnings are errors)
+ok   step passed: gluon registry baseline
+ok   step passed: tests with coverage (lines >= 80%)
+ok   step passed: cargo audit
+ok   line coverage: 96.74%
+== 2. Each gate stops a broken change (on a scratch copy) ==
+ok   badly formatted code: stopped at 'cargo fmt --check' (Diff in)
+ok   a clippy warning: stopped at 'cargo clippy' (bool_comparison)
+ok   unwrap() outside a test: stopped at 'cargo clippy' (unwrap_used)
+ok   a public item without a doc comment: stopped at 'cargo clippy' (missing documentation)
+ok   unsafe code: stopped at 'cargo clippy' (usage of an `unsafe` block)
+ok   a failing test: stopped at 'tests with coverage' (test result: FAILED)
+ok   coverage under 80%: stopped at 'tests with coverage' (below the 80% gate)
+== 3. cargo-audit ==
+ok   ran (advisory database reachable)
+
+PASS: RUST-2.2 CI verified (17 checks)

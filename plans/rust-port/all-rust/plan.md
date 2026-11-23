@@ -83,8 +83,8 @@ Started 2026-11-22 19:05 GMT.
   Cheat sheet `docs/ports/catalog-service.cheatsheet.md` (every command run from a login
   shell, incl. the switch back to Scala and reseed).
 
-- [x] inventory — 23:42–00:45 (63 min, from the RED track's commit; reading the Scala
-  service before it, and a usage-limit pause, not counted). RED `inventory-red_20261122`
+- [x] inventory — 23:42–00:27 (45 min, from the RED track's commit to the docs commit
+  `37d8640`; reading the Scala service before it, and a usage-limit pause, not counted). RED `inventory-red_20261122`
   (tests/contract): capture `86e6227` (its own compose project, Kafka on 19092: OrbStack
   holds 9092; `sbt -batch clean compile stage`, the cold AsyncAPI race failing `clean
   stage` every time), INV-F1–F18 and D1–D2 `f5e1129`, INV-F18 reordered `e4e4e9e` so the
@@ -96,16 +96,51 @@ Started 2026-11-22 19:05 GMT.
   (tests/acceptance `1fb8d17`; the scenarios place orders, so the run isn't staged); full run
   53/53, ledger OK, on the second run: the first was 52/53, an acceptance-suite race (O1). Cheat sheet `docs/ports/inventory-service.cheatsheet.md` (login shell).
 
+- [x] user — verify only, 00:27–01:05 (alongside payment RED/GREEN; already ported). Deployed
+  `user-service-rs` (k8s-local-up check-only OK at P0.5). `bin/verify-port user-service`:
+  contract 126/126, F 13/13, D 2/2 (W 13/13 out of the bar), harness CI and Rust CI MET
+  (`docs/ports/evidence/user-service/green.txt`); its "tracks" criterion was NOT MET once:
+  `verify-rust-ci.sh`'s coverage-gate scratch run hit a failing `tests/tracing.rs` test
+  while payment's CI and contract ran alongside, and passed alone, 17/17
+  (`tracks-1-flake-verify-rust-ci.txt`, `tracks-rerun-verify-rust-ci.txt`). Full acceptance
+  52/53 first (O1 again: "Cancelling while Packed" read another worker's stock,
+  `acceptance-full-1-race.txt`), then O1 fixed in tests/acceptance
+  (`worker-shares_20261123`: `db6ab6f`, archived `33c8fa4`; unit tests red first) and
+  53/53, ledger OK (`acceptance-full.txt`). No cheat sheet change (the ports' own docs stand).
+
+- [x] payment — 00:23–01:10 and 03:05–03:33 (75 min; the 01:10–03:05 gap is a stalled
+  deploy while the laptop was idle, not counted). RED `payment-red_20261123`
+  (tests/contract): capture `ce6dbbc`, PAY-F1–F18 and D1–D2 plus the payment profile
+  (Postgres + Kafka, sweep setting) `d2bab57`; on Scala 31/31 (`scala-reference.txt`);
+  skeleton `payment-service-rs` `417ae9b` → every check red for "answered 404" (18 F, 2 D).
+  GREEN `port_20261123`: `b462d57` (Scala Flyway V1–V12 verbatim, the Scala SQL, outbox in
+  the same tx, `FOR UPDATE SKIP LOCKED` sweep), contract 20/20 first run, CI 94.71% lines.
+  `bin/verify-port payment-service` all MET (`green.txt`). Deployed
+  `PAYMENT_SERVICE_IMPL=rust` on the second attempt (I1); `--grep @PAY-F` 12 passed, ledger
+  OK (tests/acceptance `f9a32bb`, archived `7fa4bc6`); full run 53/53, ledger OK first
+  time. Cheat sheet `docs/ports/payment-service.cheatsheet.md` (login shell). Differences A12.
+
 ## Finish
 
 ## Open
 
-- O1 (inventory) Acceptance race: `pickStockedProduct` indexes the products with 2+
-  available by the worker's `parallelIndex`, so when one worker's product drops below 2
-  (the sold-out scenario sets it to 1) the offsets shift and two workers can share a
-  SKU. Seen once: "Cancelling while Packed" read 1 available, not 10, because another
-  worker set it (`docs/ports/evidence/inventory-service/acceptance-full-1-race.txt`);
-  the re-run was 53/53. Not a port difference; a tests/acceptance fix, not done here.
+- O1 (inventory) Acceptance race — RESOLVED 01:05: `pickStockedProduct` indexed the
+  products with 2+ available by the worker's `parallelIndex`, so stock moving shifted the
+  offsets and two workers could share a SKU (seen in the cart, inventory and user runs: the
+  cart run's "flake" was this). Each
+  worker now picks from its own share of the catalog by position (tests/acceptance
+  `worker-shares_20261123`, `db6ab6f`).
+
+## Incidents
+
+- I1 (payment, 03:05) The OrbStack node hit DiskPressure (Mac 8 GB free) while building
+  payment-service-rs: payment-postgres was evicted in a loop and the switch reset exec'd
+  into its dead pod, so k8s-local-up failed. Fixed by `docker builder prune` (7.6 GB) and
+  deleting the stale pods; the rerun deployed. The new pod's empty database restarted the
+  WAL below the payment connector's stored offset, so Debezium skipped every new outbox
+  row (the reseed's "no PENDING fulfilment task"): stopped the connector, deleted its
+  offsets (`DELETE /connectors/payment-outbox-connector/offsets`), resumed; reseed OK.
+  Environment, not the port. The docker volumes (15.5 GB reclaimable) were not touched.
 
 ## Decisions
 
@@ -137,6 +172,14 @@ Started 2026-11-22 19:05 GMT.
   Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
   fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
   keeps gshop browsing through a Redis outage.
+- A12 (payment) As A11, none observable to its callers: (1) a payment id or
+  paymentMethodId is the canonical UUID form only; (2) a null-valued record on
+  `order-events`/`fulfilment-events` is skipped, not dead-lettered; (3) the expire and
+  resolve operations' optional `Authorization` header isn't listed in the OpenAPI
+  document; (4) an undecodable body's 400 is tapir's "Invalid value for: body (…)" with
+  serde's reason inside, not circe's (callers read the status). And (5) the simulated
+  gateway's void is a no-op in both, so the Rust service doesn't model a failing void.
+  Reason: the shared libraries' behaviour; nothing sends those inputs.
 - A11 (inventory) Three differences from Scala, none observable to its callers: (1) a
   UUID (path, `orderId`) is the canonical 8-4-4-4-12 form only, where Java's
   `UUID.fromString` also takes short hex groups (`1-1-1-1-1`); nothing sends those.
