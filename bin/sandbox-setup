@@ -16,9 +16,9 @@ Usage:
   bin/sandbox-setup --only rust vim
                                limit to the named steps
 
-Steps: network, image, rust, node, cdc, vim, shellcheck, redis, shell, git-init, git-identity,
-projects, browsers. Each uses what the sandbox already provides (on the PATH, a mirror)
-and installs its own copy only when that is missing.
+Steps: network, image, rust, cxx, node, cdc, vim, shellcheck, redis, shell, git-init,
+git-identity, projects, browsers. Each uses what the sandbox already provides (on the PATH,
+a mirror) and installs its own copy only when that is missing.
 """
 
 import argparse
@@ -140,6 +140,9 @@ VIM_PACKAGES = ("vim", "vim-runtime", "vim-common", "libgpm2", "libsodium23", "l
 """vim and the libraries it links that a minimal image lacks (the sandbox bed's did)."""
 VIM_ROOT = HOME / ".local" / "vim-root"
 VIM_LIB = VIM_ROOT / "usr" / "lib" / ARCH.multiarch
+CXX_ROOT = HOME / ".local" / "cxx-root"
+"""g++ for the gcc the image has, unpacked from Ubuntu's .debs as vim is: the Rust ports'
+librdkafka (rdkafka-sys, built from source) needs a C++ compiler; the image has gcc only."""
 SHELLCHECK_ROOT = HOME / ".local" / "shellcheck-root"
 """shellcheck (RPN-10), unpacked from Ubuntu's .deb as vim is."""
 APT_STATE = HOME / ".local" / "apt"
@@ -664,6 +667,81 @@ def step_vim(install: bool) -> list[Result]:
     return [Result("vim", status, f"{version}; vim, view in {target}; read-only: vim -M <file>")]
 
 
+def cxx_packages(major: str) -> tuple[str, ...]:
+    """g++ for gcc `major`; apt_not_installed adds its machine's own packages."""
+    return (f"g++-{major}",)
+
+
+def gcc_major(dumpversion: str) -> str:
+    """The major version in `gcc -dumpversion`'s output (`13`, or `13.3.0`)."""
+    return dumpversion.strip().split(".")[0]
+
+
+def cxx_compiler(root: Path, major: str) -> Path:
+    """The unpacked g++ for this machine's triple."""
+    return root / "usr" / "bin" / f"{ARCH.multiarch}-g++-{major}"
+
+
+def gcc_private_dirs(major: str) -> list[Path]:
+    """The image's gcc directories the unpacked g++ looks for beside itself."""
+    return [Path("/usr") / sub / "gcc" / ARCH.multiarch / major for sub in ("lib", "libexec")]
+
+
+def link_missing(source: Path, target: Path) -> None:
+    """Links every entry of `source` that `target` lacks."""
+    target.mkdir(parents=True, exist_ok=True)
+    for entry in source.iterdir():
+        link = target / entry.name
+        if not link.exists() and not link.is_symlink():
+            link.symlink_to(entry)
+
+
+def cxx_works(compiler: str) -> str:
+    """`compiler --version`'s first line if it compiles C++ with the standard library, else ''."""
+    probe = subprocess.run(
+        [compiler, "-x", "c++", "-fsyntax-only", "-"],
+        input="#include <string>\nint main() { return std::string().size(); }\n",
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    return first_line([compiler, "--version"]) if probe.returncode == 0 else ""
+
+
+def step_cxx(install: bool) -> list[Result]:
+    """A C++ compiler: the sandbox's own `c++` if one works, else g++ for the image's gcc,
+    unpacked from Ubuntu's .debs and linked onto the PATH as c++ and g++."""
+    own = shutil.which("c++")
+    if own and not own.startswith(str(bin_dir())) and (version := cxx_works(own)):
+        return [Result("c++", "OK", f"{version} (the sandbox's own, {own})")]
+    major = gcc_major(output(["gcc", "-dumpversion"]))
+    if not major:
+        return [Result("c++", "MISSING", "no gcc in the image to match")]
+    compiler = cxx_compiler(CXX_ROOT, major)
+    status = "OK"
+    if not compiler.is_file():
+        if not install:
+            return [Result("c++", "MISSING", "g++ not unpacked (run without --check)")]
+        apt_unpack(apt_not_installed(cxx_packages(major)), CXX_ROOT)
+        status = "INSTALLED"
+    target = bin_dir()
+    links = [target / "c++", target / "g++"]
+    if install:
+        for image_dir in gcc_private_dirs(major):
+            link_missing(image_dir, CXX_ROOT / image_dir.relative_to("/"))
+        target.mkdir(parents=True, exist_ok=True)
+        for link in links:
+            link.unlink(missing_ok=True)
+            link.symlink_to(compiler)
+    elif not all(link.exists() for link in links):
+        return [Result("c++", "MISSING", f"g++ unpacked but no c++/g++ in {target}")]
+    version = cxx_works(str(target / "c++"))
+    if not version:
+        return [Result("c++", "MISSING", f"{target / 'c++'} doesn't compile <string>")]
+    return [Result("c++", status, f"{version} at {compiler}, as c++ and g++ in {target}")]
+
+
 def step_shellcheck(install: bool) -> list[Result]:
     """shellcheck from Ubuntu's .deb, unpacked without root, linked onto the PATH
     (lints the bin/ and scripts/ shell scripts; its libraries are the image's)."""
@@ -1050,6 +1128,7 @@ STEPS: dict[str, Callable[[bool], list[Result]]] = {
     "network": step_network,
     "image": step_image,
     "rust": step_rust,
+    "cxx": step_cxx,
     "node": step_node,
     "cdc": step_cdc,
     "vim": step_vim,

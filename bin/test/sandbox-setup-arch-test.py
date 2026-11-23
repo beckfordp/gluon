@@ -3,7 +3,9 @@
 """Tests for bin/sandbox-setup's architectures (all-Rust Stage B, B2): every download and
 library directory follows `uname -m`; x86_64's are exactly as before (the real sandbox
 is x86); aarch64's are the arm64 bed's; an unknown machine is reported, not guessed; a
-toolchain built for another machine is MISSING under --check. Stdlib only, no network:
+toolchain built for another machine is MISSING under --check; the C++ compiler
+unpacked for librdkafka's build is gcc's own major, for the machine's triple. Stdlib
+only, no network:
 the script is loaded once per machine with `platform.machine` stood in.
   bin/test/sandbox-setup-arch-test.py
 """
@@ -12,6 +14,7 @@ import importlib.machinery
 import importlib.util
 import platform
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import ModuleType
@@ -57,6 +60,19 @@ class X86(unittest.TestCase):
     def test_browsers_upload_is_linux_x64(self) -> None:
         self.assertEqual(self.setup.BROWSERS_GLOB, "ms-playwright-*-linux-x64.tar.gz")
 
+    def test_cxx_is_gccs_own_major_for_x86_64(self) -> None:
+        self.assertEqual(self.setup.cxx_packages("13"), ("g++-13",))
+        self.assertEqual(
+            self.setup.cxx_compiler(Path("/r"), "13"), Path("/r/usr/bin/x86_64-linux-gnu-g++-13")
+        )
+        self.assertEqual(
+            self.setup.gcc_private_dirs("13"),
+            [
+                Path("/usr/lib/gcc/x86_64-linux-gnu/13"),
+                Path("/usr/libexec/gcc/x86_64-linux-gnu/13"),
+            ],
+        )
+
     def test_machine_is_supported(self) -> None:
         self.assertEqual(self.setup.arch_results(), [])
 
@@ -86,6 +102,18 @@ class Arm64(unittest.TestCase):
     def test_browsers_upload_is_linux_arm64(self) -> None:
         self.assertEqual(self.setup.BROWSERS_GLOB, "ms-playwright-*-linux-arm64.tar.gz")
 
+    def test_cxx_is_gccs_own_major_for_aarch64(self) -> None:
+        self.assertEqual(
+            self.setup.cxx_compiler(Path("/r"), "13"), Path("/r/usr/bin/aarch64-linux-gnu-g++-13")
+        )
+        self.assertEqual(
+            self.setup.gcc_private_dirs("13"),
+            [
+                Path("/usr/lib/gcc/aarch64-linux-gnu/13"),
+                Path("/usr/libexec/gcc/aarch64-linux-gnu/13"),
+            ],
+        )
+
     def test_machine_is_supported(self) -> None:
         self.assertEqual(self.setup.arch_results(), [])
 
@@ -98,6 +126,36 @@ class Unknown(unittest.TestCase):
         self.assertEqual(result.status, "MISSING")
         self.assertIn("riscv64", result.detail)
         self.assertIn("x86_64, aarch64", result.detail)
+
+
+class CxxLinks(unittest.TestCase):
+    """The unpacked g++ finds gcc's own files (headers, crt, the LTO plugin) through links
+    to the image's gcc directories: it looks for them beside itself."""
+
+    setup = load("aarch64")
+
+    def test_missing_entries_are_linked_and_unpacked_ones_kept(self) -> None:
+        with tempfile.TemporaryDirectory() as scratch:
+            image, unpacked = Path(scratch) / "image", Path(scratch) / "unpacked"
+            image.mkdir()
+            for name in ("include", "crtbegin.o", "cc1plus"):
+                (image / name).write_text("image\n")
+            unpacked.mkdir()
+            (unpacked / "cc1plus").write_text("unpacked\n")
+            self.setup.link_missing(image, unpacked)
+            self.assertEqual((unpacked / "cc1plus").read_text(), "unpacked\n")
+            self.assertEqual((unpacked / "crtbegin.o").resolve(), (image / "crtbegin.o").resolve())
+            self.assertTrue((unpacked / "include").is_symlink())
+            self.setup.link_missing(image, unpacked)  # again: no error
+
+
+class GccMajor(unittest.TestCase):
+    setup = load("aarch64")
+
+    def test_dumpversions_output_is_its_major(self) -> None:
+        self.assertEqual(self.setup.gcc_major("13\n"), "13")
+        self.assertEqual(self.setup.gcc_major("13.3.0\n"), "13")
+        self.assertEqual(self.setup.gcc_major(""), "")
 
 
 class ToolchainHost(unittest.TestCase):
