@@ -37,6 +37,9 @@ BED="$GLUON/bin/lib/sandbox-bed"
 NAME=gluon-sandbox-bed
 MEMORY="${SANDBOX_BED_MEMORY:-14g}"
 JOBS="${CARGO_BUILD_JOBS:-6}"
+# macOS's caffeinate, held while `up` runs: idle sleep froze a suite for six minutes
+# (Stage B). SANDBOX_BED_CAFFEINATE overrides it; empty: none.
+CAFFEINATE="${SANDBOX_BED_CAFFEINATE-$(command -v caffeinate || true)}"
 # The laptop's ports for the bed's gshop (5173 may be the laptop's own; in the bed it is
 # on 5174, so bin/run-acceptance's own gshop on 5173 can run beside it) and report.
 GSHOP_PORT=15173
@@ -117,6 +120,7 @@ check_only() {
   echo "browsers $BROWSERS"
   echo "memory $MEMORY"
   echo "cargo jobs $JOBS"
+  echo "keep awake ${CAFFEINATE:+caffeinate -i ($CAFFEINATE)}${CAFFEINATE:-none}"
   if [ "$1" = up ]; then
     shift
     up_args "$@"
@@ -141,6 +145,8 @@ up() {
   local service="$SERVICE" image="$IMAGE" publish=() port
   for port in "${PUBLISH[@]}"; do publish+=(-p "$port"); done
   SECONDS=0
+  # Held until this script exits.
+  [ -z "$CAFFEINATE" ] || "$CAFFEINATE" -i -w "$$" &
   if ! docker image inspect "$image" > /dev/null 2>&1; then
     echo "== building $image (once per Dockerfile change and arch)"
     docker build --platform "$PLATFORM" -t "$image" "$BED"

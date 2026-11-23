@@ -82,4 +82,14 @@ expect "a memory cap and a cargo jobs cap, both overridable" 0 arm64 up --all-ru
 expect "--all-rust with a service is refused" 2 arm64 up cart-service --all-rust -- \
   "--all-rust runs every service: no SERVICE with it"
 
+# A caffeinate stand-in: macOS's; the bed keeps the host awake while it runs (idle sleep
+# froze a suite for six minutes in Stage B).
+printf '#!/bin/sh\nexit 0\n' > "$scratch/bin/caffeinate"
+chmod +x "$scratch/bin/caffeinate"
+expect "up keeps a Mac awake (caffeinate -i) while it runs" 0 arm64 up --all-rust -- \
+  "keep awake caffeinate -i"
+rm "$scratch/bin/caffeinate"
+SANDBOX_BED_CAFFEINATE="" expect "a host without caffeinate isn't asked" 0 x86_64 \
+  up cart-service -- "keep awake none"
+
 if [ "$failures" = 0 ]; then echo "PASS"; else echo "FAIL: $failures"; exit 1; fi
