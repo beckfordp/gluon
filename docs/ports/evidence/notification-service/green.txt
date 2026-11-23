@@ -1,0 +1,25 @@
+notification-service port verification — logs in /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug
+
+== 1. harness-ci ==
+     (166 s, log /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug/harness-ci.log)
+ok   harness-ci: 493 passed, coverage 95.38%
+== 2. rust-ci ==
+     (54 s, log /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug/rust-ci.log)
+ok   rust-ci: line coverage 98.25%
+== 3. build ==
+     (5 s, log /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug/build.log)
+ok   build: notification-service
+== 4. contract ==
+     (71 s, log /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug/contract.log)
+ok   contract: 76/76 checks green — docs 2/2, fulfilment_events_functional 4/4, order_events_functional 15/15, payment_events_functional 5/5, rest_functional 12/12, rest_wire 21/21, user_events_functional 6/6, user_events_sends_functional 7/7, user_events_sends_wire 1/1, user_events_wire 3/3
+
+== notification-service contract criteria ==
+MET      F  [functional NOTIF-F1–F34] what gshop's admin email history, the acceptance suite's us-27 and its four topics' producers rely on, against the Rust service
+MET      D  [docs NOTIF-D1–D2] Swagger UI and the AsyncAPI document and page
+MET      C1 the harness green against the Rust service, isolated mode (its wire checks included)
+MET      ci Rust CI: fmt, clippy, tests, coverage (≥90% lines, Stage A)
+(deployment criteria: on the laptop (all-Rust Stage A, docs/ports/notification-service.cheatsheet.md))
+rows met: functional 34/34, docs 2/2, wire 14/23 (out of the bar), not reachable yet 0
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every criterion run is MET (4 steps; logs in /tmp/verify-port-notification-service-20261123-094520-s4s2j7ug)

@@ -147,6 +147,22 @@ Started 2026-11-22 19:05 GMT.
   `d6734a5`, archived `e72180d`); full run 53/53, ledger OK first time. Cheat sheet
   `docs/ports/fulfilment-service.cheatsheet.md` (login shell). Differences A14.
 
+- [x] notification (finish) — 06:52–07:20 and 09:40–10:03 (51 min; the 07:20–09:40 gap is a
+  usage-limit pause, not counted). RED `notification-red_20261123` (tests/contract):
+  NOTIF-F16–F34 checks (order-, payment-, fulfilment-events modules replaying the 20261111
+  capture against user/order stubs answering as its `stub.py`; `HttpStub.forget_requests`)
+  and NOTIF-D1–D2 `64f466b`; on Scala 76/76 (`scala-reference.txt`); against
+  `notification-service-rs` `9e9db81` (user-events only) the 24 new checks red for "not yet
+  implemented" (`red-functional.txt`), docs red for "answered 404" (verify-port PASS,
+  `red-docs.txt`). verify-port: `contract:<kind>` met by a kind's per-topic groups
+  `c6f6699` (test red first). GREEN `port_20261123`: `2739c74` (recipient lookups as Scala
+  `RecipientResolver` through purerest's resilience, the three topic routes with the Scala
+  copy, docs, Dockerfile), contract 76/76 first run, CI 98.25% lines. `bin/verify-port
+  notification-service` all MET (`green.txt`). Deployed `NOTIFICATION_SERVICE_IMPL=rust`;
+  `--grep @NOTIF-F` 7 passed, ledger OK (the us-27 scenarios were already tagged); full
+  run 53/53, ledger OK first time. Cheat sheet `docs/ports/notification-service.cheatsheet.md`
+  (login shell). Differences A15.
+
 ## Finish
 
 ## Open
@@ -204,6 +220,13 @@ Started 2026-11-22 19:05 GMT.
   Postgres; Rust falls back within the 500 ms cache timeout. CATALOG-F9 asks for the
   fallback, so it is red on Scala by design. Reason: the documented behaviour, and what
   keeps gshop browsing through a Redis outage.
+- A15 (notification) None observable to its callers: a lookup's id goes into the path as
+  is (http4s percent-encodes the segment; the ids are event UUIDs); five payload schema
+  descriptions worded anew (required fields as Scala's); F31's row said the shipped email
+  lists its items, the capture and Scala `shippedEmail` give only the tracking number, so
+  the row was corrected, not the copy. `unresolved` rows on gluon-local for orders the
+  acceptance cleanup deleted before the email: Scala's resolver gives the same. Reason:
+  the Scala service's behaviour as captured.
 - A14 (fulfilment) As A12/A13, none observable to its callers: a UUID is the canonical
   form only; the resolve route's optional `Authorization` header isn't listed in the
   OpenAPI document; an undecodable body's 400 is tapir's "Invalid value for: body (…)"

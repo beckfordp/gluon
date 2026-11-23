@@ -1,0 +1,37 @@
+== Coverage matrix ==
+coverage matrix: 60 covered, 25 out of scope, 0 missing, 9 not built → target/coverage-matrix.md
+== Reset and seed ==
+== Truncating databases
+  catalog-postgres
+  fulfilment-postgres
+  inventory-postgres
+  notification-postgres
+  order-postgres
+  payment-postgres
+  user-postgres
+== Purging event topics
+  fulfilment-events,order-events,payment-events,user-events
+== Flushing caches
+== Seeding catalogue and stock
+
+Inventory summary: 100 created, 0 skipped, 0 failed.
+== Flushing caches
+== Seeding demo customers and orders
+Rerun skips orders recorded in /Users/p.beckford.ext/dev/personal/gluon/.seed-demo-data.state.json; use --reset to recreate them.
+Done.
+== Acceptance suite ==
+
+Running 7 tests using 1 worker
+
+  ✓  1 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:10:3 › Customer record and email history (US-27, and every customer email) › A guest's record shows their order and its emails @US-27.1 @US-27.2 @US-27.4 @US-7.1 @US-17.5 @US-19.4 @NOTIF-F16 @NOTIF-F26 @NOTIF-F31 (4.9s)
+  ✓  2 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:19:3 › Customer record and email history (US-27, and every customer email) › A card declined at capture is emailed @US-19.4 @US-7.1 @NOTIF-F17 @NOTIF-F27 @PAY-F11 @ORDER-F12 (4.2s)
+  ✓  3 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:27:3 › Customer record and email history (US-27, and every customer email) › A failed dispatch is emailed @US-18.4 @NOTIF-F32 @FUL-F8 (2.8s)
+  ✓  4 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:38:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: I asked @US-9.9 @US-20.5 @NOTIF-F18 (3.3s)
+  ✓  5 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:45:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: support cancelled it @US-9.9 @US-20.5 @NOTIF-F18 (3.8s)
+  ✓  6 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:52:5 › Customer record and email history (US-27, and every customer email) › The cancellation email says why: <why> › The cancellation email says why: the payment hold ran out @US-9.9 @US-20.5 @NOTIF-F18 (3.7s)
+  ✓  7 [chromium] › .features-gen/features/us-27-admin-emails.feature.spec.js:61:3 › Customer record and email history (US-27, and every customer email) › A registered customer's record shows their welcome email @US-16.4 @US-27.4 @NOTIF-F6 (2.0s)
+
+  7 passed (30.4s)
+== Stock ledger invariant ==
+OK: reserved stock matches the reservation ledger for every SKU
+Report: /Users/p.beckford.ext/dev/personal/gluon/tests/acceptance/playwright-report/index.html (npx playwright show-report)

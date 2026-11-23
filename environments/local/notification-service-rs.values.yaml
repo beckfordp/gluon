@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT
+# The Rust notification-service (all-Rust Stage A), installed by bin/k8s-local-up
+# under the same release name, `notification-service`, when NOTIFICATION_SERVICE_IMPL=rust.
+# The same env vars as notification-service.values.yaml; the chart's JVM-only
+# settings blanked (the chart renders them only when non-empty).
+
+image:
+  repository: notification-service-rs
+  tag: latest
+
+javaOpts: ""
+mallocArenaMax: ""
+
+env:
+  # Spans over OTLP/HTTP to Tempo (bin/obs; ADR 0021), as the Scala service.
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://tempo:4318
+  - name: POSTGRES_HOST
+    value: notification-postgres
+  - name: POSTGRES_DB
+    value: notification
+  - name: POSTGRES_USER
+    value: notification
+  - name: POSTGRES_PASSWORD
+    value: notification
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: kafka:9092
+  # Recipient resolution (ADM-3/ADR 0025).
+  - name: USER_SERVICE_URL
+    value: http://user-service:8080
+  - name: ORDER_SERVICE_URL
+    value: http://order-service:8080
