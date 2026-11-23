@@ -89,7 +89,8 @@ fi
 # older node first, so fall back to nvm's newest installed 26, or the sandbox's node24
 # (bin/sandbox-setup).
 if [ "$(node_major node || echo 0)" -lt 24 ]; then
-  nvm26=$(ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v26.* 2>/dev/null | sort -V | tail -1)
+  # `|| true`: no nvm node 26 (the sandbox's case) isn't an error under pipefail.
+  nvm26=$(ls -d "${NVM_DIR:-$HOME/.nvm}"/versions/node/v26.* 2>/dev/null | sort -V | tail -1 || true)
   if [ -n "$nvm26" ] && [ -x "$nvm26/bin/node" ]; then
     export PATH="$nvm26/bin:$PATH"
   elif node24=$(command -v node24) && [ "$(node_major "$node24" || echo 0)" -ge 24 ]; then

@@ -73,4 +73,17 @@ check "--gkube without a cluster fails before kubectl or a forward" \
   "$code $(grep -c 'FAIL: no gluon-kube cluster' "$scratch/out") $(grep -c 'real kubectl' "$scratch/out") $(grep -c port-forward "$GKUBE_LOG")" \
   "1 1 0 0"
 
+# Past the preflight with every forward answering: no nvm (the sandbox's case) and node 22
+# must fail naming the version, not stop silently on `ls`'s exit under pipefail.
+mkdir "$scratch/home" "$scratch/node22"
+printf '#!/bin/sh\nexit 0\n' > "$scratch/node22/curl"
+printf '#!/bin/sh\necho v22.21.1\n' > "$scratch/node22/node"
+chmod +x "$scratch/node22/curl" "$scratch/node22/node"
+: > "$GKUBE_LOG"
+PATH="$scratch/node22:$scratch/bin:/usr/bin:/bin" HOME="$scratch/home" NVM_DIR="$scratch/home/.nvm" \
+  GLUON_DIR="$scratch/gluon" "$BIN/run-acceptance" --gkube --no-open > "$scratch/out" 2>&1 < /dev/null
+code=$?
+check "no nvm and node 22: a FAIL naming it, after the forwards are stopped" \
+  "$code $(grep -c 'FAIL: node v22.21.1; need >= 24' "$scratch/out")" "1 1"
+
 if [ "$failures" = 0 ]; then echo "PASS"; else echo "FAIL: $failures"; exit 1; fi
