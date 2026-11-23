@@ -8,10 +8,25 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-UP="${K8S_LOCAL_UP:-$SCRIPT_DIR/../k8s-local-up}"
-out="$(mktemp)"
-trap 'rm -f "$out"' EXIT
+scratch="$(mktemp -d)"
+trap 'rm -rf "$scratch"' EXIT
+out="$scratch/out"
 failures=0
+
+# A gluon tree of its own, so the cases don't depend on which ports the real checkout has
+# (all eight since Stage A): every Scala service with its values file, user-service-rs with
+# its values file, notification-service-rs without one, and the script itself.
+GLUON="$scratch/gluon"
+mkdir -p "$GLUON/bin/lib" "$GLUON/environments/local"
+cp "$SCRIPT_DIR/../k8s-local-up" "$GLUON/bin/"
+cp "$SCRIPT_DIR/../lib/connectors.sh" "$GLUON/bin/lib/"
+for svc in catalog cart order inventory payment notification user fulfilment; do
+  mkdir -p "$GLUON/services/$svc-service"
+  touch "$GLUON/environments/local/$svc-service.values.yaml"
+done
+mkdir -p "$GLUON/services/user-service-rs" "$GLUON/services/notification-service-rs"
+touch "$GLUON/environments/local/user-service-rs.values.yaml"
+UP="${K8S_LOCAL_UP:-$GLUON/bin/k8s-local-up}"
 
 # expect NAME CODE TEXT ENV... -- ARGS...: exit CODE, output containing TEXT.
 expect() {
@@ -34,7 +49,7 @@ expect "scala by default, every service" 0 "OK: catalog-service cart-service" --
 expect "USER_SERVICE_IMPL=rust picks user-service-rs" 0 "OK: user-service" \
   USER_SERVICE_IMPL=rust -- user-service
 expect "a rust choice without its port fails naming the port" 1 \
-  "cart-service (rust): $(cd "$SCRIPT_DIR/../.." && pwd)/services/cart-service-rs doesn't exist" \
+  "cart-service (rust): $GLUON/services/cart-service-rs doesn't exist" \
   CART_SERVICE_IMPL=rust -- cart-service
 expect "ALL_RUST=1 makes rust every default" 1 "catalog-service (rust)" ALL_RUST=1 --
 expect "ALL_RUST=1 checks every port before building any" 1 "doesn't exist" \
