@@ -183,6 +183,11 @@ Started 2026-11-22 19:05 GMT.
 
 ## Incidents
 
+- I0 (cart, ~20:30) Generating cart-service-rs in `services/`, `cargo generate` aborted on
+  the existing `services/cart-service` and the `mv` after it moved the Scala repo, which
+  the prompt forbids. Moved straight back; its history, HEAD and working tree unchanged
+  (no commits since the start, only its October `.claude/` untracked). Since then every
+  port is generated in the scratchpad and moved to `services/<svc>-rs` only.
 - I1 (payment, 03:05) The OrbStack node hit DiskPressure (Mac 8 GB free) while building
   payment-service-rs: payment-postgres was evicted in a loop and the switch reset exec'd
   into its dead pod, so k8s-local-up failed. Fixed by `docker builder prune` (7.6 GB) and
