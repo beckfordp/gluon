@@ -1,0 +1,15 @@
+fulfilment-service port verification — logs in /tmp/verify-port-fulfilment-service-20261123-061347-qw4b16b7
+
+== 1. build ==
+     (1 s, log /tmp/verify-port-fulfilment-service-20261123-061347-qw4b16b7/build.log)
+ok   build: fulfilment-service
+== 2. contract ==
+     (6 s, log /tmp/verify-port-fulfilment-service-20261123-061347-qw4b16b7/contract.log)
+FAIL contract: 0/2 checks green — docs 0/2
+       test_fulfilment_docs::test_swagger_ui_loads_the_document_of_the_routes_served
+       test_fulfilment_docs::test_the_asyncapi_document_and_its_page_describe_what_it_sends_and_receives
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (2 checks; logs in /tmp/verify-port-fulfilment-service-20261123-061347-qw4b16b7)

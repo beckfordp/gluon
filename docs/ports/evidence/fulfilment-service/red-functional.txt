@@ -1,0 +1,33 @@
+fulfilment-service port verification — logs in /tmp/verify-port-fulfilment-service-20261123-061324-jd10tai_
+
+== 1. build ==
+     (16 s, log /tmp/verify-port-fulfilment-service-20261123-061324-jd10tai_/build.log)
+ok   build: fulfilment-service
+== 2. contract ==
+     (7 s, log /tmp/verify-port-fulfilment-service-20261123-061324-jd10tai_/contract.log)
+FAIL contract: 0/20 checks green — events_functional 0/8, functional 0/12
+       test_fulfilment_events_functional::test_payment_authorized_creates_a_pending_task_from_the_orders_snapshot
+       test_fulfilment_events_functional::test_an_order_order_service_doesnt_know_or_cant_ship_is_skipped
+       test_fulfilment_events_functional::test_order_service_failing_dead_letters_the_record_with_its_key_and_value
+       test_fulfilment_events_functional::test_a_payment_events_record_it_cant_act_on_is_skipped_not_dead_lettered
+       test_fulfilment_events_functional::test_order_cancelled_aborts_a_task_that_hasnt_dispatched
+       test_fulfilment_events_functional::test_order_cancelled_after_dispatch_flags_the_task_once
+       test_fulfilment_events_functional::test_an_order_events_record_it_cant_act_on_is_dead_lettered_another_type_skipped
+       test_fulfilment_events_functional::test_an_operator_resolves_a_flag_and_the_first_resolver_wins
+       test_fulfilment_functional::test_the_list_is_every_task_oldest_first_filtered_by_state
+       test_fulfilment_functional::test_start_picking_and_pack_move_the_task_one_step_each_writing_nothing
+       test_fulfilment_functional::test_a_step_from_the_wrong_state_is_409_an_unknown_task_404_a_malformed_id_400
+       test_fulfilment_functional::test_dispatch_records_the_carrier_and_writes_dispatch_confirmed
+       test_fulfilment_functional::test_a_dispatch_it_cant_read_is_400_before_the_task_is_looked_up
+       test_fulfilment_functional::test_fail_from_any_open_state_writes_dispatch_failed
+       test_fulfilment_functional::test_a_blank_reason_is_400_even_for_a_task_nothing_has
+       test_fulfilment_functional::test_simulate_next_walks_a_task_to_dispatched
+       test_fulfilment_functional::test_simulate_next_can_force_a_failure
+       test_fulfilment_functional::test_the_reconciliation_list_is_filtered_by_status_and_order
+       test_fulfilment_functional::test_readiness_follows_postgres
+       test_fulfilment_functional::test_gshops_origin_may_call_it_from_the_browser
+
+== expect red: 'answered 404' ==
+(kinds of behaviour: tests/contract docs/behaviours.md, "Kinds of behaviour")
+
+PASS: every check red for 'answered 404' (20 checks; logs in /tmp/verify-port-fulfilment-service-20261123-061324-jd10tai_)
