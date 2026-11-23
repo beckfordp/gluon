@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# kubectl for bin/run-acceptance --gkube (all-Rust Stage B, B5): the few commands
+# bin/reset-data, bin/check-stock-ledger and bin/lib/connectors.sh run (get deploy -o name,
+# exec [-i] deploy/X -- ...), passed to gluon-kube, which takes kubectl's forms. Its
+# namespace flags are dropped (gluon-kube simulates gluon-local only, and takes -n only
+# after the subcommand); `config current-context` answers gluon-kube. On the PATH only
+# for that run.
+set -euo pipefail
+if [ "${1:-}" = config ] && [ "${2:-}" = current-context ]; then
+  echo gluon-kube
+  exit 0
+fi
+args=()
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --) args+=("$@"); break ;;
+    -n | --namespace) shift 2 ;;
+    --namespace=*) shift ;;
+    *) args+=("$1"); shift ;;
+  esac
+done
+exec gkube "${args[@]}"

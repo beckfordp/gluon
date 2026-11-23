@@ -10,8 +10,14 @@
 # then opens the report.
 #
 # Usage:
-#   bin/run-acceptance [--no-open] [playwright args...]
+#   bin/run-acceptance [--no-open] [--gkube] [playwright args...]
 #     --no-open        don't serve the HTML report afterwards
+#     --gkube          against gluon-kube (the sandbox, the sandbox bed: all-Rust Stage
+#                      B), not OrbStack: every Service port-forwarded
+#                      (bin/lib/gkube-forwards.sh; GKUBE_FORWARD_ADDRESS, default
+#                      127.0.0.1), the suite and the seed pointed at the forwards, and
+#                      kubectl a stand-in passing to gkube (bin/lib/gkube-kubectl). The
+#                      forwards stop when the run ends
 #     playwright args  passed through, e.g. --grep @US-17 or --headed
 #
 # Staged (all-Rust Stage A P0.5): ACCEPTANCE_SERVICES=cart,catalog limits the
@@ -33,14 +39,18 @@ GSHOP_PORT=5173
 . "$SCRIPT_DIR/lib/connectors.sh"
 # shellcheck source=bin/lib/acceptance-services.sh
 . "$SCRIPT_DIR/lib/acceptance-services.sh"
+# shellcheck source=bin/lib/gkube-forwards.sh
+. "$SCRIPT_DIR/lib/gkube-forwards.sh"
 
-usage() { echo "usage: bin/run-acceptance [--no-open] [playwright args...]" >&2; exit 2; }
+usage() { echo "usage: bin/run-acceptance [--no-open] [--gkube] [playwright args...]" >&2; exit 2; }
 
 open_report=true
+gkube=false
 args=()
 for arg in "$@"; do
   case "$arg" in
     --no-open) open_report=false ;;
+    --gkube) gkube=true ;;
     -h|--help) usage ;;
     *) args+=("$arg") ;;
   esac
@@ -53,12 +63,22 @@ acceptance_validate || exit 2
 if acceptance_staged; then
   echo "== Staged: $(acceptance_list | paste -sd, -) (ACCEPTANCE_SERVICES; unset for the full run) =="
 fi
-if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+if $gkube; then
+  if ! gkube cluster status > /dev/null 2>&1; then
+    echo "FAIL: no gluon-kube cluster — run 'gkube cluster start && gkube up' first" >&2
+    exit 1
+  fi
+  export GLUON_KUBE=1 PATH="$SCRIPT_DIR/lib/gkube-kubectl:$PATH"
+  trap gkube_forwards_stop EXIT
+  echo "== Port-forwarding every Service (gkube port-forward) =="
+  gkube_forwards_start "${GKUBE_FORWARD_ADDRESS:-127.0.0.1}" "$GLUON_DIR/target/gkube" || exit 1
+  while IFS= read -r url; do export "${url?}"; done < <(gkube_urls)
+elif [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
   echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
   exit 1
 fi
 if ! kubectl get namespace "$NAMESPACE" >/dev/null 2>&1; then
-  echo "FAIL: namespace $NAMESPACE missing — run bin/k8s-local-up first" >&2
+  echo "FAIL: namespace $NAMESPACE missing — run bin/k8s-local-up (or gkube up) first" >&2
   exit 1
 fi
 if [ ! -d "$SUITE_DIR" ]; then

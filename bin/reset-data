@@ -42,7 +42,8 @@ for arg in "$@"; do
 done
 [ "$CONFIRMED" = 1 ] || { echo "Refusing to wipe without --yes (see --help)." >&2; exit 2; }
 
-if [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
+# GLUON_KUBE=1: bin/run-acceptance --gkube's run, kubectl its gluon-kube stand-in.
+if [ "${GLUON_KUBE:-0}" != 1 ] && [ "$(kubectl config current-context 2>/dev/null)" != "orbstack" ]; then
   echo "FAIL: kubectl context is not 'orbstack' — switch with 'kubectl config use-context orbstack'" >&2
   exit 1
 fi
