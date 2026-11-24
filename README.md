@@ -25,7 +25,7 @@ gluon/
 ├── bin/             platform tooling entry points (generate-service, codegen, gkube)
 ├── services/        each generated service — its own git repo, gitignored here
 ├── frontends/       each frontend app — its own git repo, gitignored here
-├── apps/            applications built on the platform (gfood) — own git repos, gitignored here (ADR 0031)
+├── apps/            applications built on the platform (gfood) — own git repos, gitignored here
 ├── tools/           platform tooling repos (pure-service-generator) — own git repo, gitignored here
 ├── lib/             shared platform library repos (purerest) — own git repo, gitignored here
 ├── tests/           acceptance (Playwright) and performance (Gatling) suites — own git repos, gitignored here; run via bin/run-acceptance, bin/run-perf

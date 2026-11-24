@@ -7,7 +7,7 @@
 #   2. its reference check warns for a repo not exported, and not for an
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
-#      (apps/gfood is one: gluon ADR 0031); gluon itself keeps only apps/README.md
+#      (apps/gfood is one); gluon itself keeps only apps/README.md
 #   4. the touched Python scripts compile
 #   5. a default export carries the gluon-kube plan
 #   6. a --no-plans export carries no plan and no live track, and keeps Conductor's

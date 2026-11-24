@@ -3,7 +3,7 @@
 Each application built on the Gluon platform lives here as its own **independent
 git repository** — `apps/gfood/`, etc. — pushed to its own GitHub remote
 (`beckfordp/<name>`), with its own `/conductor`, user stories, ADRs and acceptance
-suite ([ADR 0031](../docs/adr/0031-multi-app-platform.md)).
+suite.
 
 gshop, the exemplar the platform was built with, stays part of the platform
 (`frontends/gshop`, `services/`).
