@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
 set -euo pipefail
 cd services/user-service
 OUT="$HOME/user-service-contracts-$(date +%Y%m%d)"

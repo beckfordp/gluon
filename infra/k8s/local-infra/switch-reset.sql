@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MIT
 -- A service's database, reset for a switch between its Scala and Rust
 -- implementations (ADR 0028 decision 5; all-Rust Stage A P0.4): each keeps its own
 -- migration history, and there is no production data. Run by bin/k8s-local-up on the
