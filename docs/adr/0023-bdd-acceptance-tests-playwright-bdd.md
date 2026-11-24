@@ -1,7 +1,8 @@
 # 0023. BDD acceptance tests via playwright-bdd
 
 ## Status
-Proposed (2026-10-31). Amends [0020](./0020-playwright-acceptance-tests.md).
+Accepted (recorded 2026-11-24; proposed 2026-10-31): `tests/acceptance` runs on
+playwright-bdd's feature files. Amends [0020](./0020-playwright-acceptance-tests.md).
 
 ## Context
 ADR 0020 chose Playwright through gshop over API-level Cucumber. It

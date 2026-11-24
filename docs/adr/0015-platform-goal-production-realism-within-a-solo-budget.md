@@ -1,7 +1,7 @@
 # 0015. Platform goal: production realism within a solo consultant's budget
 
 ## Status
-Proposed
+Accepted (recorded 2026-11-24): every later ADR treats it as in force.
 
 ## Context
 `docs/product.md`'s Vision describes Gluon as "a production-grade

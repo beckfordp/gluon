@@ -1,7 +1,8 @@
 # 0030. gluon-kube: a simulated gluon-local for running Rust services in the sandbox
 
 ## Status
-Proposed (2026-11-15). Follows [ADR 0028](./0028-rust-port-spike-user-service.md)
+Accepted (recorded 2026-11-24; proposed 2026-11-15): gluon-kube is built
+(`tools/gluon-kube`) and runs the Rust ports in the sandbox. Follows [ADR 0028](./0028-rust-port-spike-user-service.md)
 and [ADR 0029](./0029-after-the-rust-spike.md) (option 3: further ports).
 Decision 3 revised 2026-11-15 from the GK-1 feasibility probe (`tools/gluon-kube`
 `spikes/netns-probe/FINDINGS.md`).

@@ -1,7 +1,8 @@
 # 0011. Payment: authorize then capture, stay simulated for now
 
 ## Status
-Proposed
+Accepted (recorded 2026-11-24): built in payment-service and payment-service-rs,
+as amended below.
 
 > **Amendment 2026-10-26:** Decision 4 below ("sync-vs-async authorization
 > timing is untouched") is superseded. Authorization is now a synchronous

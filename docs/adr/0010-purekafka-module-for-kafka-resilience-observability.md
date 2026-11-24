@@ -1,7 +1,10 @@
 # 0010. New `purekafka` module for Kafka resilience + observability
 
 ## Status
-Proposed
+Accepted (recorded 2026-11-24; it was built before then). Built as purerest's
+`purekafka` module for the Scala services; carried to the Rust ports as gluon-rs's
+`kafka-client` and `kafka-event-consumer` crates (supervision, dead-lettering, trace
+context in headers, consumer lag and age metrics).
 
 ## Context
 [`TECHNICAL_DEBT.md`](../../TECHNICAL_DEBT.md)'s TD-2 exists because
