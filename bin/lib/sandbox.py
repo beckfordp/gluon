@@ -38,13 +38,14 @@ SHARED_REPOS = (
     Path("tests") / "acceptance",
     Path("frontends") / "gshop",
     Path("apps") / "gfood",
+    Path("apps") / "ggrocery",
 )
 """Repos every port needs: the contract harness, purerest/purekafka as the reference
 for the shared Rust layer, gluon-rs, that layer (TD-43), gluon-kube, the simulated
 gluon-local the ports run in (ADR 0030), the cargo-generate service template each port
 starts from (all-Rust prep P3), and the Playwright acceptance suite with the gshop
-frontend it drives (bin/run-acceptance). Also gfood, the first application on the
-platform, fleshed out in the sandbox."""
+frontend it drives (bin/run-acceptance). Also the applications on the platform (gfood,
+ggrocery), each fleshed out in a sandbox session of its own (bin/sandbox-export --app)."""
 
 SANDBOX_REPOS = (
     Path("tests") / "contract",
@@ -54,12 +55,13 @@ SANDBOX_REPOS = (
     Path("tests") / "acceptance",
     Path("frontends") / "gshop",
     Path("apps") / "gfood",
+    Path("apps") / "ggrocery",
 )
 """Git repos the sandbox commits to, relative to gluon's root: the harness, the Rust ports,
 gluon-rs (created on the laptop; RPN-7 and RPN-8 add to it), gluon-kube (created in
 the sandbox, ADR 0030; its first order is the contract harness and the first port, so
 bin/sandbox-review's aliases keep their indices), and the acceptance suite and gshop,
-run in the sandbox on gluon-kube, and gfood."""
+run in the sandbox on gluon-kube, and the applications."""
 
 NESTED_REPO_DIRS = ("services", "frontends", "tools", "lib", "tests", "apps")
 """gluon's gitignored directories of independent repos; only their README.md is gluon's."""
@@ -102,13 +104,18 @@ def platform_files(root: Path = GLUON) -> list[Path]:
 APP_LEFT_OUT = frozenset({Path("lib") / "purerest", *(scala for scala, _ in PORTS)})
 """Repos an application's export (bin/sandbox-export --app) leaves out: the Scala services
 the Rust ports were made from and purerest, their reference. An application builds on the
-ports."""
+ports. The other applications are left out too: each session starts from its own."""
+
+APPS = Path("apps")
+"""Where the applications' repos live."""
 
 
-def export_repos(root: Path = GLUON, app: bool = False) -> list[Path]:
+def export_repos(root: Path = GLUON, app: str | None = None) -> list[Path]:
     """The nested repos bin/sandbox-export copies: SHARED_REPOS and both sides of each port
-    that exist under `root`, sorted; with `app`, without APP_LEFT_OUT."""
-    wanted = {*SHARED_REPOS, *(repo for port in PORTS for repo in port)} - (APP_LEFT_OUT if app else set())
+    that exist under `root`, sorted; for `app`, without APP_LEFT_OUT and the other apps."""
+    wanted = {*SHARED_REPOS, *(repo for port in PORTS for repo in port)}
+    if app is not None:
+        wanted = {r for r in wanted - APP_LEFT_OUT if r.parent != APPS or r.name == app}
     return sorted(repo for repo in wanted if (root / repo).is_dir())
 
 

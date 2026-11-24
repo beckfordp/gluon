@@ -1,7 +1,7 @@
 # apps/
 
 Each application built on the Gluon platform lives here as its own **independent
-git repository** — `apps/gfood/`, etc. — pushed to its own GitHub remote
+git repository** — `apps/gfood/`, `apps/ggrocery/`, etc. — pushed to its own GitHub remote
 (`beckfordp/<name>`), with its own `/conductor`, user stories, ADRs and acceptance
 suite.
 
@@ -16,5 +16,5 @@ changes; generic changes raised as change requests in the gluon service's backlo
 services are repos under `apps/<app>/services/`, one per service.
 
 This directory is **not** tracked by gluon's own git repo (see `.gitignore`), bar
-this README. `bin/sandbox-export` carries `apps/gfood` to the sandbox and
-`bin/sandbox-save` brings its commits back (`bin/lib/sandbox.py`).
+this README. `bin/sandbox-export --app <app>` carries one app to a sandbox session of its
+own, and `bin/sandbox-save` brings its commits back (`bin/lib/sandbox.py`).

@@ -53,7 +53,8 @@ name), to tell two exports apart in the sandbox's uploads.
 
 --app NAME exports for an application session (apps/NAME, one of SHARED_REPOS): the
 platform it builds on, without APP_LEFT_OUT (the Scala services and purerest, which only
-the ports needed). It implies --no-plans, and --prefix NAME unless one is given.
+the ports needed) and without the other applications. It implies --no-plans, and
+--prefix NAME unless one is given.
 
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
@@ -286,6 +287,7 @@ APP_LEFT_OUT_ROWS = (
         ", ".join(f"`{repo.as_posix()}`" for repo in sorted(APP_LEFT_OUT)),
         "An application's export (`--app`): it builds on the Rust ports; the Scala originals and their reference stay on the laptop.",
     ),
+    ("The other applications under `apps/`", "An application's export (`--app`): each application's session starts from its own repo."),
 )
 """What an --app export also leaves out; added to LEFT_OUT in EXPORT-REVIEW.md."""
 
@@ -622,7 +624,7 @@ def export(
 ) -> dict[str, object]:
     """Stages and scans the export, then empties `out` and writes it there; returns its manifest.
     Without `plans`, no plan travels (--no-plans); with `app`, no APP_LEFT_OUT (--app)."""
-    nested = export_repos(app=app is not None)
+    nested = export_repos(app=app)
     repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
     if unclean:
@@ -741,7 +743,7 @@ def main(argv: Sequence[str]) -> int:
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
     if not args.no_lock_check:
         check_locks()
-    clean([GLUON, *(GLUON / r for r in export_repos(app=args.app is not None))], args.yes)
+    clean([GLUON, *(GLUON / r for r in export_repos(app=args.app))], args.yes)
     export(out, captures, args.clean, plans=not args.no_plans, app=args.app)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:

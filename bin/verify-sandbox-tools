@@ -2,12 +2,12 @@
 # SPDX-License-Identifier: MIT
 # Verifies laptop session RPN-0.1 (PLAN.md, Rust Port — notification-service),
 # each check printed PASS or FAIL as it finishes:
-#   1. bin/sandbox-export exports gluon, SHARED_REPOS (apps/gfood among them) and the
+#   1. bin/sandbox-export exports gluon, SHARED_REPOS (the apps among them) and the
 #      PORTS repos that exist, and no other nested repo (a real export, to a temp directory)
 #   2. its reference check warns for a repo not exported, and not for an
 #      exported repo, an allowed file or Markdown
 #   3. bin/sandbox-save warns for a git repo not in SANDBOX_REPOS, not for listed ones
-#      (apps/gfood is one); gluon itself keeps only apps/README.md
+#      (the apps are); gluon itself keeps only apps/README.md
 #   4. the touched Python scripts compile
 #   5. a default export carries the gluon-kube plan
 #   6. a --no-plans export carries no plan and no live track, and keeps Conductor's
@@ -15,7 +15,7 @@
 #   7. --prefix names the archive; tracks.md loses a section's items, not its
 #      headings, separators or intro (the laptop's layout, for clean imports)
 #   9. an --app export carries the app and the Rust platform: no Scala service, no
-#      purerest, no plan; --app takes only an application in SHARED_REPOS
+#      purerest, no plan, no other app; --app takes only an application in SHARED_REPOS
 #   8. bin/check-locks names a locked crate too young for the sandbox's mirror,
 #      with the version to go back to, and passes locks old enough (TD-53.1)
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
@@ -66,7 +66,7 @@ want = {".", "tests/contract", "lib/purerest", "lib/gluon-rs", "tools/gluon-kube
         "tools/rust-service-template", "tests/acceptance", "frontends/gshop",
         *(f"services/{s}-service" for s in scala)}
 want |= {f"services/{s}-service-rs" for s in scala if Path(f"services/{s}-service-rs").is_dir()}
-want |= {"apps/gfood"} if Path("apps/gfood").is_dir() else set()
+want |= {a for a in ("apps/gfood", "apps/ggrocery") if Path(a).is_dir()}
 print("exported:", sorted(got))
 print("warnings:", manifest["unexported_refs"])
 sys.exit(0 if got == want else f"want {sorted(want)}, got {sorted(got)}")'
@@ -110,7 +110,7 @@ print(names, [repr(g) for g in got])
 sys.exit(0 if names == ("spike-gluon.tar.gz", "gluon.tar.gz")
          and got == [want for _, want in cases] else "unexpected")'
 
-check "--app export carries the app and the Rust platform, no Scala, no purerest, no plan" app.log '
+check "--app export carries the app and the Rust platform, no Scala, no purerest, no plan, no other app" app.log '
 with tempfile.TemporaryDirectory() as out:
     root = Path(out) / "gluon"
     manifest = export.export(root, [], False, plans=False, app="gfood")
@@ -126,9 +126,11 @@ try:
     refused = False
 except SystemExit as stop:
     refused = "--app must be one of" in str(stop)
-print("exported:", sorted(got), "plans:", plans, "app:", manifest["app"], "refused:", refused)
+grocery = {r.as_posix() for r in sandbox.export_repos(app="ggrocery") if r.parent == Path("apps")}
+print("exported:", sorted(got), "plans:", plans, "app:", manifest["app"], "refused:", refused, "ggrocery apps:", grocery)
 sys.exit(0 if got == want and not plans and manifest["app"] == "gfood" and not manifest["plans"]
          and "`services/order-service`" in review and "`lib/purerest`" in review and refused
+         and grocery == {"apps/ggrocery"}
          else f"want {sorted(want)}, got {sorted(got)}")'
 
 check "gluon keeps only apps/README.md of apps/; gfood is its own repo" apps.log '
@@ -155,7 +157,7 @@ sys.exit(0 if found == ["bin/run-thing:1: tools/pure-service-generator"] and sum
 check "sandbox-save warns only for unlisted git repos" save.log '
 with tempfile.TemporaryDirectory() as scratch:
     root = Path(scratch)
-    for repo in ("tests/contract", "services/user-service-rs", "services/foo-rs", "apps/gfood", "apps/bar"):
+    for repo in ("tests/contract", "services/user-service-rs", "services/foo-rs", "apps/gfood", "apps/ggrocery", "apps/bar"):
         (root / repo / ".git").mkdir(parents=True)
     (root / "services" / "not-a-repo").mkdir()
     missing = save.unsaved(root)
