@@ -2,7 +2,7 @@
 services/*
 !services/README.md
 
-# Applications built on the platform are their own independent git repos (ADR 0031).
+# Applications built on the platform are their own independent git repos.
 apps/*
 !apps/README.md
 
