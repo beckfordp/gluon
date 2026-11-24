@@ -26,7 +26,7 @@ allowed match with the reason it's fine, for the sandbox reviewer.
 Usage:
   bin/sandbox-export [--out DIR] [--clean] [--capture SERVICE=DIR ...]
                      [--no-auto-captures] [--no-archive] [--yes]
-                     [--no-plans] [--prefix NAME]
+                     [--no-plans] [--prefix NAME] [--app NAME]
 
 First, build output (BUILD_DIRS) in those repos is removed, unasked; then untracked
 files are listed and, once confirmed (or with --yes), removed; KEPT and LOCAL_ONLY
@@ -51,6 +51,10 @@ commits apply to the laptop's file unchanged.
 --prefix NAME names the archive NAME-OUT.tar.gz (the archive's root stays OUT's
 name), to tell two exports apart in the sandbox's uploads.
 
+--app NAME exports for an application session (apps/NAME, one of SHARED_REPOS): the
+platform it builds on, without APP_LEFT_OUT (the Scala services and purerest, which only
+the ports needed). It implies --no-plans, and --prefix NAME unless one is given.
+
 DIR must be empty, missing, or a previous export (it holds EXPORT-MANIFEST.json);
 --clean empties any other DIR first (refused if it holds a .git).
 """
@@ -71,11 +75,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 from sandbox import (
+    APP_LEFT_OUT,
     GLUON,
     KEPT,
     NESTED_REPO_DIRS,
     PLATFORM_EXCLUDES,
     SANDBOX_REPOS,
+    SHARED_REPOS,
     export_repos,
     git_repos,
     remove,
@@ -274,6 +280,17 @@ PLANLESS_LEFT_OUT = (
     ),
 )
 """What a --no-plans export also leaves out; added to LEFT_OUT in EXPORT-REVIEW.md."""
+
+APP_LEFT_OUT_ROWS = (
+    (
+        ", ".join(f"`{repo.as_posix()}`" for repo in sorted(APP_LEFT_OUT)),
+        "An application's export (`--app`): it builds on the Rust ports; the Scala originals and their reference stay on the laptop.",
+    ),
+)
+"""What an --app export also leaves out; added to LEFT_OUT in EXPORT-REVIEW.md."""
+
+APPS = frozenset(repo.name for repo in SHARED_REPOS if repo.parent == Path("apps"))
+"""The applications an --app export can be for."""
 
 CAPTURE_EDITS = (
     ("`stdout.log`, `CAPTURE.sh`", "laptop paths in JVM warnings and the script", "`/Users/<user>/<path-to>/gluon/…`"),
@@ -571,6 +588,8 @@ def review(
     lines += [f"| {what} | {why} |" for what, why in LEFT_OUT]
     if not manifest["plans"]:
         lines += [f"| {what} | {why} |" for what, why in PLANLESS_LEFT_OUT]
+    if manifest.get("app"):
+        lines += [f"| {what} | {why} |" for what, why in APP_LEFT_OUT_ROWS]
     lines += [
         "",
         "## Matches that look private, and why they aren't",
@@ -598,10 +617,12 @@ def review(
     return "\n".join(lines)
 
 
-def export(out: Path, captures: Sequence[str], clean: bool, plans: bool = True) -> dict[str, object]:
+def export(
+    out: Path, captures: Sequence[str], clean: bool, plans: bool = True, app: str | None = None
+) -> dict[str, object]:
     """Stages and scans the export, then empties `out` and writes it there; returns its manifest.
-    Without `plans`, no plan travels (--no-plans)."""
-    nested = export_repos()
+    Without `plans`, no plan travels (--no-plans); with `app`, no APP_LEFT_OUT (--app)."""
+    nested = export_repos(app=app is not None)
     repos = [GLUON, *(GLUON / r for r in nested)]
     unclean = {r.relative_to(GLUON).as_posix(): d for r in repos if (d := dirty(r))}
     if unclean:
@@ -610,6 +631,7 @@ def export(out: Path, captures: Sequence[str], clean: bool, plans: bool = True) 
     manifest: dict[str, object] = {
         "created": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "plans": plans,
+        "app": app,
     }
     with tempfile.TemporaryDirectory() as scratch:
         staging = Path(scratch) / "gluon"
@@ -697,10 +719,16 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--yes", action="store_true", help="remove untracked files unasked (build output always is)")
     parser.add_argument("--no-plans", action="store_true", help="no plan, no live track")
     parser.add_argument("--prefix", metavar="NAME", help="archive as NAME-OUT.tar.gz")
+    parser.add_argument("--app", metavar="NAME", help="for apps/NAME: no Scala, no purerest, no plans")
     parser.add_argument(
         "--no-lock-check", action="store_true", help="skip bin/check-locks (crates the mirror may lack)"
     )
     args = parser.parse_args(argv)
+    if args.app is not None:
+        if args.app not in APPS:
+            raise SystemExit(f"--app must be one of {sorted(APPS)}")
+        args.no_plans = True
+        args.prefix = args.prefix or args.app
     if args.prefix is not None and not PREFIX.match(args.prefix):
         raise SystemExit(f"--prefix must match {PREFIX.pattern}")
     out = args.out.expanduser().resolve()
@@ -713,8 +741,8 @@ def main(argv: Sequence[str]) -> int:
         raise SystemExit(f"{out} isn't empty and isn't a previous export; pass --clean to empty it")
     if not args.no_lock_check:
         check_locks()
-    clean([GLUON, *(GLUON / r for r in export_repos())], args.yes)
-    export(out, captures, args.clean, plans=not args.no_plans)
+    clean([GLUON, *(GLUON / r for r in export_repos(app=args.app is not None))], args.yes)
+    export(out, captures, args.clean, plans=not args.no_plans, app=args.app)
     print(f"\nExported to {out}; reviewer note: {out / REVIEW}")
     if not args.no_archive:
         archive = out.parent / archive_name(out, args.prefix)

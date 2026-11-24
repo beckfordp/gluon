@@ -14,6 +14,8 @@
 #      workflow, gluon-kube's included (no repo is read-only for it now)
 #   7. --prefix names the archive; tracks.md loses a section's items, not its
 #      headings, separators or intro (the laptop's layout, for clean imports)
+#   9. an --app export carries the app and the Rust platform: no Scala service, no
+#      purerest, no plan; --app takes only an application in SHARED_REPOS
 #   8. bin/check-locks names a locked crate too young for the sandbox's mirror,
 #      with the version to go back to, and passes locks old enough (TD-53.1)
 # Logs go to a run directory, printed at the start. Exits 1 on any FAIL.
@@ -107,6 +109,27 @@ got = [export.strip_items(export.strip_backlog(text), "Tracks") for text, _ in c
 print(names, [repr(g) for g in got])
 sys.exit(0 if names == ("spike-gluon.tar.gz", "gluon.tar.gz")
          and got == [want for _, want in cases] else "unexpected")'
+
+check "--app export carries the app and the Rust platform, no Scala, no purerest, no plan" app.log '
+with tempfile.TemporaryDirectory() as out:
+    root = Path(out) / "gluon"
+    manifest = export.export(root, [], False, plans=False, app="gfood")
+    plans = (root / "plans").exists()
+    review = (root / "EXPORT-REVIEW.md").read_text()
+got = {repo["path"] for repo in manifest["repos"]}
+scala = ["user", "notification", "cart", "catalog", "inventory", "fulfilment", "payment", "order"]
+want = {".", "tests/contract", "lib/gluon-rs", "tools/gluon-kube", "tools/rust-service-template",
+        "tests/acceptance", "frontends/gshop", "apps/gfood"}
+want |= {f"services/{s}-service-rs" for s in scala if Path(f"services/{s}-service-rs").is_dir()}
+try:
+    export.main(["--app", "nosuch", "--no-archive"])
+    refused = False
+except SystemExit as stop:
+    refused = "--app must be one of" in str(stop)
+print("exported:", sorted(got), "plans:", plans, "app:", manifest["app"], "refused:", refused)
+sys.exit(0 if got == want and not plans and manifest["app"] == "gfood" and not manifest["plans"]
+         and "`services/order-service`" in review and "`lib/purerest`" in review and refused
+         else f"want {sorted(want)}, got {sorted(got)}")'
 
 check "gluon keeps only apps/README.md of apps/; gfood is its own repo" apps.log '
 files = [str(f) for f in sandbox.platform_files() if f.parts[0] == "apps"]

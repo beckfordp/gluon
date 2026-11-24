@@ -99,10 +99,16 @@ def platform_files(root: Path = GLUON) -> list[Path]:
     return files
 
 
-def export_repos(root: Path = GLUON) -> list[Path]:
+APP_LEFT_OUT = frozenset({Path("lib") / "purerest", *(scala for scala, _ in PORTS)})
+"""Repos an application's export (bin/sandbox-export --app) leaves out: the Scala services
+the Rust ports were made from and purerest, their reference. An application builds on the
+ports."""
+
+
+def export_repos(root: Path = GLUON, app: bool = False) -> list[Path]:
     """The nested repos bin/sandbox-export copies: SHARED_REPOS and both sides of each port
-    that exist under `root`, sorted."""
-    wanted = {*SHARED_REPOS, *(repo for port in PORTS for repo in port)}
+    that exist under `root`, sorted; with `app`, without APP_LEFT_OUT."""
+    wanted = {*SHARED_REPOS, *(repo for port in PORTS for repo in port)} - (APP_LEFT_OUT if app else set())
     return sorted(repo for repo in wanted if (root / repo).is_dir())
 
 
